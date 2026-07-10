@@ -60,7 +60,17 @@ export function crearSistemaRenderizado(THREE, canvas, configuracion) {
   sol.position.set(-31, 33, -55);
   scene.add(sol);
 
-  return { renderer, scene, camera };
+  return {
+    renderer,
+    scene,
+    camera,
+    luces: {
+      ambiente: luzAmbiente,
+      hemisferio: luzHemisferio,
+      solar: luzSolar,
+    },
+    sol,
+  };
 }
 
 export function ajustarRenderizado(renderer, camera, configuracion) {

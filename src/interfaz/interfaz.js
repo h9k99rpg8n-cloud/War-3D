@@ -6,6 +6,9 @@ export function obtenerInterfaz() {
     pantallaInicio: document.querySelector("#start-screen"),
     formularioMundo: document.querySelector("#world-form"),
     nombreMundo: document.querySelector("#world-name"),
+    opcionMundoPlano: document.querySelector("#flat-world-option"),
+    mundoPlano: document.querySelector("#flat-world"),
+    notaMundoPlano: document.querySelector("#flat-world-note"),
     canvas: document.querySelector("#game-canvas"),
     carga: document.querySelector("#loading"),
     textoCarga: document.querySelector("#loading-text"),
@@ -27,6 +30,12 @@ export function obtenerInterfaz() {
     contadorMadera: document.querySelector("#wood-count"),
     botonColocar: document.querySelector("#place-block"),
     mensajeAccion: document.querySelector("#action-message"),
+    salud: document.querySelector("#health-hud"),
+    corazones: [...document.querySelectorAll("#health-hud .heart")],
+    etiquetaSalud: document.querySelector("#health-label"),
+    destelloDano: document.querySelector("#damage-flash"),
+    panelMuerte: document.querySelector("#death-panel"),
+    botonReaparecer: document.querySelector("#respawn-button"),
   };
 }
 
@@ -35,22 +44,27 @@ export function prepararInterfaz(interfaz) {
 }
 
 export function esperarCreacionMundo(interfaz) {
+  configurarSelectorMundo(interfaz);
   return new Promise((resolve) => {
     interfaz.formularioMundo.addEventListener(
       "submit",
       (event) => {
         event.preventDefault();
         const nombre = interfaz.nombreMundo.value.trim() || "Mi mundo";
+        const datos = new FormData(interfaz.formularioMundo);
+        const modo = datos.get("gameMode") === "creativo" ? "creativo" : "supervivencia";
+        const tipoMundo =
+          modo === "creativo" && datos.get("worldType") === "plano" ? "plano" : "normal";
         document.title = `War 3D — ${nombre}`;
-        resolve(nombre.slice(0, 24));
+        resolve({ nombreMundo: nombre.slice(0, 24), modo, tipoMundo });
       },
       { once: true },
     );
   });
 }
 
-export async function mostrarCargaMundo(interfaz, nombre) {
-  interfaz.textoCarga.textContent = `Generando ${nombre}…`;
+export async function mostrarCargaMundo(interfaz, opcionesMundo) {
+  interfaz.textoCarga.textContent = `Generando ${opcionesMundo.nombreMundo}…`;
   interfaz.carga.hidden = false;
   interfaz.pantallaInicio.classList.add("is-leaving");
   await new Promise((resolve) => window.setTimeout(resolve, 280));
@@ -70,4 +84,27 @@ export function mostrarError(interfaz, mensaje) {
   interfaz.carga.hidden = true;
   interfaz.panelError.hidden = false;
   interfaz.mensajeError.textContent = mensaje;
+}
+
+function configurarSelectorMundo(interfaz) {
+  const opcionesModo = [
+    ...interfaz.formularioMundo.querySelectorAll('input[name="gameMode"]'),
+  ];
+
+  const actualizar = () => {
+    const creativo = opcionesModo.some(
+      (opcion) => opcion.checked && opcion.value === "creativo",
+    );
+    interfaz.mundoPlano.disabled = !creativo;
+    interfaz.opcionMundoPlano.classList.toggle("is-disabled", !creativo);
+    interfaz.notaMundoPlano.textContent = creativo
+      ? "Sin relieve ni árboles"
+      : "Solo disponible en creativo";
+    if (!creativo && interfaz.mundoPlano.checked) {
+      interfaz.formularioMundo.querySelector('input[value="normal"]').checked = true;
+    }
+  };
+
+  for (const opcion of opcionesModo) opcion.addEventListener("change", actualizar);
+  actualizar();
 }

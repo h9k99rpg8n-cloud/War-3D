@@ -1,81 +1,69 @@
 export const TIPOS_BLOQUE = Object.freeze(["pasto", "hojas", "madera"]);
 
-const DEFINICIONES = Object.freeze({
-  pasto: Object.freeze({
-    base: [91, 190, 76],
-    claro: [132, 222, 101],
-    oscuro: [48, 130, 54],
-    emissive: 0x174a1c,
-    intensidadEmisiva: 0.42,
-    semilla: 11,
-  }),
-  hojas: Object.freeze({
-    base: [45, 143, 61],
-    claro: [83, 188, 75],
-    oscuro: [24, 95, 46],
-    emissive: 0x103d1e,
-    intensidadEmisiva: 0.34,
-    semilla: 29,
-  }),
-  madera: Object.freeze({
-    base: [151, 103, 58],
-    claro: [190, 139, 76],
-    oscuro: [91, 58, 39],
-    emissive: 0x3d2415,
-    intensidadEmisiva: 0.26,
-    semilla: 47,
-  }),
-});
-
 export function crearBibliotecaBloques(THREE) {
-  const materialesInstanciados = {};
-  const materialesRecolectables = {};
+  const texturas = {
+    pastoSuperior: crearTextura(THREE, "pasto-superior", pixelPastoSuperior),
+    pastoLateral: crearTextura(THREE, "pasto-lateral", pixelPastoLateral),
+    tierra: crearTextura(THREE, "tierra", pixelTierra),
+    hojas: crearTextura(THREE, "hojas", pixelHojas),
+    corteMadera: crearTextura(THREE, "corte-madera", pixelCorteMadera),
+    maderaLateral: crearTextura(THREE, "madera-lateral", pixelMaderaLateral),
+  };
 
-  for (const tipo of TIPOS_BLOQUE) {
-    const definicion = DEFINICIONES[tipo];
-    const textura = crearTexturaProcedural(THREE, tipo, definicion);
-    materialesInstanciados[tipo] = new THREE.MeshLambertMaterial({
-      color: 0xffffff,
-      emissive: definicion.emissive,
-      emissiveIntensity: definicion.intensidadEmisiva,
-      flatShading: true,
-      map: textura,
-      vertexColors: true,
-    });
-    materialesRecolectables[tipo] = new THREE.MeshLambertMaterial({
-      color: 0xffffff,
-      emissive: definicion.emissive,
-      emissiveIntensity: definicion.intensidadEmisiva + 0.12,
-      flatShading: true,
-      map: textura,
-    });
-  }
+  const materialesInstanciados = {
+    pasto: carasCubo(
+      material(THREE, texturas.pastoLateral, 0x174a1c, 0.42, true),
+      material(THREE, texturas.pastoSuperior, 0x1b521d, 0.46, true),
+      material(THREE, texturas.tierra, 0x3b2415, 0.27, true),
+    ),
+    hojas: material(THREE, texturas.hojas, 0x103d1e, 0.38, true),
+    madera: carasCubo(
+      material(THREE, texturas.maderaLateral, 0x3d2415, 0.31, true),
+      material(THREE, texturas.corteMadera, 0x4b2c18, 0.34, true),
+      material(THREE, texturas.corteMadera, 0x3a2114, 0.27, true),
+    ),
+  };
 
-  return { materialesInstanciados, materialesRecolectables };
+  const materialesRecolectables = {
+    pasto: carasCubo(
+      material(THREE, texturas.pastoLateral, 0x174a1c, 0.54, false),
+      material(THREE, texturas.pastoSuperior, 0x1b521d, 0.58, false),
+      material(THREE, texturas.tierra, 0x3b2415, 0.38, false),
+    ),
+    hojas: material(THREE, texturas.hojas, 0x103d1e, 0.5, false),
+    madera: carasCubo(
+      material(THREE, texturas.maderaLateral, 0x3d2415, 0.43, false),
+      material(THREE, texturas.corteMadera, 0x4b2c18, 0.46, false),
+      material(THREE, texturas.corteMadera, 0x3a2114, 0.39, false),
+    ),
+  };
+
+  return { materialesInstanciados, materialesRecolectables, texturas };
 }
 
-function crearTexturaProcedural(THREE, tipo, definicion) {
+// BoxGeometry ordena sus grupos como derecha, izquierda, arriba, abajo, frente y atrás.
+function carasCubo(lateral, superior, inferior) {
+  return [lateral, lateral, superior, inferior, lateral, lateral];
+}
+
+function material(THREE, textura, emisivo, intensidad, coloresInstancia) {
+  return new THREE.MeshLambertMaterial({
+    color: 0xffffff,
+    emissive: emisivo,
+    emissiveIntensity: intensidad,
+    flatShading: true,
+    map: textura,
+    vertexColors: coloresInstancia,
+  });
+}
+
+function crearTextura(THREE, nombre, obtenerPixel) {
   const tamano = 16;
   const datos = new Uint8Array(tamano * tamano * 4);
 
   for (let y = 0; y < tamano; y += 1) {
     for (let x = 0; x < tamano; x += 1) {
-      const ruido = hashPixel(x, y, definicion.semilla);
-      let color = definicion.base;
-
-      if (tipo === "pasto") {
-        if (ruido > 0.82) color = definicion.claro;
-        else if (ruido < 0.18) color = definicion.oscuro;
-      } else if (tipo === "hojas") {
-        const grupo = hashPixel(Math.floor(x / 2), Math.floor(y / 2), definicion.semilla + 8);
-        if (grupo > 0.7 || (x + y) % 7 === 0) color = definicion.claro;
-        else if (grupo < 0.3 || ruido < 0.15) color = definicion.oscuro;
-      } else {
-        const franja = (x + Math.floor(y / 4)) % 5;
-        if (franja === 0 || ruido < 0.12) color = definicion.oscuro;
-        else if (franja === 3 && ruido > 0.52) color = definicion.claro;
-      }
-
+      const color = obtenerPixel(x, y);
       const indice = (y * tamano + x) * 4;
       datos[indice] = color[0];
       datos[indice + 1] = color[1];
@@ -85,12 +73,66 @@ function crearTexturaProcedural(THREE, tipo, definicion) {
   }
 
   const textura = new THREE.DataTexture(datos, tamano, tamano, THREE.RGBAFormat);
+  textura.name = nombre;
   textura.colorSpace = THREE.SRGBColorSpace;
   textura.magFilter = THREE.NearestFilter;
   textura.minFilter = THREE.NearestMipmapNearestFilter;
   textura.generateMipmaps = true;
   textura.needsUpdate = true;
   return textura;
+}
+
+function pixelPastoSuperior(x, y) {
+  const ruido = hashPixel(x, y, 11);
+  const veta = (x * 3 + y * 5 + Math.floor(ruido * 5)) % 11;
+  if (veta === 0 || (veta === 1 && ruido > 0.54)) return [43, 127, 45];
+  if (veta === 6 || ruido > 0.88) return [132, 218, 91];
+  return ruido < 0.34 ? [77, 169, 61] : [96, 193, 73];
+}
+
+function pixelPastoLateral(x, y) {
+  const ruido = hashPixel(x, y, 23);
+  const bordePasto = 11 + Math.floor(hashPixel(x, 0, 31) * 3);
+  if (y >= bordePasto) {
+    return ruido > 0.73 ? [123, 210, 83] : ruido < 0.23 ? [49, 133, 47] : [84, 179, 64];
+  }
+  if (y >= bordePasto - 2 && hashPixel(x, y, 37) > 0.55) return [55, 145, 49];
+  return pixelTierra(x, y);
+}
+
+function pixelTierra(x, y) {
+  const ruido = hashPixel(x, y, 41);
+  if (ruido > 0.83) return [154, 106, 61];
+  if (ruido < 0.2) return [83, 54, 37];
+  return ruido > 0.52 ? [127, 82, 48] : [109, 69, 43];
+}
+
+function pixelHojas(x, y) {
+  const grupo = hashPixel(Math.floor(x / 3), Math.floor(y / 3), 53);
+  const nervadura = (x + y * 2) % 9 === 0 || (x * 2 - y + 32) % 11 === 0;
+  if (nervadura) return [112, 193, 73];
+  if (grupo > 0.72) return [70, 163, 61];
+  if (grupo < 0.25 || hashPixel(x, y, 59) < 0.12) return [24, 93, 42];
+  return [43, 134, 52];
+}
+
+function pixelMaderaLateral(x, y) {
+  const ruido = hashPixel(x, y, 71);
+  const franja = (x + Math.floor(y / 5)) % 5;
+  if (franja === 0 || ruido < 0.11) return [84, 48, 29];
+  if (franja === 3 && ruido > 0.48) return [185, 119, 62];
+  return ruido > 0.62 ? [150, 91, 48] : [125, 72, 40];
+}
+
+function pixelCorteMadera(x, y) {
+  const dx = x - 7.5;
+  const dy = y - 7.5;
+  const distancia = Math.sqrt(dx * dx + dy * dy);
+  const anillo = Math.floor(distancia * 1.45 + hashPixel(x, y, 83) * 0.8) % 3;
+  if (distancia < 1.8) return [87, 49, 27];
+  if (anillo === 0) return [112, 65, 34];
+  if (anillo === 1) return [193, 132, 73];
+  return [157, 99, 53];
 }
 
 function hashPixel(x, y, semilla) {

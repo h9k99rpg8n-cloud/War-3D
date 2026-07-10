@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#87b9d9">
     <meta
       name="description"
-      content="War 3D v1.3: mundo cúbico con árboles y texturas procedurales para navegador y móvil."
+      content="War 3D v1.4: supervivencia, modo creativo, ciclo de día y noche y arañas cúbicas."
     >
-    <title>War 3D — v1.3</title>
+    <title>War 3D — v1.4</title>
     <link rel="stylesheet" href="./style.css">
   </head>
   <body>
@@ -33,12 +33,57 @@
               autocomplete="off"
               required
             >
+            <div class="world-options">
+              <fieldset class="world-choice">
+                <legend>MODO DE JUEGO</legend>
+                <div class="world-choice__grid">
+                  <label class="choice-card">
+                    <input type="radio" name="gameMode" value="supervivencia" checked>
+                    <span>
+                      <b aria-hidden="true">♥</b>
+                      <strong>SUPERVIVENCIA</strong>
+                      <small>Corazones, recursos y arañas</small>
+                    </span>
+                  </label>
+                  <label class="choice-card">
+                    <input type="radio" name="gameMode" value="creativo">
+                    <span>
+                      <b aria-hidden="true">∞</b>
+                      <strong>CREATIVO</strong>
+                      <small>Bloques ilimitados y sin daño</small>
+                    </span>
+                  </label>
+                </div>
+              </fieldset>
+
+              <fieldset class="world-choice">
+                <legend>TIPO DE MUNDO</legend>
+                <div class="world-choice__grid">
+                  <label class="choice-card">
+                    <input type="radio" name="worldType" value="normal" checked>
+                    <span>
+                      <b aria-hidden="true">▦</b>
+                      <strong>NORMAL</strong>
+                      <small>Relieve y árboles</small>
+                    </span>
+                  </label>
+                  <label id="flat-world-option" class="choice-card is-disabled">
+                    <input id="flat-world" type="radio" name="worldType" value="plano" disabled>
+                    <span>
+                      <b aria-hidden="true">━</b>
+                      <strong>PLANO</strong>
+                      <small id="flat-world-note">Solo disponible en creativo</small>
+                    </span>
+                  </label>
+                </div>
+              </fieldset>
+            </div>
             <button type="submit">
               <span aria-hidden="true">＋</span>
               CREAR NUEVO MUNDO
             </button>
           </form>
-          <p class="start-screen__version">v1.3 • TEXTURAS PROCEDURALES</p>
+          <p class="start-screen__version">v1.4 • SUPERVIVENCIA Y CICLO NOCTURNO</p>
         </div>
       </section>
 
@@ -52,8 +97,17 @@
             <p>PROTOTIPO DE MOVIMIENTO</p>
           </div>
         </div>
-        <span id="version-badge" class="version-badge">v1.3 • THREE.JS</span>
+        <span id="version-badge" class="version-badge">v1.4 • THREE.JS</span>
       </header>
+
+      <section id="health-hud" class="health-hud" aria-label="Salud del jugador" hidden>
+        <span class="heart" aria-hidden="true">♥</span>
+        <span class="heart" aria-hidden="true">♥</span>
+        <span class="heart" aria-hidden="true">♥</span>
+        <span class="heart" aria-hidden="true">♥</span>
+        <span class="heart" aria-hidden="true">♥</span>
+        <small id="health-label">5 / 5</small>
+      </section>
 
       <div class="crosshair" aria-hidden="true"><span></span></div>
 
@@ -161,6 +215,17 @@
       </button>
 
       <div id="action-message" class="action-message" role="status" aria-live="polite" hidden></div>
+
+      <div id="damage-flash" class="damage-flash" aria-hidden="true"></div>
+
+      <section id="death-panel" class="death-panel" role="dialog" aria-labelledby="death-title" hidden>
+        <div class="death-panel__card">
+          <span aria-hidden="true">☠</span>
+          <h2 id="death-title">HAS CAÍDO</h2>
+          <p>Las Arañas Umbral dominaron la noche.</p>
+          <button id="respawn-button" type="button">REAPARECER</button>
+        </div>
+      </section>
 
       <section id="error-panel" class="error-panel" role="alert" hidden>
         <strong>No se pudo iniciar War 3D</strong>

@@ -1,4 +1,4 @@
-export const VERSION_JUEGO = "1.3";
+export const VERSION_JUEGO = "1.4";
 export const VERSION_THREE = "0.185.1";
 export const URL_THREE = `https://cdn.jsdelivr.net/npm/three@${VERSION_THREE}/build/three.module.js`;
 
@@ -12,7 +12,10 @@ export const CONFIGURACION = Object.freeze({
   }),
   jugador: Object.freeze({
     alturaOjos: 1.68,
+    radio: 0.4,
     velocidad: 6.4,
+    corazones: 5,
+    invulnerabilidadMs: 850,
   }),
   camara: Object.freeze({
     campoVision: 70,
@@ -55,5 +58,28 @@ export const CONFIGURACION = Object.freeze({
     separacion: 8,
     probabilidad: 0.68,
     alturaTronco: 3,
+  }),
+  cicloDiaNoche: Object.freeze({
+    duraciones: Object.freeze({
+      dia: 180_000,
+      atardecer: 60_000,
+      noche: 120_000,
+      amanecer: 60_000,
+    }),
+  }),
+  aranas: Object.freeze({
+    maximo: 4,
+    cantidadInicial: 3,
+    rangoVision: 18,
+    semiAnguloVision: Math.PI * 0.3,
+    memoriaPersecucionMs: 2_000,
+    velocidadPatrulla: 1.15,
+    velocidadPersecucion: 2.8,
+    distanciaAtaque: 2.15,
+    intervaloAtaqueMs: 950,
+    radioCuerpo: 0.58,
+    radioSpawnMinimo: 15,
+    radioSpawnMaximo: 28,
+    dano: 1,
   }),
 });

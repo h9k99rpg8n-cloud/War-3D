@@ -3,13 +3,15 @@ import {
   crearBibliotecaBloques,
 } from "../renderizado/texturasBloques.js";
 
-export function crearTerreno(THREE, scene, configuracion) {
+export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
   const {
     nivelFondo,
     nivelMaximoColocacion,
     tamanoBloque,
     tamanoCuadricula,
   } = configuracion.mundo;
+  const tipoMundo = opcionesMundo.tipoMundo === "plano" ? "plano" : "normal";
+  const creativo = opcionesMundo.modo === "creativo";
   const bloques = new Map();
   const bloquesPorTipo = Object.fromEntries(
     TIPOS_BLOQUE.map((tipo) => [tipo, new Map()]),
@@ -18,6 +20,7 @@ export function crearTerreno(THREE, scene, configuracion) {
     TIPOS_BLOQUE.map((tipo) => [tipo, []]),
   );
   const mallasPorTipo = {};
+  const mallas = [];
   const capacidades = {};
   const nivelesSuelo = Array.from({ length: tamanoCuadricula }, () =>
     Array(tamanoCuadricula).fill(0),
@@ -27,7 +30,7 @@ export function crearTerreno(THREE, scene, configuracion) {
   );
 
   generarSuelo();
-  generarArboles();
+  if (tipoMundo === "normal") generarArboles();
 
   const geometria = new THREE.BoxGeometry(tamanoBloque, tamanoBloque, tamanoBloque);
   const biblioteca = crearBibliotecaBloques(THREE);
@@ -37,22 +40,17 @@ export function crearTerreno(THREE, scene, configuracion) {
 
   for (const tipo of TIPOS_BLOQUE) {
     const cantidadInicial = bloquesPorTipo[tipo].size;
-    capacidades[tipo] =
-      cantidadInicial + configuracion.inventario.limites[tipo] + 16;
-    const malla = new THREE.InstancedMesh(
-      geometria,
-      biblioteca.materialesInstanciados[tipo],
-      capacidades[tipo],
-    );
-    malla.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    malla.userData.tipoBloque = tipo;
+    capacidades[tipo] = cantidadInicial + (creativo ? 128 : configuracion.inventario.limites[tipo] + 16);
+    const malla = crearMallaTipo(tipo, capacidades[tipo]);
     mallasPorTipo[tipo] = malla;
+    mallas.push(malla);
     reconstruirMalla(tipo);
     scene.add(malla);
   }
 
   return {
-    mallas: TIPOS_BLOQUE.map((tipo) => mallasPorTipo[tipo]),
+    tipoMundo,
+    mallas,
 
     contieneBloque(bloque) {
       return Boolean(bloque && bloques.get(bloque.clave) === bloque);
@@ -91,39 +89,31 @@ export function crearTerreno(THREE, scene, configuracion) {
     },
 
     hayColisionJugador(worldX, worldZ, pies, cabeza) {
-      const radioJugador = tamanoBloque * 0.2;
-      const gridX = worldX / tamanoBloque + (tamanoCuadricula - 1) / 2;
-      const gridZ = worldZ / tamanoBloque + (tamanoCuadricula - 1) / 2;
-      const xMin = Math.max(0, Math.floor(gridX) - 1);
-      const xMax = Math.min(tamanoCuadricula - 1, Math.ceil(gridX) + 1);
-      const zMin = Math.max(0, Math.floor(gridZ) - 1);
-      const zMax = Math.min(tamanoCuadricula - 1, Math.ceil(gridZ) + 1);
-      const yMin = Math.max(nivelFondo, Math.floor(pies / tamanoBloque) - 1);
-      const yMax = Math.min(
-        nivelMaximoColocacion,
-        Math.ceil(cabeza / tamanoBloque) + 1,
+      return medirPenetracionCuerpo(
+        worldX,
+        worldZ,
+        pies,
+        cabeza,
+        configuracion.jugador.radio,
+      ) > 0;
+    },
+
+    obtenerPenetracionJugador(worldX, worldZ, pies, cabeza) {
+      return medirPenetracionCuerpo(
+        worldX,
+        worldZ,
+        pies,
+        cabeza,
+        configuracion.jugador.radio,
       );
-      const mitad = tamanoBloque / 2;
+    },
 
-      for (let z = zMin; z <= zMax; z += 1) {
-        for (let x = xMin; x <= xMax; x += 1) {
-          for (let y = yMin; y <= yMax; y += 1) {
-            const bloque = bloques.get(claveBloque(x, y, z));
-            if (!bloque || bloque.tipo === "pasto") continue;
+    hayColisionCuerpo(worldX, worldZ, pies, cabeza, radio) {
+      return medirPenetracionCuerpo(worldX, worldZ, pies, cabeza, radio) > 0;
+    },
 
-            const centroX = indiceAMundo(x, tamanoCuadricula, tamanoBloque);
-            const centroZ = indiceAMundo(z, tamanoCuadricula, tamanoBloque);
-            const centroY = y * tamanoBloque;
-            const coincideHorizontalmente =
-              Math.abs(worldX - centroX) < mitad + radioJugador &&
-              Math.abs(worldZ - centroZ) < mitad + radioJugador;
-            const coincideVerticalmente =
-              pies < centroY + mitad && cabeza > centroY - mitad;
-            if (coincideHorizontalmente && coincideVerticalmente) return true;
-          }
-        }
-      }
-      return false;
+    obtenerPenetracionCuerpo(worldX, worldZ, pies, cabeza, radio) {
+      return medirPenetracionCuerpo(worldX, worldZ, pies, cabeza, radio);
     },
 
     romperBloque(bloque) {
@@ -159,7 +149,7 @@ export function crearTerreno(THREE, scene, configuracion) {
 
       const bloque = crearDatosBloque(x, y, z, tipo);
       if (bloques.has(bloque.clave)) return { ok: false, motivo: "ocupado" };
-      if (mallasPorTipo[tipo].count >= capacidades[tipo]) {
+      if (!asegurarCapacidad(tipo, mallasPorTipo[tipo].count + 1)) {
         return { ok: false, motivo: "sin_capacidad" };
       }
 
@@ -175,10 +165,85 @@ export function crearTerreno(THREE, scene, configuracion) {
     },
   };
 
+  function medirPenetracionCuerpo(worldX, worldZ, pies, cabeza, radio) {
+    const gridX = worldX / tamanoBloque + (tamanoCuadricula - 1) / 2;
+    const gridZ = worldZ / tamanoBloque + (tamanoCuadricula - 1) / 2;
+    const xMin = Math.max(0, Math.floor(gridX) - 1);
+    const xMax = Math.min(tamanoCuadricula - 1, Math.ceil(gridX) + 1);
+    const zMin = Math.max(0, Math.floor(gridZ) - 1);
+    const zMax = Math.min(tamanoCuadricula - 1, Math.ceil(gridZ) + 1);
+    const yMin = Math.max(nivelFondo, Math.floor(pies / tamanoBloque) - 1);
+    const yMax = Math.min(
+      nivelMaximoColocacion,
+      Math.ceil(cabeza / tamanoBloque) + 1,
+    );
+    const mitad = tamanoBloque / 2;
+    let penetracion = 0;
+
+    for (let z = zMin; z <= zMax; z += 1) {
+      for (let x = xMin; x <= xMax; x += 1) {
+        for (let y = yMin; y <= yMax; y += 1) {
+          const bloque = bloques.get(claveBloque(x, y, z));
+          if (!bloque || bloque.tipo === "pasto") continue;
+
+          const centroX = indiceAMundo(x, tamanoCuadricula, tamanoBloque);
+          const centroZ = indiceAMundo(z, tamanoCuadricula, tamanoBloque);
+          const centroY = y * tamanoBloque;
+          const solapamientoX = mitad + radio - Math.abs(worldX - centroX);
+          const solapamientoZ = mitad + radio - Math.abs(worldZ - centroZ);
+          const coincideVerticalmente =
+            pies < centroY + mitad && cabeza > centroY - mitad;
+          if (solapamientoX > 0 && solapamientoZ > 0 && coincideVerticalmente) {
+            penetracion += Math.min(solapamientoX, solapamientoZ);
+          }
+        }
+      }
+    }
+    return penetracion;
+  }
+
+  function crearMallaTipo(tipo, capacidad) {
+    const malla = new THREE.InstancedMesh(
+      geometria,
+      biblioteca.materialesInstanciados[tipo],
+      capacidad,
+    );
+    malla.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    malla.userData.tipoBloque = tipo;
+    return malla;
+  }
+
+  function asegurarCapacidad(tipo, cantidadNecesaria) {
+    if (cantidadNecesaria <= capacidades[tipo]) return true;
+    const capacidadMaxima =
+      tamanoCuadricula *
+      tamanoCuadricula *
+      (nivelMaximoColocacion - nivelFondo + 1);
+    if (capacidades[tipo] >= capacidadMaxima) return false;
+
+    const capacidadNueva = Math.min(
+      capacidadMaxima,
+      Math.max(
+        cantidadNecesaria,
+        capacidades[tipo] + 128,
+        Math.ceil(capacidades[tipo] * 1.5),
+      ),
+    );
+    const anterior = mallasPorTipo[tipo];
+    const nueva = crearMallaTipo(tipo, capacidadNueva);
+    mallasPorTipo[tipo] = nueva;
+    capacidades[tipo] = capacidadNueva;
+    mallas[TIPOS_BLOQUE.indexOf(tipo)] = nueva;
+    scene.remove(anterior);
+    scene.add(nueva);
+    return true;
+  }
+
   function generarSuelo() {
     for (let z = 0; z < tamanoCuadricula; z += 1) {
       for (let x = 0; x < tamanoCuadricula; x += 1) {
-        const nivelSuperficie = calcularNivelSuperficie(x, z, tamanoCuadricula);
+        const nivelSuperficie =
+          tipoMundo === "plano" ? 0 : calcularNivelSuperficie(x, z, tamanoCuadricula);
         nivelesSuelo[z][x] = nivelSuperficie;
         for (let y = nivelFondo; y <= nivelSuperficie; y += 1) {
           agregarDatosBloque(x, y, z, "pasto");
@@ -270,7 +335,7 @@ export function crearTerreno(THREE, scene, configuracion) {
 
     malla.count = instancia;
     malla.instanceMatrix.needsUpdate = true;
-    malla.instanceColor.needsUpdate = true;
+    if (malla.instanceColor) malla.instanceColor.needsUpdate = true;
     malla.computeBoundingBox();
     malla.computeBoundingSphere();
   }

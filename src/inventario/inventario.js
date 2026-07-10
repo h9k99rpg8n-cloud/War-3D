@@ -4,8 +4,9 @@ export const NOMBRES_BLOQUE = Object.freeze({
   madera: "Bloque de madera",
 });
 
-export function crearInventario(interfaz, configuracion) {
+export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
   const limites = configuracion.inventario.limites;
+  const creativo = opcionesMundo.modo === "creativo";
   const estados = {
     pasto: crearEstado(interfaz.espacioPasto, interfaz.contadorPasto),
     hojas: crearEstado(interfaz.espacioHojas, interfaz.contadorHojas),
@@ -23,20 +24,26 @@ export function crearInventario(interfaz, configuracion) {
       return seleccionado;
     },
 
+    esCreativo() {
+      return creativo;
+    },
+
     nombre(tipo) {
       return NOMBRES_BLOQUE[tipo] ?? "Bloque";
     },
 
     cantidad(tipo = seleccionado) {
-      return estados[tipo]?.cantidad ?? 0;
+      return creativo && estados[tipo] ? Number.POSITIVE_INFINITY : (estados[tipo]?.cantidad ?? 0);
     },
 
     estaLleno(tipo) {
+      if (creativo) return false;
       const estado = estados[tipo];
       return !estado || estado.cantidad + estado.reservas >= limites[tipo];
     },
 
     reservarEspacio(tipo) {
+      if (creativo) return true;
       const estado = estados[tipo];
       if (!estado || estado.cantidad + estado.reservas >= limites[tipo]) return false;
       estado.reservas += 1;
@@ -44,11 +51,13 @@ export function crearInventario(interfaz, configuracion) {
     },
 
     liberarReserva(tipo) {
+      if (creativo) return;
       const estado = estados[tipo];
       if (estado) estado.reservas = Math.max(0, estado.reservas - 1);
     },
 
     confirmarRecoleccion(tipo) {
+      if (creativo) return true;
       const estado = estados[tipo];
       if (!estado) return false;
       if (estado.reservas > 0) estado.reservas -= 1;
@@ -59,6 +68,7 @@ export function crearInventario(interfaz, configuracion) {
     },
 
     usarBloque(tipo = seleccionado) {
+      if (creativo) return true;
       const estado = estados[tipo];
       if (!estado || estado.cantidad <= 0) return false;
       estado.cantidad -= 1;
@@ -75,12 +85,13 @@ export function crearInventario(interfaz, configuracion) {
 
   function actualizarInterfaz() {
     for (const [tipo, estado] of Object.entries(estados)) {
-      estado.contador.textContent = `${estado.cantidad} / ${limites[tipo]}`;
-      estado.espacio.classList.toggle("is-empty", estado.cantidad === 0);
+      estado.contador.textContent = creativo ? "∞" : `${estado.cantidad} / ${limites[tipo]}`;
+      estado.espacio.classList.toggle("is-empty", !creativo && estado.cantidad === 0);
+      estado.espacio.classList.toggle("is-unlimited", creativo);
       estado.espacio.classList.toggle("is-selected", tipo === seleccionado);
       estado.espacio.setAttribute("aria-pressed", String(tipo === seleccionado));
     }
-    interfaz.botonColocar.disabled = estados[seleccionado].cantidad === 0;
+    interfaz.botonColocar.disabled = !creativo && estados[seleccionado].cantidad === 0;
     interfaz.botonColocar.setAttribute(
       "aria-label",
       `Colocar ${NOMBRES_BLOQUE[seleccionado].toLowerCase()}`,

@@ -8,6 +8,7 @@ export function crearInteraccionBloques(
   terreno,
   inventario,
   configuracion,
+  opcionesMundo = {},
 ) {
   const { interaccion, jugador, mundo } = configuracion;
   const raycaster = new THREE.Raycaster();
@@ -71,8 +72,9 @@ export function crearInteraccionBloques(
   });
 
   return {
-    actualizar(now) {
-      actualizarRotura(now);
+    actualizar(now, jugadorActivo = true) {
+      if (jugadorActivo) actualizarRotura(now);
+      else if (rotura) cancelarRotura();
       actualizarRecolectables(now);
     },
   };
@@ -110,7 +112,11 @@ export function crearInteraccionBloques(
 
     limpiarVisualRotura();
     rotura = null;
-    crearRecolectable(resultado.posicion, resultado.bloque.tipo, now);
+    if (opcionesMundo.modo === "creativo") {
+      mostrarMensaje(`${NOMBRES_BLOQUE[resultado.bloque.tipo]} eliminado`);
+    } else {
+      crearRecolectable(resultado.posicion, resultado.bloque.tipo, now);
+    }
   }
 
   function cancelarRotura() {
@@ -246,12 +252,13 @@ export function crearInteraccionBloques(
   function intersectaJugador(posicionBloque) {
     const mitad = mundo.tamanoBloque / 2;
     const piesJugador = camera.position.y - jugador.alturaOjos;
+    const cabezaJugador = camera.position.y + 0.18;
     const coincideHorizontalmente =
-      Math.abs(camera.position.x - posicionBloque.x) < mitad * 0.72 &&
-      Math.abs(camera.position.z - posicionBloque.z) < mitad * 0.72;
+      Math.abs(camera.position.x - posicionBloque.x) < mitad + jugador.radio &&
+      Math.abs(camera.position.z - posicionBloque.z) < mitad + jugador.radio;
     const coincideVerticalmente =
       piesJugador < posicionBloque.y + mitad &&
-      camera.position.y > posicionBloque.y - mitad;
+      cabezaJugador > posicionBloque.y - mitad;
     return coincideHorizontalmente && coincideVerticalmente;
   }
 

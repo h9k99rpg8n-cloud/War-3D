@@ -10,10 +10,10 @@ import {
 const interfaz = obtenerInterfaz();
 
 try {
-  const nombreMundo = await esperarCreacionMundo(interfaz);
-  await mostrarCargaMundo(interfaz, nombreMundo);
+  const opcionesMundo = await esperarCreacionMundo(interfaz);
+  await mostrarCargaMundo(interfaz, opcionesMundo);
   const THREE = await import(URL_THREE);
-  iniciarJuego(THREE, interfaz, { nombreMundo });
+  iniciarJuego(THREE, interfaz, opcionesMundo);
 } catch (error) {
   console.error(error);
   mostrarError(

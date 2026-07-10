@@ -1,0 +1,323 @@
+export function crearSistemaAranas(
+  THREE,
+  scene,
+  camera,
+  terreno,
+  salud,
+  configuracion,
+) {
+  const ajustes = configuracion.aranas;
+  const partesPorArana = 22;
+  const ojosPorArana = 4;
+  const geometria = new THREE.BoxGeometry(1, 1, 1);
+  const materialCuerpo = new THREE.MeshLambertMaterial({
+    color: 0xffffff,
+    emissive: 0x160b11,
+    emissiveIntensity: 0.42,
+    flatShading: true,
+    vertexColors: true,
+  });
+  const materialOjos = new THREE.MeshBasicMaterial({ color: 0xffb43f, fog: false });
+  const mallaPartes = new THREE.InstancedMesh(
+    geometria,
+    materialCuerpo,
+    ajustes.maximo * partesPorArana,
+  );
+  const mallaOjos = new THREE.InstancedMesh(
+    geometria,
+    materialOjos,
+    ajustes.maximo * ojosPorArana,
+  );
+  const aranas = [];
+  const matrizRaiz = new THREE.Matrix4();
+  const matrizLocal = new THREE.Matrix4();
+  const matrizMundo = new THREE.Matrix4();
+  const posicion = new THREE.Vector3();
+  const escala = new THREE.Vector3();
+  const cuaternion = new THREE.Quaternion();
+  const cuaternionRaiz = new THREE.Quaternion();
+  const vectorDireccion = new THREE.Vector3();
+  const vectorCentro = new THREE.Vector3();
+  const cadera = new THREE.Vector3();
+  const rodilla = new THREE.Vector3();
+  const pie = new THREE.Vector3();
+  const vectorUno = new THREE.Vector3(1, 0, 0);
+  const escalaRaiz = new THREE.Vector3(1, 1, 1);
+  const ejeVertical = new THREE.Vector3(0, 1, 0);
+  const color = new THREE.Color();
+  const mitadMundo =
+    (configuracion.mundo.tamanoCuadricula * configuracion.mundo.tamanoBloque) / 2;
+  const limiteMundo = mitadMundo - configuracion.mundo.margenLimite - 1;
+  let indiceParte = 0;
+  let indiceOjo = 0;
+  let nocheActiva = false;
+  let ultimaNoche = 0;
+
+  mallaPartes.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  mallaOjos.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  mallaPartes.frustumCulled = false;
+  mallaOjos.frustumCulled = false;
+  mallaPartes.userData.nombreEntidad = "Araña Umbral";
+  mallaOjos.userData.nombreEntidad = "Ojos de Araña Umbral";
+  mallaPartes.count = 0;
+  mallaOjos.count = 0;
+  scene.add(mallaPartes);
+  scene.add(mallaOjos);
+
+  return {
+    actualizar(now, delta, estadoCiclo) {
+      if (estadoCiclo.esNoche) {
+        if (!nocheActiva || ultimaNoche !== estadoCiclo.numeroNoche) {
+          nocheActiva = true;
+          ultimaNoche = estadoCiclo.numeroNoche;
+          generarNoche(ultimaNoche);
+        }
+      } else if (nocheActiva) {
+        nocheActiva = false;
+        aranas.length = 0;
+      }
+
+      for (const arana of aranas) actualizarArana(arana, now, delta);
+      actualizarMallas(now);
+    },
+
+    obtenerCantidad() {
+      return aranas.length;
+    },
+
+    despejarAlrededor(posicionJugador, radio = 12) {
+      for (let i = aranas.length - 1; i >= 0; i -= 1) {
+        if (
+          Math.hypot(
+            aranas[i].x - posicionJugador.x,
+            aranas[i].z - posicionJugador.z,
+          ) < radio
+        ) {
+          aranas.splice(i, 1);
+        }
+      }
+    },
+  };
+
+  function generarNoche(numeroNoche) {
+    aranas.length = 0;
+    const cantidad = Math.min(ajustes.cantidadInicial, ajustes.maximo);
+
+    for (let indice = 0; indice < cantidad; indice += 1) {
+      let encontrada = null;
+      for (let intento = 0; intento < 16 && !encontrada; intento += 1) {
+        const semilla = numeroNoche * 97 + indice * 23 + intento * 11;
+        const angulo = hash(semilla, 1) * Math.PI * 2;
+        const distancia = interpolar(
+          ajustes.radioSpawnMinimo,
+          ajustes.radioSpawnMaximo,
+          hash(semilla, 2),
+        );
+        const x = limitar(camera.position.x + Math.cos(angulo) * distancia, -limiteMundo, limiteMundo);
+        const z = limitar(camera.position.z + Math.sin(angulo) * distancia, -limiteMundo, limiteMundo);
+        const suelo = terreno.obtenerAltura(x, z);
+        if (
+          !terreno.hayColisionCuerpo(
+            x,
+            z,
+            suelo + 0.02,
+            suelo + 0.82,
+            ajustes.radioCuerpo,
+          )
+        ) {
+          encontrada = { x, z, suelo, semilla };
+        }
+      }
+
+      if (!encontrada) continue;
+      aranas.push({
+        x: encontrada.x,
+        z: encontrada.z,
+        y: encontrada.suelo,
+        giro: hash(encontrada.semilla, 4) * Math.PI * 2,
+        fasePaso: hash(encontrada.semilla, 5) * Math.PI * 2,
+        semilla: encontrada.semilla,
+        vistoHasta: Number.NEGATIVE_INFINITY,
+        ultimoAtaque: Number.NEGATIVE_INFINITY,
+        alerta: 0,
+      });
+    }
+  }
+
+  function actualizarArana(arana, now, delta) {
+    const haciaX = camera.position.x - arana.x;
+    const haciaZ = camera.position.z - arana.z;
+    const distancia = Math.hypot(haciaX, haciaZ);
+    const frenteX = Math.sin(arana.giro);
+    const frenteZ = Math.cos(arana.giro);
+    const producto =
+      distancia > 0.001 ? (frenteX * haciaX + frenteZ * haciaZ) / distancia : 1;
+    const dentroVision =
+      !salud.estaMuerto() &&
+      distancia <= ajustes.rangoVision &&
+      producto >= Math.cos(ajustes.semiAnguloVision);
+
+    if (dentroVision) arana.vistoHasta = now + ajustes.memoriaPersecucionMs;
+    const persiguiendo = !salud.estaMuerto() && now <= arana.vistoHasta;
+    let velocidad = ajustes.velocidadPatrulla;
+
+    if (persiguiendo) {
+      const giroObjetivo = Math.atan2(haciaX, haciaZ);
+      arana.giro = acercarAngulo(arana.giro, giroObjetivo, delta * 3.8);
+      velocidad = ajustes.velocidadPersecucion;
+      arana.alerta = Math.min(1, arana.alerta + delta * 4.5);
+    } else {
+      arana.giro += Math.sin(now * 0.0007 + arana.semilla) * delta * 0.42;
+      arana.alerta = Math.max(0, arana.alerta - delta * 2.5);
+    }
+
+    const siguienteX = limitar(
+      arana.x + Math.sin(arana.giro) * velocidad * delta,
+      -limiteMundo,
+      limiteMundo,
+    );
+    const siguienteZ = limitar(
+      arana.z + Math.cos(arana.giro) * velocidad * delta,
+      -limiteMundo,
+      limiteMundo,
+    );
+    const siguienteSuelo = terreno.obtenerAltura(siguienteX, siguienteZ);
+    const bloqueada = terreno.hayColisionCuerpo(
+      siguienteX,
+      siguienteZ,
+      siguienteSuelo + 0.02,
+      siguienteSuelo + 0.82,
+      ajustes.radioCuerpo,
+    );
+
+    if (bloqueada) {
+      arana.giro += Math.PI * (0.55 + hash(arana.semilla, Math.floor(now / 900)) * 0.35);
+    } else {
+      arana.x = siguienteX;
+      arana.z = siguienteZ;
+      arana.y = siguienteSuelo;
+    }
+    arana.fasePaso += delta * velocidad * 5.2;
+
+    if (
+      persiguiendo &&
+      distancia <= ajustes.distanciaAtaque &&
+      now - arana.ultimoAtaque >= ajustes.intervaloAtaqueMs
+    ) {
+      arana.ultimoAtaque = now;
+      salud.recibirDano(ajustes.dano, now);
+    }
+  }
+
+  function actualizarMallas(now) {
+    indiceParte = 0;
+    indiceOjo = 0;
+
+    for (const arana of aranas) dibujarArana(arana, now);
+
+    mallaPartes.count = indiceParte;
+    mallaOjos.count = indiceOjo;
+    mallaPartes.instanceMatrix.needsUpdate = true;
+    mallaOjos.instanceMatrix.needsUpdate = true;
+    if (mallaPartes.instanceColor) mallaPartes.instanceColor.needsUpdate = true;
+  }
+
+  function dibujarArana(arana, now) {
+    posicion.set(arana.x, arana.y, arana.z);
+    cuaternionRaiz.setFromAxisAngle(ejeVertical, arana.giro);
+    matrizRaiz.compose(posicion, cuaternionRaiz, escalaRaiz);
+
+    agregarCaja(0, 0.4, -0.28, 0.92, 0.48, 1.08, 0x55283a);
+    agregarCaja(0, 0.4, 0.56, 0.72, 0.43, 0.66, 0x24171c);
+    agregarCaja(-0.17, 0.35, 0.96, 0.12, 0.18, 0.24, 0x8e5034);
+    agregarCaja(0.17, 0.35, 0.96, 0.12, 0.18, 0.24, 0x8e5034);
+    agregarCaja(-0.17, 0.37, -0.88, 0.13, 0.16, 0.25, 0x302026);
+    agregarCaja(0.17, 0.37, -0.88, 0.13, 0.16, 0.25, 0x302026);
+
+    const posicionesZ = [0.5, 0.2, -0.18, -0.5];
+    const aperturaZ = [0.62, 0.25, -0.25, -0.62];
+    for (let fila = 0; fila < 4; fila += 1) {
+      for (const lado of [-1, 1]) {
+        const paso = Math.sin(
+          arana.fasePaso + fila * 1.42 + (lado > 0 ? Math.PI : 0),
+        );
+        const elevacionPaso = Math.max(0, paso) * 0.12;
+        const defensa = fila === 0 ? arana.alerta : 0;
+        cadera.set(lado * 0.31, 0.41, posicionesZ[fila]);
+        rodilla.set(
+          lado * 0.88,
+          0.27 + elevacionPaso + defensa * 0.5,
+          posicionesZ[fila] + aperturaZ[fila] * 0.45 + paso * 0.11,
+        );
+        pie.set(
+          lado * 1.38,
+          0.08 + defensa * 0.46,
+          posicionesZ[fila] + aperturaZ[fila] + paso * 0.06,
+        );
+        agregarSegmento(cadera, rodilla, 0.13, 0x3b2425);
+        agregarSegmento(rodilla, pie, 0.11, 0x2d1c20);
+      }
+    }
+
+    const pulsoOjos = 0.085 + Math.sin(now * 0.008 + arana.semilla) * 0.008;
+    agregarOjo(-0.18, 0.53, 0.89, pulsoOjos);
+    agregarOjo(0.18, 0.53, 0.89, pulsoOjos);
+    agregarOjo(-0.07, 0.47, 0.91, pulsoOjos * 0.78);
+    agregarOjo(0.07, 0.47, 0.91, pulsoOjos * 0.78);
+  }
+
+  function agregarCaja(x, y, z, escalaX, escalaY, escalaZ, colorHex) {
+    posicion.set(x, y, z);
+    escala.set(escalaX, escalaY, escalaZ);
+    cuaternion.identity();
+    matrizLocal.compose(posicion, cuaternion, escala);
+    matrizMundo.multiplyMatrices(matrizRaiz, matrizLocal);
+    mallaPartes.setMatrixAt(indiceParte, matrizMundo);
+    color.setHex(colorHex);
+    mallaPartes.setColorAt(indiceParte, color);
+    indiceParte += 1;
+  }
+
+  function agregarSegmento(inicio, fin, grosor, colorHex) {
+    vectorDireccion.subVectors(fin, inicio);
+    const longitud = vectorDireccion.length();
+    vectorDireccion.normalize();
+    vectorCentro.addVectors(inicio, fin).multiplyScalar(0.5);
+    cuaternion.setFromUnitVectors(vectorUno, vectorDireccion);
+    escala.set(longitud, grosor, grosor);
+    matrizLocal.compose(vectorCentro, cuaternion, escala);
+    matrizMundo.multiplyMatrices(matrizRaiz, matrizLocal);
+    mallaPartes.setMatrixAt(indiceParte, matrizMundo);
+    color.setHex(colorHex);
+    mallaPartes.setColorAt(indiceParte, color);
+    indiceParte += 1;
+  }
+
+  function agregarOjo(x, y, z, tamano) {
+    posicion.set(x, y, z);
+    escala.set(tamano, tamano, tamano * 0.7);
+    cuaternion.identity();
+    matrizLocal.compose(posicion, cuaternion, escala);
+    matrizMundo.multiplyMatrices(matrizRaiz, matrizLocal);
+    mallaOjos.setMatrixAt(indiceOjo, matrizMundo);
+    indiceOjo += 1;
+  }
+}
+
+function acercarAngulo(actual, objetivo, pasoMaximo) {
+  const diferencia = Math.atan2(Math.sin(objetivo - actual), Math.cos(objetivo - actual));
+  return actual + limitar(diferencia, -pasoMaximo, pasoMaximo);
+}
+
+function hash(a, b) {
+  const valor = Math.sin(a * 127.1 + b * 311.7) * 43758.5453;
+  return valor - Math.floor(valor);
+}
+
+function interpolar(inicio, fin, progreso) {
+  return inicio + (fin - inicio) * progreso;
+}
+
+function limitar(valor, minimo, maximo) {
+  return Math.max(minimo, Math.min(maximo, valor));
+}

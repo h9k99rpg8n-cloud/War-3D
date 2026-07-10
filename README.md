@@ -1,6 +1,6 @@
 # War 3D
 
-**War 3D v1.3** es un prototipo 3D para navegador pensado primero para móvil.
+**War 3D v1.4** es un juego 3D de bloques para navegador pensado primero para móvil.
 
 ## Jugar
 
@@ -15,6 +15,19 @@
 - Controles de escritorio con WASD o flechas y arrastre del ratón.
 - Inventario para recoger, seleccionar y colocar pasto, hojas y madera.
 - Render optimizado con mallas instanciadas por tipo y resolución limitada para móviles.
+
+## Cambios de la v1.4
+
+- Modo Supervivencia con cinco corazones, daño, muerte y reaparición.
+- Modo Creativo con pasto, hojas y madera ilimitados y mallas que crecen bajo demanda.
+- Mundo normal para ambos modos y mundo plano exclusivo de Creativo.
+- Ciclo de siete minutos: día, atardecer, noche y amanecer.
+- Sol animado y media luna construida mediante pequeños cubos.
+- Primera entidad: Araña Umbral con modelo, ojos y ocho patas animadas por matrices.
+- Arañas nocturnas con cono de visión frontal, persecución y ataques.
+- Pasto con cara superior de césped, laterales de tierra y base propia.
+- Texturas diferenciadas para las hojas, la corteza y los anillos de la madera.
+- Colisiones corregidas para impedir bloques dentro del jugador y permitir escapar de una intersección previa.
 
 ## Cambios de la v1.3
 
