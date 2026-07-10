@@ -1,6 +1,6 @@
 # War 3D
 
-**War 3D v1.1** es un prototipo 3D para navegador pensado primero para móvil.
+**War 3D v1.2** es un prototipo 3D para navegador pensado primero para móvil.
 
 ## Jugar
 
@@ -8,12 +8,23 @@
 
 ## Contenido actual
 
-- Mundo de cubos de colores con relieve suave.
+- Mundo ampliado de cubos de pasto verdes con relieve.
 - Movimiento hacia delante, atrás y los lados.
 - Joystick táctil en el lado izquierdo.
 - Cámara táctil arrastrando el lado derecho de la pantalla.
 - Controles de escritorio con WASD o flechas y arrastre del ratón.
 - Render optimizado con terreno instanciado y resolución limitada para móviles.
+
+## Cambios de la v1.2
+
+- Mapa ampliado de 36×36 a 64×64 bloques.
+- Iluminación global clara y materiales verdes sin zonas café o negras.
+- Bloques reales con varias capas que pueden romperse manteniendo pulsado.
+- Contorno de selección y barra de progreso durante la rotura.
+- Bloque 3D flotante que vuela hacia el jugador al ser recogido.
+- Inventario de Bloque de pasto con stack máximo de 32.
+- Botón para colocar bloques apuntando con la mira.
+- Joystick, cámara, movimiento y HUD original conservados.
 
 ## Cambios de la v1.1
 

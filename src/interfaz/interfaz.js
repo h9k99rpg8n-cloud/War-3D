@@ -12,6 +12,13 @@ export function obtenerInterfaz() {
     joystick: document.querySelector("#joystick"),
     perillaJoystick: document.querySelector("#joystick-knob"),
     zonaMirada: document.querySelector("#look-zone"),
+    progresoRotura: document.querySelector("#break-progress"),
+    rellenoRotura: document.querySelector("#break-progress-fill"),
+    barraInventario: document.querySelector("#inventory-bar"),
+    espacioPasto: document.querySelector("#grass-slot"),
+    contadorPasto: document.querySelector("#grass-count"),
+    botonColocar: document.querySelector("#place-block"),
+    mensajeAccion: document.querySelector("#action-message"),
   };
 }
 

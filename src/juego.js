@@ -1,6 +1,8 @@
 import { CONFIGURACION } from "./configuracion.js";
 import { crearControles } from "./controles/entrada.js";
 import { ocultarCarga, prepararInterfaz } from "./interfaz/interfaz.js";
+import { crearInventario } from "./inventario/inventario.js";
+import { crearInteraccionBloques } from "./mundo/interaccionBloques.js";
 import { crearTerreno } from "./mundo/terreno.js";
 import { ajustarRenderizado, crearSistemaRenderizado } from "./renderizado/escena.js";
 
@@ -14,12 +16,23 @@ export function iniciarJuego(THREE, interfaz) {
   );
   const terreno = crearTerreno(THREE, scene, CONFIGURACION);
   const controles = crearControles(interfaz, CONFIGURACION);
+  const inventario = crearInventario(interfaz, CONFIGURACION);
   const { camara, jugador, mundo } = CONFIGURACION;
   const mitadMundo = (mundo.tamanoCuadricula * mundo.tamanoBloque) / 2;
   const limiteMundo = mitadMundo - mundo.margenLimite;
 
-  camera.position.set(0, terreno.obtenerAltura(0, 0) + jugador.alturaOjos, 10);
+  camera.position.set(0, terreno.obtenerAltura(0, 10) + jugador.alturaOjos, 10);
   camera.rotation.set(camara.inclinacionInicial, camara.giroInicial, 0);
+
+  const interaccionBloques = crearInteraccionBloques(
+    THREE,
+    scene,
+    camera,
+    interfaz,
+    terreno,
+    inventario,
+    CONFIGURACION,
+  );
 
   let ultimoFrame = performance.now();
 
@@ -59,6 +72,7 @@ export function iniciarJuego(THREE, interfaz) {
       mezclaAltura,
     );
     camera.rotation.set(inclinacion, giro, 0);
+    interaccionBloques.actualizar(now);
 
     renderer.render(scene, camera);
   }

@@ -18,7 +18,7 @@ export function crearSistemaRenderizado(THREE, canvas, configuracion) {
   );
   renderer.setSize(window.innerWidth, window.innerHeight, false);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMapping = THREE.NoToneMapping;
   renderer.toneMappingExposure = renderizado.exposicion;
 
   const scene = new THREE.Scene();
@@ -43,14 +43,14 @@ export function crearSistemaRenderizado(THREE, canvas, configuracion) {
 
   // El hemisferio conserva un cielo claro y tonos cálidos en las caras laterales.
   const luzHemisferio = new THREE.HemisphereLight(
-    0xf4fbff,
-    0x8a7257,
+    0xffffff,
+    0x7da36c,
     iluminacion.hemisferio,
   );
   scene.add(luzHemisferio);
 
   // La luz direccional mantiene el volumen y el relieve de los cubos.
-  const luzSolar = new THREE.DirectionalLight(0xfff0d1, iluminacion.sol);
+  const luzSolar = new THREE.DirectionalLight(0xffffff, iluminacion.sol);
   luzSolar.position.set(-22, 30, 16);
   scene.add(luzSolar);
   scene.add(luzSolar.target);
