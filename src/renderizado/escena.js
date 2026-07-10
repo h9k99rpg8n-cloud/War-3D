@@ -13,9 +13,7 @@ export function crearSistemaRenderizado(THREE, canvas, configuracion) {
     throw new Error("WebGL no está disponible en este navegador.", { cause: error });
   }
 
-  renderer.setPixelRatio(
-    Math.min(window.devicePixelRatio || 1, renderizado.proporcionPixelesMaxima),
-  );
+  renderer.setPixelRatio(obtenerProporcionPixeles(renderizado));
   renderer.setSize(window.innerWidth, window.innerHeight, false);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.NoToneMapping;
@@ -70,11 +68,14 @@ export function ajustarRenderizado(renderer, camera, configuracion) {
   const height = window.innerHeight;
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
-  renderer.setPixelRatio(
-    Math.min(
-      window.devicePixelRatio || 1,
-      configuracion.renderizado.proporcionPixelesMaxima,
-    ),
-  );
+  renderer.setPixelRatio(obtenerProporcionPixeles(configuracion.renderizado));
   renderer.setSize(width, height, false);
+}
+
+function obtenerProporcionPixeles(renderizado) {
+  const esDispositivoTactil = window.matchMedia?.("(pointer: coarse)").matches ?? false;
+  const limite = esDispositivoTactil
+    ? renderizado.proporcionPixelesMovil
+    : renderizado.proporcionPixelesMaxima;
+  return Math.min(window.devicePixelRatio || 1, limite);
 }

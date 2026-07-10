@@ -1,4 +1,4 @@
-export const VERSION_JUEGO = "1.2";
+export const VERSION_JUEGO = "1.3";
 export const VERSION_THREE = "0.185.1";
 export const URL_THREE = `https://cdn.jsdelivr.net/npm/three@${VERSION_THREE}/build/three.module.js`;
 
@@ -26,6 +26,7 @@ export const CONFIGURACION = Object.freeze({
   }),
   renderizado: Object.freeze({
     proporcionPixelesMaxima: 1.75,
+    proporcionPixelesMovil: 1.5,
     exposicion: 1,
     colorCielo: 0x87b9d9,
     nieblaCercana: 30,
@@ -37,12 +38,22 @@ export const CONFIGURACION = Object.freeze({
     sol: 1.8,
   }),
   inventario: Object.freeze({
-    limiteBloquesPasto: 32,
+    limites: Object.freeze({
+      pasto: 32,
+      hojas: 32,
+      madera: 35,
+    }),
   }),
   interaccion: Object.freeze({
     alcance: 14,
     duracionRotura: 950,
     toleranciaArrastre: 10,
-    duracionRecoleccion: 650,
+    radioRecoleccion: 2.4,
+    duracionVueloRecoleccion: 240,
+  }),
+  arboles: Object.freeze({
+    separacion: 8,
+    probabilidad: 0.68,
+    alturaTronco: 3,
   }),
 });

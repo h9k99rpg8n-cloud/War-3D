@@ -1,3 +1,5 @@
+import { NOMBRES_BLOQUE } from "../inventario/inventario.js";
+
 export function crearInteraccionBloques(
   THREE,
   scene,
@@ -16,11 +18,6 @@ export function crearInteraccionBloques(
     mundo.tamanoBloque * 0.34,
     mundo.tamanoBloque * 0.34,
   );
-  const materialRecolectable = new THREE.MeshLambertMaterial({
-    color: 0x79dc63,
-    emissive: 0x1e5a25,
-    emissiveIntensity: 0.55,
-  });
   const recolectables = [];
 
   let punteroActivo = null;
@@ -84,16 +81,9 @@ export function crearInteraccionBloques(
     const impacto = buscarImpactoDesdePantalla(clientX, clientY);
     if (!impacto) return;
 
-    if (!inventario.reservarEspacio()) {
-      mostrarMensaje("Inventario lleno: 32 / 32");
-      return;
-    }
-
-    rotura = {
-      bloque: impacto.bloque,
-      inicio: now,
-      reservaActiva: true,
-    };
+    rotura = { bloque: impacto.bloque, inicio: now };
+    interfaz.etiquetaRotura.textContent =
+      `ROMPIENDO ${NOMBRES_BLOQUE[impacto.bloque.tipo].toUpperCase()}`;
     contorno.position.copy(terreno.obtenerCentroBloque(impacto.bloque));
     contorno.visible = true;
     interfaz.rellenoRotura.style.transform = "scaleX(0)";
@@ -110,7 +100,6 @@ export function crearInteraccionBloques(
     const progreso = Math.min(1, (now - rotura.inicio) / interaccion.duracionRotura);
     interfaz.rellenoRotura.style.transform = `scaleX(${progreso})`;
     contorno.material.color.setHSL(0.31 - progreso * 0.18, 0.9, 0.65);
-
     if (progreso < 1) return;
 
     const resultado = terreno.romperBloque(rotura.bloque);
@@ -119,14 +108,12 @@ export function crearInteraccionBloques(
       return;
     }
 
-    rotura.reservaActiva = false;
     limpiarVisualRotura();
     rotura = null;
-    crearRecolectable(resultado.posicion, now);
+    crearRecolectable(resultado.posicion, resultado.bloque.tipo, now);
   }
 
   function cancelarRotura() {
-    if (rotura?.reservaActiva) inventario.liberarReserva();
     rotura = null;
     limpiarVisualRotura();
   }
@@ -137,51 +124,77 @@ export function crearInteraccionBloques(
     interfaz.rellenoRotura.style.transform = "scaleX(0)";
   }
 
-  function crearRecolectable(posicion, now) {
-    const malla = new THREE.Mesh(geometriaRecolectable, materialRecolectable);
-    const origenVuelo = posicion.clone();
-    origenVuelo.y += mundo.tamanoBloque * 0.65;
+  function crearRecolectable(posicion, tipo, now) {
+    const material = terreno.obtenerMaterialRecolectable(tipo);
+    if (!material) return;
+    const malla = new THREE.Mesh(geometriaRecolectable, material);
     malla.position.copy(posicion);
+    const posicionBase = posicion.clone();
+    posicionBase.y = terreno.obtenerAltura(posicion.x, posicion.z);
     scene.add(malla);
-    recolectables.push({ malla, posicionBase: posicion.clone(), origenVuelo, inicio: now });
+    recolectables.push({
+      malla,
+      tipo,
+      posicionBase,
+      origenCaida: posicion.clone(),
+      desfase: hashRecolectable(posicion) * Math.PI * 2,
+      inicio: now,
+      recogiendo: false,
+      inicioVuelo: 0,
+      origenVuelo: null,
+    });
   }
 
   function actualizarRecolectables(now) {
     for (let i = recolectables.length - 1; i >= 0; i -= 1) {
       const item = recolectables[i];
-      const progreso = Math.min(
-        1,
-        (now - item.inicio) / interaccion.duracionRecoleccion,
-      );
-      item.malla.rotation.x += 0.055;
-      item.malla.rotation.y += 0.09;
+      item.malla.rotation.x += 0.018;
+      item.malla.rotation.y += 0.035;
 
-      if (progreso < 0.55) {
-        const subida = progreso / 0.55;
-        item.malla.position.copy(item.posicionBase);
+      if (!item.recogiendo) {
+        const progresoCaida = Math.min(1, (now - item.inicio) / 420);
+        item.malla.position.lerpVectors(
+          item.origenCaida,
+          item.posicionBase,
+          progresoCaida * progresoCaida,
+        );
         item.malla.position.y +=
-          Math.sin(subida * Math.PI) * mundo.tamanoBloque * 0.32 +
-          subida * mundo.tamanoBloque * 0.65;
-      } else {
-        const vuelo = (progreso - 0.55) / 0.45;
-        const vueloSuave = vuelo * vuelo;
-        item.malla.position.lerpVectors(item.origenVuelo, camera.position, vueloSuave);
-        const escala = Math.max(0.18, 1 - vueloSuave * 0.82);
-        item.malla.scale.setScalar(escala);
+          mundo.tamanoBloque * 0.35 +
+          Math.sin(now * 0.004 + item.desfase) * mundo.tamanoBloque * 0.11;
+
+        if (
+          progresoCaida >= 1 &&
+          item.malla.position.distanceTo(camera.position) <= interaccion.radioRecoleccion &&
+          inventario.reservarEspacio(item.tipo)
+        ) {
+          item.recogiendo = true;
+          item.inicioVuelo = now;
+          item.origenVuelo = item.malla.position.clone();
+        }
+        continue;
       }
 
-      if (progreso < 1) continue;
+      const progreso = Math.min(
+        1,
+        (now - item.inicioVuelo) / interaccion.duracionVueloRecoleccion,
+      );
+      const progresoSuave = 1 - (1 - progreso) ** 3;
+      item.malla.position.lerpVectors(item.origenVuelo, camera.position, progresoSuave);
+      const escala = Math.max(0.12, 1 - progresoSuave * 0.88);
+      item.malla.scale.setScalar(escala);
 
+      if (progreso < 1) continue;
       scene.remove(item.malla);
       recolectables.splice(i, 1);
-      inventario.confirmarRecoleccion();
-      mostrarMensaje("+1 Bloque de pasto");
+      inventario.confirmarRecoleccion(item.tipo);
+      mostrarMensaje(`+1 ${NOMBRES_BLOQUE[item.tipo]}`);
     }
   }
 
   function colocarBloque() {
-    if (inventario.cantidad() <= 0) {
-      mostrarMensaje("Rompe un bloque de pasto primero");
+    const tipo = inventario.tipoSeleccionado();
+    if (inventario.cantidad(tipo) <= 0) {
+      mostrarMensaje(`No tienes ${NOMBRES_BLOQUE[tipo].toLowerCase()}`);
       return;
     }
 
@@ -194,6 +207,7 @@ export function crearInteraccionBloques(
     const resultado = terreno.colocarAdyacente(
       impacto.bloque,
       impacto.normal,
+      tipo,
       (posicion) => !intersectaJugador(posicion),
     );
     if (!resultado.ok) {
@@ -207,8 +221,8 @@ export function crearInteraccionBloques(
       return;
     }
 
-    inventario.usarBloque();
-    mostrarMensaje("Bloque de pasto colocado");
+    inventario.usarBloque(tipo);
+    mostrarMensaje(`${NOMBRES_BLOQUE[tipo]} colocado`);
   }
 
   function buscarImpactoDesdePantalla(clientX, clientY) {
@@ -220,11 +234,11 @@ export function crearInteraccionBloques(
   function buscarImpacto(ndcX, ndcY) {
     punteroNormalizado.set(ndcX, ndcY);
     raycaster.setFromCamera(punteroNormalizado, camera);
-    const impactos = raycaster.intersectObject(terreno.malla, false);
+    const impactos = raycaster.intersectObjects(terreno.mallas, false);
     const impacto = impactos.find((candidato) => candidato.distance <= interaccion.alcance);
     if (!impacto || impacto.instanceId === undefined || !impacto.face) return null;
 
-    const bloque = terreno.obtenerBloquePorInstancia(impacto.instanceId);
+    const bloque = terreno.obtenerBloquePorInstancia(impacto.object, impacto.instanceId);
     if (!bloque) return null;
     return { bloque, normal: impacto.face.normal.clone(), distancia: impacto.distance };
   }
@@ -262,6 +276,7 @@ function crearContornoBloque(THREE, tamanoBloque) {
   const material = new THREE.LineBasicMaterial({
     color: 0x9cff85,
     depthTest: false,
+    depthWrite: false,
     opacity: 0.96,
     transparent: true,
   });
@@ -269,4 +284,9 @@ function crearContornoBloque(THREE, tamanoBloque) {
   contorno.renderOrder = 20;
   contorno.visible = false;
   return contorno;
+}
+
+function hashRecolectable(posicion) {
+  const valor = Math.sin(posicion.x * 12.7 + posicion.y * 31.1 + posicion.z * 7.3) * 43758.5;
+  return valor - Math.floor(valor);
 }

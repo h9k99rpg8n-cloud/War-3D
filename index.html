@@ -6,13 +6,42 @@
     <meta name="theme-color" content="#87b9d9">
     <meta
       name="description"
-      content="War 3D v1.2: mundo cúbico explorable para navegador y móvil creado con Three.js."
+      content="War 3D v1.3: mundo cúbico con árboles y texturas procedurales para navegador y móvil."
     >
-    <title>War 3D — v1.2</title>
+    <title>War 3D — v1.3</title>
     <link rel="stylesheet" href="./style.css">
   </head>
   <body>
     <main id="game" aria-label="War 3D">
+      <section id="start-screen" class="start-screen" aria-labelledby="start-title">
+        <div class="start-screen__card">
+          <div class="start-screen__logo">
+            <span class="start-screen__mark" aria-hidden="true">W</span>
+            <div>
+              <h1 id="start-title">WAR <strong>3D</strong></h1>
+              <p>MUNDO DE BLOQUES</p>
+            </div>
+          </div>
+          <form id="world-form" class="world-form">
+            <label for="world-name">NOMBRE DEL MUNDO</label>
+            <input
+              id="world-name"
+              name="worldName"
+              type="text"
+              maxlength="24"
+              placeholder="Mi mundo"
+              autocomplete="off"
+              required
+            >
+            <button type="submit">
+              <span aria-hidden="true">＋</span>
+              CREAR NUEVO MUNDO
+            </button>
+          </form>
+          <p class="start-screen__version">v1.3 • TEXTURAS PROCEDURALES</p>
+        </div>
+      </section>
+
       <canvas id="game-canvas" role="img" aria-label="Mundo 3D de War 3D"></canvas>
 
       <header class="hud" aria-hidden="true">
@@ -23,12 +52,12 @@
             <p>PROTOTIPO DE MOVIMIENTO</p>
           </div>
         </div>
-        <span id="version-badge" class="version-badge">v1.2 • THREE.JS</span>
+        <span id="version-badge" class="version-badge">v1.3 • THREE.JS</span>
       </header>
 
       <div class="crosshair" aria-hidden="true"><span></span></div>
 
-      <section id="loading" class="loading" aria-live="polite">
+      <section id="loading" class="loading" aria-live="polite" hidden>
         <div class="loading__spinner"></div>
         <p id="loading-text">Construyendo mundo cúbico…</p>
       </section>
@@ -52,30 +81,78 @@
       </div>
 
       <div id="break-progress" class="break-progress" role="status" aria-live="polite" hidden>
-        <span>ROMPIENDO BLOQUE DE PASTO</span>
+        <span id="break-progress-label">ROMPIENDO BLOQUE</span>
         <div class="break-progress__track">
           <div id="break-progress-fill" class="break-progress__fill"></div>
         </div>
       </div>
 
       <div id="inventory-bar" class="inventory-bar" role="group" aria-label="Inventario">
-        <div id="grass-slot" class="inventory-slot is-empty">
-          <div class="mini-block-float" aria-hidden="true">
-            <div class="mini-block">
+        <button
+          id="grass-slot"
+          class="inventory-slot is-empty is-selected"
+          type="button"
+          aria-pressed="true"
+        >
+          <span class="mini-block-float" aria-hidden="true">
+            <span class="mini-block mini-block--grass">
               <span class="mini-block__face mini-block__face--front"></span>
               <span class="mini-block__face mini-block__face--back"></span>
               <span class="mini-block__face mini-block__face--right"></span>
               <span class="mini-block__face mini-block__face--left"></span>
               <span class="mini-block__face mini-block__face--top"></span>
               <span class="mini-block__face mini-block__face--bottom"></span>
-            </div>
-          </div>
-          <div class="inventory-slot__name">
-            <span>INVENTARIO</span>
+            </span>
+          </span>
+          <span class="inventory-slot__name">
             <strong>Bloque de pasto</strong>
-          </div>
+          </span>
           <b id="grass-count" class="inventory-slot__count">0 / 32</b>
-        </div>
+        </button>
+
+        <button
+          id="leaves-slot"
+          class="inventory-slot is-empty"
+          type="button"
+          aria-pressed="false"
+        >
+          <span class="mini-block-float" aria-hidden="true">
+            <span class="mini-block mini-block--leaves">
+              <span class="mini-block__face mini-block__face--front"></span>
+              <span class="mini-block__face mini-block__face--back"></span>
+              <span class="mini-block__face mini-block__face--right"></span>
+              <span class="mini-block__face mini-block__face--left"></span>
+              <span class="mini-block__face mini-block__face--top"></span>
+              <span class="mini-block__face mini-block__face--bottom"></span>
+            </span>
+          </span>
+          <span class="inventory-slot__name">
+            <strong>Bloque de hojas</strong>
+          </span>
+          <b id="leaves-count" class="inventory-slot__count">0 / 32</b>
+        </button>
+
+        <button
+          id="wood-slot"
+          class="inventory-slot is-empty"
+          type="button"
+          aria-pressed="false"
+        >
+          <span class="mini-block-float" aria-hidden="true">
+            <span class="mini-block mini-block--wood">
+              <span class="mini-block__face mini-block__face--front"></span>
+              <span class="mini-block__face mini-block__face--back"></span>
+              <span class="mini-block__face mini-block__face--right"></span>
+              <span class="mini-block__face mini-block__face--left"></span>
+              <span class="mini-block__face mini-block__face--top"></span>
+              <span class="mini-block__face mini-block__face--bottom"></span>
+            </span>
+          </span>
+          <span class="inventory-slot__name">
+            <strong>Bloque de madera</strong>
+          </span>
+          <b id="wood-count" class="inventory-slot__count">0 / 35</b>
+        </button>
       </div>
 
       <button id="place-block" class="place-block" type="button" aria-label="Colocar bloque de pasto">

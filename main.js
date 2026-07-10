@@ -1,13 +1,19 @@
 import { URL_THREE } from "./src/configuracion.js";
 import { iniciarJuego } from "./src/juego.js";
-import { obtenerInterfaz, mostrarError } from "./src/interfaz/interfaz.js";
+import {
+  esperarCreacionMundo,
+  mostrarCargaMundo,
+  mostrarError,
+  obtenerInterfaz,
+} from "./src/interfaz/interfaz.js";
 
 const interfaz = obtenerInterfaz();
 
 try {
-  interfaz.textoCarga.textContent = "Cargando Three.js…";
+  const nombreMundo = await esperarCreacionMundo(interfaz);
+  await mostrarCargaMundo(interfaz, nombreMundo);
   const THREE = await import(URL_THREE);
-  iniciarJuego(THREE, interfaz);
+  iniciarJuego(THREE, interfaz, { nombreMundo });
 } catch (error) {
   console.error(error);
   mostrarError(

@@ -56,12 +56,46 @@ export function iniciarJuego(THREE, interfaz) {
     const rightX = Math.cos(giro);
     const rightZ = -Math.sin(giro);
 
-    camera.position.x +=
+    const posicionAnteriorX = camera.position.x;
+    const posicionAnteriorZ = camera.position.z;
+    const desplazamientoX =
       (rightX * lateral + forwardX * adelante) * jugador.velocidad * delta;
-    camera.position.z +=
+    const desplazamientoZ =
       (rightZ * lateral + forwardZ * adelante) * jugador.velocidad * delta;
-    camera.position.x = THREE.MathUtils.clamp(camera.position.x, -limiteMundo, limiteMundo);
-    camera.position.z = THREE.MathUtils.clamp(camera.position.z, -limiteMundo, limiteMundo);
+    const piesJugador = camera.position.y - jugador.alturaOjos;
+    const cabezaJugador = camera.position.y + 0.18;
+
+    camera.position.x = THREE.MathUtils.clamp(
+      posicionAnteriorX + desplazamientoX,
+      -limiteMundo,
+      limiteMundo,
+    );
+    if (
+      terreno.hayColisionJugador(
+        camera.position.x,
+        posicionAnteriorZ,
+        piesJugador,
+        cabezaJugador,
+      )
+    ) {
+      camera.position.x = posicionAnteriorX;
+    }
+
+    camera.position.z = THREE.MathUtils.clamp(
+      posicionAnteriorZ + desplazamientoZ,
+      -limiteMundo,
+      limiteMundo,
+    );
+    if (
+      terreno.hayColisionJugador(
+        camera.position.x,
+        camera.position.z,
+        piesJugador,
+        cabezaJugador,
+      )
+    ) {
+      camera.position.z = posicionAnteriorZ;
+    }
 
     const alturaObjetivo =
       terreno.obtenerAltura(camera.position.x, camera.position.z) + jugador.alturaOjos;
