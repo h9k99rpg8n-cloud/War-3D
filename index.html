@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+    <meta name="theme-color" content="#87b9d9">
+    <meta
+      name="description"
+      content="War 3D v0.1: prototipo de movimiento 3D para navegador y móvil creado con Three.js."
+    >
+    <title>War 3D — v0.1</title>
+    <link rel="stylesheet" href="./style.css">
+  </head>
+  <body>
+    <main id="game" aria-label="War 3D">
+      <canvas id="game-canvas" role="img" aria-label="Mundo 3D de War 3D"></canvas>
+
+      <header class="hud" aria-hidden="true">
+        <div class="brand">
+          <span class="brand__mark">W</span>
+          <div>
+            <h1>WAR <strong>3D</strong></h1>
+            <p>PROTOTIPO DE MOVIMIENTO</p>
+          </div>
+        </div>
+        <span id="version-badge" class="version-badge">v0.1 • THREE.JS</span>
+      </header>
+
+      <div class="crosshair" aria-hidden="true"><span></span></div>
+
+      <section id="loading" class="loading" aria-live="polite">
+        <div class="loading__spinner"></div>
+        <p id="loading-text">Construyendo mundo cúbico…</p>
+      </section>
+
+      <div id="look-zone" class="look-zone"></div>
+
+      <section id="joystick" class="joystick" aria-label="Joystick de movimiento">
+        <div class="joystick__arrows" aria-hidden="true">▲</div>
+        <div id="joystick-knob" class="joystick__knob"></div>
+      </section>
+
+      <div class="mobile-hint mobile-hint--move" aria-hidden="true">MOVER</div>
+      <div class="mobile-hint mobile-hint--look" aria-hidden="true">
+        <span>↔</span>
+        ARRASTRA PARA MIRAR
+      </div>
+
+      <div class="desktop-hint" aria-hidden="true">
+        <span><b>WASD</b> MOVER</span>
+        <span><b>ARRASTRAR</b> MIRAR</span>
+      </div>
+
+      <section id="error-panel" class="error-panel" role="alert" hidden>
+        <strong>No se pudo iniciar War 3D</strong>
+        <p id="error-message">Revisa tu conexión y vuelve a cargar la página.</p>
+      </section>
+    </main>
+
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
