@@ -1,6 +1,6 @@
 # War 3D
 
-**War 3D v1.6** es un juego 3D de bloques para navegador pensado primero para móvil.
+**War 3D v1.7** es un juego 3D de bloques para navegador pensado primero para móvil.
 
 ## Jugar
 
@@ -14,8 +14,20 @@
 - Joystick táctil en el lado izquierdo.
 - Cámara táctil arrastrando el lado derecho de la pantalla.
 - Controles de escritorio con WASD o flechas y arrastre del ratón.
-- Barra de seis espacios para recoger, seleccionar y colocar pasto, hojas, madera y arena.
+- Barra táctil de seis espacios para recoger, reordenar, seleccionar y colocar pasto, hojas, madera y arena.
 - Render optimizado con mallas instanciadas por tipo y resolución limitada para móviles.
+
+## Cambios de la v1.7
+
+- Segunda entidad hostil original: el **Zombi Resquebrajado**, con textura procedural propia y animaciones separadas de caminar, correr y atacar.
+- Los zombis aparecen únicamente de noche en grupos de tres y desaparecen al terminar la noche.
+- En Creativo, las arañas ya no detectan al jugador ni activan ataques; los zombis hostiles no se generan.
+- Reacción al daño con una sacudida breve de cámara y corazones reconstruidos como figuras pixeladas.
+- El agua dejó de ser una colección de cubos transparentes: los lagos usan una superficie conectada, orillas continuas, brillo y textura animada.
+- Arena con gravedad mediante Rapier en Supervivencia; en Creativo permanece exactamente donde se coloca.
+- Inventario táctil con drag & drop entre sus seis casillas, incluidas las vacías. Los íconos solo aparecen al poseer el bloque (o por ser ilimitados en Creativo).
+- Sol cuadrado con textura procedural de 16×16 píxeles para mantener el mismo lenguaje visual voxel/pixel de la luna.
+- Correcciones de interacción, aparición nocturna, colisiones y estados de interfaz.
 
 ## Cambios de la v1.6
 
@@ -85,6 +97,7 @@
 ## Tecnología
 
 - Three.js `0.185.1` mediante módulo ES.
+- Rapier 3D `0.19.3` para la gravedad de la arena en Supervivencia.
 - HTML, CSS y JavaScript modular sin proceso de compilación.
 - Despliegue automático con GitHub Pages.
 

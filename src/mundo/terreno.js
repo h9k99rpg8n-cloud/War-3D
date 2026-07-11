@@ -63,6 +63,7 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
   const biblioteca = crearBibliotecaBloques(THREE);
   const matriz = new THREE.Matrix4();
   const posicion = new THREE.Vector3();
+  let ultimoMovimientoAgua = 0;
 
   for (const tipo of TIPOS_BLOQUE) {
     const cantidadInicial = bloquesVisiblesPorTipo[tipo].size;
@@ -93,6 +94,14 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
 
     obtenerMaterialRecolectable(tipo) {
       return biblioteca.materialesRecolectables[tipo] ?? null;
+    },
+
+    actualizar(now) {
+      if (now - ultimoMovimientoAgua < 30) return;
+      ultimoMovimientoAgua = now;
+      const texturaAgua = biblioteca.texturas.agua;
+      texturaAgua.offset.x = (now * 0.000018) % 1;
+      texturaAgua.offset.y = (now * 0.000011) % 1;
     },
 
     obtenerCentroBloque(bloque) {
@@ -224,6 +233,67 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
         new Set([bloque.tipo]),
       );
       return { bloque, posicion: posicionRota };
+    },
+
+    extraerBloqueParaFisica(bloque) {
+      if (
+        !bloque ||
+        bloque.tipo !== "arena" ||
+        !bloques.delete(bloque.clave)
+      ) {
+        return false;
+      }
+      bloquesPorTipo.arena.delete(bloque.clave);
+      bloquesVisiblesPorTipo.arena.delete(bloque.clave);
+      recalcularAlturaSuelo(bloque.x, bloque.z);
+      actualizarVisibilidadAlrededor(
+        bloque.x,
+        bloque.y,
+        bloque.z,
+        new Set(["arena"]),
+      );
+      return true;
+    },
+
+    obtenerNivelSoporteBloque(x, z, desdeY) {
+      for (
+        let y = Math.min(nivelMaximoColocacion, Math.floor(desdeY) - 1);
+        y >= nivelFondo;
+        y -= 1
+      ) {
+        const bloque = bloques.get(claveBloque(x, y, z));
+        if (bloque && bloque.tipo !== "agua") return y + 1;
+      }
+      return nivelFondo;
+    },
+
+    colocarBloqueEnCoordenadas(x, y, z, tipo) {
+      if (
+        !TIPOS_RECOLECTABLES.includes(tipo) ||
+        x < 0 ||
+        x >= tamanoCuadricula ||
+        z < 0 ||
+        z >= tamanoCuadricula ||
+        y < nivelFondo ||
+        y > nivelMaximoColocacion
+      ) {
+        return null;
+      }
+      const clave = claveBloque(x, y, z);
+      const existente = bloques.get(clave);
+      if (existente && existente.tipo !== "agua") return null;
+      const tiposAfectados = new Set([tipo]);
+      if (existente?.tipo === "agua") {
+        bloques.delete(clave);
+        bloquesPorTipo.agua.delete(clave);
+        bloquesVisiblesPorTipo.agua.delete(clave);
+        tiposAfectados.add("agua");
+      }
+      if (!agregarDatosBloque(x, y, z, tipo)) return null;
+      if (TIPOS_SUELO.has(tipo)) recalcularAlturaSuelo(x, z);
+      if (existente?.tipo === "agua") recalcularNivelAgua(x, z);
+      actualizarVisibilidadAlrededor(x, y, z, tiposAfectados);
+      return bloques.get(clave);
     },
 
     colocarAdyacente(bloqueBase, normal, tipo, validarPosicion) {
@@ -426,6 +496,17 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
   }
 
   function crearMallaTipo(tipo, capacidad) {
+    if (tipo === "agua") {
+      const mallaAgua = new THREE.Mesh(
+        new THREE.BufferGeometry(),
+        biblioteca.materialesInstanciados.agua,
+      );
+      mallaAgua.renderOrder = 2;
+      mallaAgua.userData.tipoBloque = "agua";
+      mallaAgua.userData.atravesable = true;
+      mallaAgua.userData.superficieContinua = true;
+      return mallaAgua;
+    }
     const malla = new THREE.InstancedMesh(
       geometria,
       biblioteca.materialesInstanciados[tipo],
@@ -433,14 +514,11 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
     );
     malla.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     malla.userData.tipoBloque = tipo;
-    if (tipo === "agua") {
-      malla.renderOrder = 2;
-      malla.userData.atravesable = true;
-    }
     return malla;
   }
 
   function asegurarCapacidad(tipo, cantidadNecesaria) {
+    if (tipo === "agua") return true;
     if (cantidadNecesaria <= capacidades[tipo]) return true;
     const capacidadMaxima =
       tamanoCuadricula *
@@ -564,6 +642,14 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
   }
 
   function reconstruirMalla(tipo) {
+    if (tipo === "agua") {
+      const mallaAgua = mallasPorTipo.agua;
+      const geometriaAnterior = mallaAgua.geometry;
+      mallaAgua.geometry = crearGeometriaSuperficieAgua();
+      geometriaAnterior.dispose();
+      mallaAgua.userData.cantidadCeldas = contarColumnasAgua();
+      return true;
+    }
     const visibles = bloquesVisiblesPorTipo[tipo];
     if (!asegurarCapacidad(tipo, visibles.size)) return false;
     const malla = mallasPorTipo[tipo];
@@ -594,6 +680,127 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
       malla.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 0);
     }
     return true;
+  }
+
+  function crearGeometriaSuperficieAgua() {
+    const vertices = [];
+    const normales = [];
+    const uvs = [];
+    const indices = [];
+    const mitad = tamanoBloque / 2;
+    const margenSuperficie = tamanoBloque * 0.08;
+
+    for (let z = 0; z < tamanoCuadricula; z += 1) {
+      for (let x = 0; x < tamanoCuadricula; x += 1) {
+        const columna = obtenerColumnaAgua(x, z);
+        if (!columna) continue;
+        const centroX = indiceAMundo(x, tamanoCuadricula, tamanoBloque);
+        const centroZ = indiceAMundo(z, tamanoCuadricula, tamanoBloque);
+        const superior = columna.maximo * tamanoBloque + mitad - margenSuperficie;
+        const inferior = columna.minimo * tamanoBloque - mitad + tamanoBloque * 0.04;
+        agregarCuadrilatero(
+          [centroX - mitad, superior, centroZ - mitad],
+          [centroX - mitad, superior, centroZ + mitad],
+          [centroX + mitad, superior, centroZ + mitad],
+          [centroX + mitad, superior, centroZ - mitad],
+          [0, 1, 0],
+          [x, z, x + 1, z + 1],
+        );
+
+        agregarOrillaSiNecesaria(x - 1, z, [
+          [centroX - mitad, inferior, centroZ + mitad],
+          [centroX - mitad, inferior, centroZ - mitad],
+          [centroX - mitad, superior, centroZ - mitad],
+          [centroX - mitad, superior, centroZ + mitad],
+        ], [-1, 0, 0], x, z);
+        agregarOrillaSiNecesaria(x + 1, z, [
+          [centroX + mitad, inferior, centroZ - mitad],
+          [centroX + mitad, inferior, centroZ + mitad],
+          [centroX + mitad, superior, centroZ + mitad],
+          [centroX + mitad, superior, centroZ - mitad],
+        ], [1, 0, 0], x, z);
+        agregarOrillaSiNecesaria(x, z - 1, [
+          [centroX - mitad, inferior, centroZ - mitad],
+          [centroX + mitad, inferior, centroZ - mitad],
+          [centroX + mitad, superior, centroZ - mitad],
+          [centroX - mitad, superior, centroZ - mitad],
+        ], [0, 0, -1], x, z);
+        agregarOrillaSiNecesaria(x, z + 1, [
+          [centroX + mitad, inferior, centroZ + mitad],
+          [centroX - mitad, inferior, centroZ + mitad],
+          [centroX - mitad, superior, centroZ + mitad],
+          [centroX + mitad, superior, centroZ + mitad],
+        ], [0, 0, 1], x, z);
+      }
+    }
+
+    const geometriaAgua = new THREE.BufferGeometry();
+    geometriaAgua.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(vertices, 3),
+    );
+    geometriaAgua.setAttribute(
+      "normal",
+      new THREE.Float32BufferAttribute(normales, 3),
+    );
+    geometriaAgua.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+    geometriaAgua.setIndex(indices);
+    if (vertices.length > 0) {
+      geometriaAgua.computeBoundingBox();
+      geometriaAgua.computeBoundingSphere();
+    }
+    return geometriaAgua;
+
+    function agregarOrillaSiNecesaria(
+      vecinoX,
+      vecinoZ,
+      puntos,
+      normal,
+      uvX,
+      uvZ,
+    ) {
+      if (obtenerColumnaAgua(vecinoX, vecinoZ)) return;
+      agregarCuadrilatero(
+        puntos[0],
+        puntos[1],
+        puntos[2],
+        puntos[3],
+        normal,
+        [uvX, uvZ, uvX + 1, uvZ + 1],
+      );
+    }
+
+    function agregarCuadrilatero(a, b, c, d, normal, uv) {
+      const inicio = vertices.length / 3;
+      vertices.push(...a, ...b, ...c, ...d);
+      for (let i = 0; i < 4; i += 1) normales.push(...normal);
+      uvs.push(uv[0], uv[1], uv[0], uv[3], uv[2], uv[3], uv[2], uv[1]);
+      indices.push(inicio, inicio + 1, inicio + 2, inicio, inicio + 2, inicio + 3);
+    }
+  }
+
+  function obtenerColumnaAgua(x, z) {
+    if (x < 0 || x >= tamanoCuadricula || z < 0 || z >= tamanoCuadricula) {
+      return null;
+    }
+    let minimo = null;
+    let maximo = null;
+    for (let y = nivelFondo; y <= nivelMaximoColocacion; y += 1) {
+      if (bloques.get(claveBloque(x, y, z))?.tipo !== "agua") continue;
+      if (minimo === null) minimo = y;
+      maximo = y;
+    }
+    return minimo === null ? null : { minimo, maximo };
+  }
+
+  function contarColumnasAgua() {
+    let cantidad = 0;
+    for (let z = 0; z < tamanoCuadricula; z += 1) {
+      for (let x = 0; x < tamanoCuadricula; x += 1) {
+        if (nivelesAgua[z][x] !== null) cantidad += 1;
+      }
+    }
+    return cantidad;
   }
 
   function inicializarVisibilidad() {

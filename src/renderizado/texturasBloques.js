@@ -65,15 +65,19 @@ function material(THREE, textura, emisivo, intensidad) {
 }
 
 function materialAgua(THREE, textura) {
-  return new THREE.MeshLambertMaterial({
-    color: 0xffffff,
+  textura.wrapS = THREE.RepeatWrapping;
+  textura.wrapT = THREE.RepeatWrapping;
+  textura.repeat.set(0.42, 0.42);
+  return new THREE.MeshPhongMaterial({
+    color: 0xb7eeff,
     emissive: 0x0b416c,
-    emissiveIntensity: 0.48,
-    flatShading: true,
+    emissiveIntensity: 0.36,
     map: textura,
-    opacity: 0.7,
+    opacity: 0.78,
     transparent: true,
     depthWrite: false,
+    shininess: 84,
+    specular: 0xbfefff,
     side: THREE.DoubleSide,
     vertexColors: false,
   });

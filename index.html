@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#87b9d9">
     <meta
       name="description"
-      content="War 3D v1.6: mundos de hasta 128×128, lagos, arena, agua y nueva barra de inventario."
+      content="War 3D v1.7: zombis nocturnos, agua conectada, arena con física e inventario táctil."
     >
-    <title>War 3D — v1.6</title>
+    <title>War 3D — v1.7</title>
     <link rel="stylesheet" href="./style.css">
   </head>
   <body>
@@ -42,7 +42,7 @@
                     <span>
                       <b aria-hidden="true">♥</b>
                       <strong>SUPERVIVENCIA</strong>
-                      <small>Corazones, recursos y arañas</small>
+                      <small>Corazones, recursos, arañas y zombis</small>
                     </span>
                   </label>
                   <label class="choice-card">
@@ -110,7 +110,7 @@
               CREAR NUEVO MUNDO
             </button>
           </form>
-          <p class="start-screen__version">v1.6 • LAGOS, ARENA Y 16 CAPAS</p>
+          <p class="start-screen__version">v1.7 • ZOMBIS, FÍSICA Y AGUA VIVA</p>
         </div>
       </section>
 
@@ -124,15 +124,15 @@
             <p>PROTOTIPO DE MOVIMIENTO</p>
           </div>
         </div>
-        <span id="version-badge" class="version-badge">v1.6 • THREE.JS</span>
+        <span id="version-badge" class="version-badge">v1.7 • THREE.JS</span>
       </header>
 
       <section id="health-hud" class="health-hud" aria-label="Salud del jugador" hidden>
-        <span class="heart" aria-hidden="true">♥</span>
-        <span class="heart" aria-hidden="true">♥</span>
-        <span class="heart" aria-hidden="true">♥</span>
-        <span class="heart" aria-hidden="true">♥</span>
-        <span class="heart" aria-hidden="true">♥</span>
+        <span class="heart" aria-hidden="true"></span>
+        <span class="heart" aria-hidden="true"></span>
+        <span class="heart" aria-hidden="true"></span>
+        <span class="heart" aria-hidden="true"></span>
+        <span class="heart" aria-hidden="true"></span>
         <small id="health-label">5 / 5</small>
       </section>
 
@@ -171,57 +171,12 @@
       </div>
 
       <div id="inventory-bar" class="inventory-bar" role="group" aria-label="Inventario">
-        <button
-          id="grass-slot"
-          class="inventory-slot is-empty is-selected"
-          type="button"
-          aria-pressed="true"
-          aria-label="Bloque de pasto"
-        >
-          <span class="inventory-tile inventory-tile--grass" aria-hidden="true"></span>
-          <b id="grass-count" class="inventory-slot__count">0</b>
-        </button>
-
-        <button
-          id="leaves-slot"
-          class="inventory-slot is-empty"
-          type="button"
-          aria-pressed="false"
-          aria-label="Bloque de hojas"
-        >
-          <span class="inventory-tile inventory-tile--leaves" aria-hidden="true"></span>
-          <b id="leaves-count" class="inventory-slot__count">0</b>
-        </button>
-
-        <button
-          id="wood-slot"
-          class="inventory-slot is-empty"
-          type="button"
-          aria-pressed="false"
-          aria-label="Bloque de madera"
-        >
-          <span class="inventory-tile inventory-tile--wood" aria-hidden="true"></span>
-          <b id="wood-count" class="inventory-slot__count">0</b>
-        </button>
-
-        <button
-          id="sand-slot"
-          class="inventory-slot is-empty"
-          type="button"
-          aria-pressed="false"
-          aria-label="Bloque de arena"
-        >
-          <span class="inventory-tile inventory-tile--sand" aria-hidden="true"></span>
-          <b id="sand-count" class="inventory-slot__count">0</b>
-        </button>
-
-        <button class="inventory-slot inventory-slot--future" type="button" disabled aria-label="Espacio futuro">
-          <span aria-hidden="true">·</span>
-        </button>
-
-        <button class="inventory-slot inventory-slot--future" type="button" disabled aria-label="Espacio futuro">
-          <span aria-hidden="true">·</span>
-        </button>
+        <button class="inventory-slot is-selected" data-slot-index="0" type="button" aria-pressed="true" aria-label="Casilla 1 vacía"></button>
+        <button class="inventory-slot" data-slot-index="1" type="button" aria-pressed="false" aria-label="Casilla 2 vacía"></button>
+        <button class="inventory-slot" data-slot-index="2" type="button" aria-pressed="false" aria-label="Casilla 3 vacía"></button>
+        <button class="inventory-slot" data-slot-index="3" type="button" aria-pressed="false" aria-label="Casilla 4 vacía"></button>
+        <button class="inventory-slot" data-slot-index="4" type="button" aria-pressed="false" aria-label="Casilla 5 vacía"></button>
+        <button class="inventory-slot" data-slot-index="5" type="button" aria-pressed="false" aria-label="Casilla 6 vacía"></button>
       </div>
 
       <button id="place-block" class="place-block" type="button" aria-label="Colocar bloque de pasto">
@@ -264,7 +219,7 @@
         <div class="death-panel__card">
           <span aria-hidden="true">☠</span>
           <h2 id="death-title">HAS CAÍDO</h2>
-          <p>Las Arañas Umbral dominaron la noche.</p>
+          <p>Las criaturas nocturnas dominaron la noche.</p>
           <button id="respawn-button" type="button">REAPARECER</button>
         </div>
       </section>

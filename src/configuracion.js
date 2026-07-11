@@ -1,6 +1,8 @@
-export const VERSION_JUEGO = "1.6";
+export const VERSION_JUEGO = "1.7";
 export const VERSION_THREE = "0.185.1";
+export const VERSION_RAPIER = "0.19.3";
 export const URL_THREE = `https://cdn.jsdelivr.net/npm/three@${VERSION_THREE}/build/three.module.js`;
+export const URL_RAPIER = `https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@${VERSION_RAPIER}/rapier.mjs`;
 
 export const CONFIGURACION = Object.freeze({
   mundo: Object.freeze({
@@ -62,6 +64,10 @@ export const CONFIGURACION = Object.freeze({
     velocidadAscenso: 4.2,
     velocidadHundimiento: 1.15,
   }),
+  fisica: Object.freeze({
+    gravedad: -18,
+    velocidadMaximaArena: 22,
+  }),
   interaccion: Object.freeze({
     alcance: 14,
     duracionRotura: 950,
@@ -99,6 +105,23 @@ export const CONFIGURACION = Object.freeze({
     radioCuerpo: 0.58,
     radioSpawnMinimo: 15,
     radioSpawnMaximo: 28,
+    dano: 1,
+  }),
+  zombies: Object.freeze({
+    tamanoGrupo: 3,
+    cantidadGrupos: 1,
+    maximo: 6,
+    rangoVision: 14,
+    memoriaPersecucionMs: 1_600,
+    velocidadCaminar: 0.9,
+    velocidadCorrer: 2.15,
+    distanciaAtaque: 1.85,
+    intervaloAtaqueMs: 1_350,
+    duracionAtaqueMs: 620,
+    retrasoGolpeMs: 270,
+    radioCuerpo: 0.46,
+    radioSpawnMinimo: 17,
+    radioSpawnMaximo: 29,
     dano: 1,
   }),
 });

@@ -1,6 +1,8 @@
 import { CONFIGURACION } from "./configuracion.js";
 import { crearControles } from "./controles/entrada.js";
 import { crearSistemaAranas } from "./entidades/aranas.js";
+import { crearSistemaZombies } from "./entidades/zombies.js";
+import { crearFisicaArena } from "./fisica/arena.js";
 import { ocultarCarga, prepararInterfaz } from "./interfaz/interfaz.js";
 import { crearInventario } from "./inventario/inventario.js";
 import { crearSistemaSalud } from "./jugador/salud.js";
@@ -9,7 +11,7 @@ import { crearInteraccionBloques } from "./mundo/interaccionBloques.js";
 import { crearTerreno } from "./mundo/terreno.js";
 import { ajustarRenderizado, crearSistemaRenderizado } from "./renderizado/escena.js";
 
-export function iniciarJuego(THREE, interfaz, opcionesMundo = {}) {
+export function iniciarJuego(THREE, interfaz, opcionesMundo = {}, RAPIER = null) {
   const opciones = normalizarOpcionesMundo(opcionesMundo);
   const configuracion = crearConfiguracionJuego(opciones);
   const creativo = opciones.modo === "creativo";
@@ -23,6 +25,14 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}) {
   );
   const { renderer, scene, camera } = sistemaRenderizado;
   const terreno = crearTerreno(THREE, scene, configuracion, opciones);
+  const fisicaArena = crearFisicaArena(
+    THREE,
+    RAPIER,
+    scene,
+    terreno,
+    configuracion,
+    opciones,
+  );
   const controles = crearControles(interfaz, configuracion);
   const inventario = crearInventario(interfaz, configuracion, opciones);
   const salud = crearSistemaSalud(interfaz, configuracion, opciones);
@@ -57,6 +67,16 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}) {
     terreno,
     salud,
     configuracion,
+    opciones,
+  );
+  const zombies = crearSistemaZombies(
+    THREE,
+    scene,
+    camera,
+    terreno,
+    salud,
+    configuracion,
+    opciones,
   );
 
   const interaccionBloques = crearInteraccionBloques(
@@ -68,6 +88,7 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}) {
     inventario,
     configuracion,
     opciones,
+    fisicaArena,
   );
 
   salud.establecerAlReaparecer(() => {
@@ -79,6 +100,10 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}) {
       puntoInicio.z,
     );
     aranas.despejarAlrededor(camera.position, configuracion.aranas.radioSpawnMinimo);
+    zombies.despejarAlrededor(
+      camera.position,
+      configuracion.zombies.radioSpawnMinimo,
+    );
   });
 
   let ultimoFrame = performance.now();
@@ -186,10 +211,18 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}) {
     }
 
     if (!muerto) actualizarMovimientoVertical(delta, saltoSolicitado);
-    camera.rotation.set(inclinacion, giro, 0);
+    const sacudida = salud.obtenerSacudida(now);
+    camera.rotation.set(
+      inclinacion + Math.sin(now * 0.071) * 0.022 * sacudida,
+      giro + Math.cos(now * 0.057) * 0.017 * sacudida,
+      Math.sin(now * 0.089) * 0.026 * sacudida,
+    );
     const estadoCiclo = cicloDiaNoche.actualizar(deltaReal);
     salud.actualizar(now);
     aranas.actualizar(now, delta, estadoCiclo);
+    zombies.actualizar(now, delta, estadoCiclo);
+    fisicaArena.actualizar(delta);
+    terreno.actualizar(now);
     interaccionBloques.actualizar(now, !salud.estaMuerto());
 
     renderer.render(scene, camera);

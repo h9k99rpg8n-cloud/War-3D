@@ -1,4 +1,8 @@
-import { VERSION_JUEGO, VERSION_THREE } from "../configuracion.js";
+import {
+  VERSION_JUEGO,
+  VERSION_RAPIER,
+  VERSION_THREE,
+} from "../configuracion.js";
 
 export function obtenerInterfaz() {
   return {
@@ -22,14 +26,9 @@ export function obtenerInterfaz() {
     etiquetaRotura: document.querySelector("#break-progress-label"),
     rellenoRotura: document.querySelector("#break-progress-fill"),
     barraInventario: document.querySelector("#inventory-bar"),
-    espacioPasto: document.querySelector("#grass-slot"),
-    contadorPasto: document.querySelector("#grass-count"),
-    espacioHojas: document.querySelector("#leaves-slot"),
-    contadorHojas: document.querySelector("#leaves-count"),
-    espacioMadera: document.querySelector("#wood-slot"),
-    contadorMadera: document.querySelector("#wood-count"),
-    espacioArena: document.querySelector("#sand-slot"),
-    contadorArena: document.querySelector("#sand-count"),
+    espaciosInventario: [
+      ...document.querySelectorAll("#inventory-bar .inventory-slot"),
+    ],
     botonColocar: document.querySelector("#place-block"),
     botonSaltar: document.querySelector("#jump-button"),
     etiquetaSalto: document.querySelector("#jump-label"),
@@ -46,7 +45,8 @@ export function obtenerInterfaz() {
 }
 
 export function prepararInterfaz(interfaz) {
-  interfaz.insigniaVersion.textContent = `v${VERSION_JUEGO} • THREE ${VERSION_THREE}`;
+  interfaz.insigniaVersion.textContent =
+    `v${VERSION_JUEGO} • THREE ${VERSION_THREE} • RAPIER ${VERSION_RAPIER}`;
 }
 
 export function esperarCreacionMundo(interfaz) {

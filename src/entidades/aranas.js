@@ -5,8 +5,10 @@ export function crearSistemaAranas(
   terreno,
   salud,
   configuracion,
+  opcionesMundo = {},
 ) {
   const ajustes = configuracion.aranas;
+  const hostiles = opcionesMundo.modo === "supervivencia";
   const partesPorArana = 22;
   const ojosPorArana = 4;
   const geometria = new THREE.BoxGeometry(1, 1, 1);
@@ -163,12 +165,13 @@ export function crearSistemaAranas(
     const producto =
       distancia > 0.001 ? (frenteX * haciaX + frenteZ * haciaZ) / distancia : 1;
     const dentroVision =
+      hostiles &&
       !salud.estaMuerto() &&
       distancia <= ajustes.rangoVision &&
       producto >= Math.cos(ajustes.semiAnguloVision);
 
     if (dentroVision) arana.vistoHasta = now + ajustes.memoriaPersecucionMs;
-    const persiguiendo = !salud.estaMuerto() && now <= arana.vistoHasta;
+    const persiguiendo = hostiles && !salud.estaMuerto() && now <= arana.vistoHasta;
     let velocidad = ajustes.velocidadPatrulla;
 
     if (persiguiendo) {
@@ -243,7 +246,11 @@ export function crearSistemaAranas(
       (inclinacionObjetivo - arana.inclinacion) * mezclaInclinacion;
     arana.fasePaso += delta * velocidad * (arana.subiendo ? 7.4 : 5.2);
 
-    if (arana.danoPendiente && now - arana.inicioAtaque >= ajustes.retrasoGolpeMs) {
+    if (
+      hostiles &&
+      arana.danoPendiente &&
+      now - arana.inicioAtaque >= ajustes.retrasoGolpeMs
+    ) {
       arana.danoPendiente = false;
       const distanciaGolpe = Math.hypot(
         camera.position.x - arana.x,
@@ -262,6 +269,7 @@ export function crearSistemaAranas(
     }
 
     if (
+      hostiles &&
       persiguiendo &&
       distancia <= ajustes.distanciaAtaque &&
       distanciaVertical <= 1.45 &&

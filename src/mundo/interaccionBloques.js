@@ -9,6 +9,7 @@ export function crearInteraccionBloques(
   inventario,
   configuracion,
   opcionesMundo = {},
+  fisicaArena = null,
 ) {
   const { interaccion, jugador, mundo } = configuracion;
   const raycaster = new THREE.Raycaster();
@@ -228,7 +229,15 @@ export function crearInteraccionBloques(
     }
 
     inventario.usarBloque(tipo);
-    mostrarMensaje(`${NOMBRES_BLOQUE[tipo]} colocado`);
+    const cayendo = fisicaArena?.procesarBloqueColocado(
+      resultado.bloque,
+      resultado.posicion,
+    );
+    mostrarMensaje(
+      cayendo
+        ? `${NOMBRES_BLOQUE[tipo]} cayendo`
+        : `${NOMBRES_BLOQUE[tipo]} colocado`,
+    );
   }
 
   function buscarImpactoDesdePantalla(clientX, clientY) {

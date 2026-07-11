@@ -1,4 +1,4 @@
-import { URL_THREE } from "./src/configuracion.js";
+import { URL_RAPIER, URL_THREE } from "./src/configuracion.js";
 import { iniciarJuego } from "./src/juego.js";
 import {
   esperarCreacionMundo,
@@ -22,7 +22,15 @@ try {
   const opcionesMundo = await esperarCreacionMundo(interfaz);
   await mostrarCargaMundo(interfaz, opcionesMundo);
   const THREE = await import(URL_THREE);
-  iniciarJuego(THREE, interfaz, opcionesMundo);
+  let RAPIER = null;
+  try {
+    const moduloRapier = await import(URL_RAPIER);
+    RAPIER = moduloRapier.default ?? moduloRapier;
+    await moduloRapier.init();
+  } catch (errorRapier) {
+    console.warn("Rapier no cargó; se usará la gravedad de respaldo.", errorRapier);
+  }
+  iniciarJuego(THREE, interfaz, opcionesMundo, RAPIER);
 } catch (error) {
   manejarError(error);
 }
