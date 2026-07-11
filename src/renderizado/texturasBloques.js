@@ -1,4 +1,17 @@
-export const TIPOS_BLOQUE = Object.freeze(["pasto", "hojas", "madera"]);
+export const TIPOS_BLOQUE = Object.freeze([
+  "pasto",
+  "hojas",
+  "madera",
+  "arena",
+  "agua",
+]);
+
+export const TIPOS_RECOLECTABLES = Object.freeze([
+  "pasto",
+  "hojas",
+  "madera",
+  "arena",
+]);
 
 export function crearBibliotecaBloques(THREE) {
   const texturas = {
@@ -8,6 +21,8 @@ export function crearBibliotecaBloques(THREE) {
     hojas: crearTextura(THREE, "hojas", pixelHojas),
     corteMadera: crearTextura(THREE, "corte-madera", pixelCorteMadera),
     maderaLateral: crearTextura(THREE, "madera-lateral", pixelMaderaLateral),
+    arena: crearTextura(THREE, "arena", pixelArena),
+    agua: crearTextura(THREE, "agua", pixelAgua),
   };
 
   const materialesCompartidos = {
@@ -22,6 +37,8 @@ export function crearBibliotecaBloques(THREE) {
       material(THREE, texturas.corteMadera, 0x4b2c18, 0.46),
       material(THREE, texturas.corteMadera, 0x3a2114, 0.39),
     ),
+    arena: material(THREE, texturas.arena, 0x6b5527, 0.34),
+    agua: materialAgua(THREE, texturas.agua),
   };
 
   return {
@@ -43,6 +60,21 @@ function material(THREE, textura, emisivo, intensidad) {
     emissiveIntensity: intensidad,
     flatShading: true,
     map: textura,
+    vertexColors: false,
+  });
+}
+
+function materialAgua(THREE, textura) {
+  return new THREE.MeshLambertMaterial({
+    color: 0xffffff,
+    emissive: 0x0b416c,
+    emissiveIntensity: 0.48,
+    flatShading: true,
+    map: textura,
+    opacity: 0.7,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
     vertexColors: false,
   });
 }
@@ -123,6 +155,22 @@ function pixelCorteMadera(x, y) {
   if (anillo === 0) return [112, 65, 34];
   if (anillo === 1) return [193, 132, 73];
   return [157, 99, 53];
+}
+
+function pixelArena(x, y) {
+  const ruido = hashPixel(x, y, 97);
+  const grano = (x * 5 + y * 3 + Math.floor(ruido * 7)) % 13;
+  if (grano === 0 || ruido > 0.9) return [242, 214, 132];
+  if (grano === 6 || ruido < 0.13) return [164, 130, 72];
+  return ruido > 0.52 ? [219, 185, 103] : [198, 160, 84];
+}
+
+function pixelAgua(x, y) {
+  const ruido = hashPixel(x, y, 109);
+  const onda = (x + Math.floor(y / 2) * 3) % 9;
+  if (onda === 0 || (onda === 1 && ruido > 0.45)) return [91, 190, 229];
+  if (ruido < 0.16) return [26, 104, 172];
+  return ruido > 0.7 ? [67, 157, 210] : [42, 132, 193];
 }
 
 function hashPixel(x, y, semilla) {

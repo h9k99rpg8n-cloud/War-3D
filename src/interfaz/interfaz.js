@@ -28,6 +28,8 @@ export function obtenerInterfaz() {
     contadorHojas: document.querySelector("#leaves-count"),
     espacioMadera: document.querySelector("#wood-slot"),
     contadorMadera: document.querySelector("#wood-count"),
+    espacioArena: document.querySelector("#sand-slot"),
+    contadorArena: document.querySelector("#sand-count"),
     botonColocar: document.querySelector("#place-block"),
     botonSaltar: document.querySelector("#jump-button"),
     etiquetaSalto: document.querySelector("#jump-label"),
@@ -59,8 +61,12 @@ export function esperarCreacionMundo(interfaz) {
         const modo = datos.get("gameMode") === "creativo" ? "creativo" : "supervivencia";
         const tipoMundo =
           modo === "creativo" && datos.get("worldType") === "plano" ? "plano" : "normal";
+        const tamanoSolicitado = Number(datos.get("worldSize"));
+        const tamanoMundo = [64, 96, 128].includes(tamanoSolicitado)
+          ? tamanoSolicitado
+          : 128;
         document.title = `War 3D — ${nombre}`;
-        resolve({ nombreMundo: nombre.slice(0, 24), modo, tipoMundo });
+        resolve({ nombreMundo: nombre.slice(0, 24), modo, tipoMundo, tamanoMundo });
       },
       { once: true },
     );
@@ -68,7 +74,11 @@ export function esperarCreacionMundo(interfaz) {
 }
 
 export async function mostrarCargaMundo(interfaz, opcionesMundo) {
-  interfaz.textoCarga.textContent = `Generando ${opcionesMundo.nombreMundo}…`;
+  const tamanoMundo = [64, 96, 128].includes(Number(opcionesMundo.tamanoMundo))
+    ? Number(opcionesMundo.tamanoMundo)
+    : 128;
+  interfaz.textoCarga.textContent =
+    `Generando ${opcionesMundo.nombreMundo} · ${tamanoMundo}×${tamanoMundo}…`;
   interfaz.carga.hidden = false;
   interfaz.pantallaInicio.classList.add("is-leaving");
   await new Promise((resolve) => window.setTimeout(resolve, 280));

@@ -11,6 +11,7 @@ import { ajustarRenderizado, crearSistemaRenderizado } from "./renderizado/escen
 
 export function iniciarJuego(THREE, interfaz, opcionesMundo = {}) {
   const opciones = normalizarOpcionesMundo(opcionesMundo);
+  const configuracion = crearConfiguracionJuego(opciones);
   const creativo = opciones.modo === "creativo";
   prepararInterfaz(interfaz);
   interfaz.juego.classList.toggle("mode-creative", creativo);
@@ -18,14 +19,14 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}) {
   const sistemaRenderizado = crearSistemaRenderizado(
     THREE,
     interfaz.canvas,
-    CONFIGURACION,
+    configuracion,
   );
   const { renderer, scene, camera } = sistemaRenderizado;
-  const terreno = crearTerreno(THREE, scene, CONFIGURACION, opciones);
-  const controles = crearControles(interfaz, CONFIGURACION);
-  const inventario = crearInventario(interfaz, CONFIGURACION, opciones);
-  const salud = crearSistemaSalud(interfaz, CONFIGURACION, opciones);
-  const { camara, jugador, mundo } = CONFIGURACION;
+  const terreno = crearTerreno(THREE, scene, configuracion, opciones);
+  const controles = crearControles(interfaz, configuracion);
+  const inventario = crearInventario(interfaz, configuracion, opciones);
+  const salud = crearSistemaSalud(interfaz, configuracion, opciones);
+  const { agua, camara, jugador, mundo } = configuracion;
   const mitadMundo = (mundo.tamanoCuadricula * mundo.tamanoBloque) / 2;
   const limiteMundo = mitadMundo - mundo.margenLimite;
   const puntoInicio = { x: 0, z: 10 };
@@ -47,7 +48,7 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}) {
     scene,
     camera,
     sistemaRenderizado,
-    CONFIGURACION,
+    configuracion,
   );
   const aranas = crearSistemaAranas(
     THREE,
@@ -55,7 +56,7 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}) {
     camera,
     terreno,
     salud,
-    CONFIGURACION,
+    configuracion,
   );
 
   const interaccionBloques = crearInteraccionBloques(
@@ -65,7 +66,7 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}) {
     interfaz,
     terreno,
     inventario,
-    CONFIGURACION,
+    configuracion,
     opciones,
   );
 
@@ -77,12 +78,12 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}) {
       terreno.obtenerAltura(puntoInicio.x, puntoInicio.z) + jugador.alturaOjos,
       puntoInicio.z,
     );
-    aranas.despejarAlrededor(camera.position, CONFIGURACION.aranas.radioSpawnMinimo);
+    aranas.despejarAlrededor(camera.position, configuracion.aranas.radioSpawnMinimo);
   });
 
   let ultimoFrame = performance.now();
 
-  const redimensionar = () => ajustarRenderizado(renderer, camera, CONFIGURACION);
+  const redimensionar = () => ajustarRenderizado(renderer, camera, configuracion);
   window.addEventListener("resize", redimensionar);
   window.addEventListener("orientationchange", redimensionar);
   document.addEventListener("contextmenu", (event) => event.preventDefault());
@@ -112,10 +113,29 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}) {
 
     const posicionAnteriorX = camera.position.x;
     const posicionAnteriorZ = camera.position.z;
+    const piesAntesMovimiento = camera.position.y - jugador.alturaOjos;
+    const cabezaAntesMovimiento = camera.position.y + 0.18;
+    const enAguaAntesMovimiento =
+      !volando &&
+      terreno.estaEnAgua(
+        posicionAnteriorX,
+        posicionAnteriorZ,
+        piesAntesMovimiento,
+        cabezaAntesMovimiento,
+      );
+    const multiplicadorMovimiento = enAguaAntesMovimiento
+      ? agua.multiplicadorMovimiento
+      : 1;
     const desplazamientoX =
-      (rightX * lateral + forwardX * adelante) * jugador.velocidad * delta;
+      (rightX * lateral + forwardX * adelante) *
+      jugador.velocidad *
+      multiplicadorMovimiento *
+      delta;
     const desplazamientoZ =
-      (rightZ * lateral + forwardZ * adelante) * jugador.velocidad * delta;
+      (rightZ * lateral + forwardZ * adelante) *
+      jugador.velocidad *
+      multiplicadorMovimiento *
+      delta;
     const piesJugador = camera.position.y - jugador.alturaOjos;
     const cabezaJugador = camera.position.y + 0.18;
     let penetracionActual = terreno.obtenerPenetracionJugador(
@@ -226,6 +246,53 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}) {
     }
 
     const piesActuales = camera.position.y - jugador.alturaOjos;
+    const cabezaActual = camera.position.y + 0.18;
+    if (
+      terreno.estaEnAgua(
+        camera.position.x,
+        camera.position.z,
+        piesActuales,
+        cabezaActual,
+      )
+    ) {
+      const ascendiendo =
+        controles.obtenerMovimientoVertical() > 0 || saltoSolicitado;
+      const velocidadObjetivo = ascendiendo
+        ? agua.velocidadAscenso
+        : -agua.velocidadHundimiento;
+      const mezclaAgua = 1 - Math.exp(-agua.gravedad * delta);
+      velocidadVertical = THREE.MathUtils.lerp(
+        velocidadVertical,
+        velocidadObjetivo,
+        mezclaAgua,
+      );
+      const siguienteY = camera.position.y + velocidadVertical * delta;
+      const siguientesPies = siguienteY - jugador.alturaOjos;
+      const siguienteCabeza = siguienteY + 0.18;
+      const soporte = terreno.obtenerAlturaSoporte(
+        camera.position.x,
+        camera.position.z,
+        piesActuales + 0.08,
+        jugador.radio * 0.92,
+      );
+      if (velocidadVertical < 0 && siguientesPies <= soporte) {
+        camera.position.y = soporte + jugador.alturaOjos;
+        velocidadVertical = 0;
+      } else if (
+        !terreno.hayColisionJugador(
+          camera.position.x,
+          camera.position.z,
+          siguientesPies,
+          siguienteCabeza,
+        )
+      ) {
+        camera.position.y = siguienteY;
+      } else {
+        velocidadVertical = 0;
+      }
+      return;
+    }
+
     const soporteCercano = terreno.obtenerAlturaSoporte(
       camera.position.x,
       camera.position.z,
@@ -307,9 +374,26 @@ function normalizarOpcionesMundo(opciones) {
   const modo = opciones.modo === "creativo" ? "creativo" : "supervivencia";
   const tipoMundo =
     modo === "creativo" && opciones.tipoMundo === "plano" ? "plano" : "normal";
+  const tamanoSolicitado = Number(opciones.tamanoMundo);
+  const tamanoMundo = CONFIGURACION.mundo.tamanosDisponibles.includes(
+    tamanoSolicitado,
+  )
+    ? tamanoSolicitado
+    : CONFIGURACION.mundo.tamanoCuadricula;
   return {
     nombreMundo: opciones.nombreMundo || "Mi mundo",
     modo,
     tipoMundo,
+    tamanoMundo,
   };
+}
+
+function crearConfiguracionJuego(opciones) {
+  return Object.freeze({
+    ...CONFIGURACION,
+    mundo: Object.freeze({
+      ...CONFIGURACION.mundo,
+      tamanoCuadricula: opciones.tamanoMundo,
+    }),
+  });
 }

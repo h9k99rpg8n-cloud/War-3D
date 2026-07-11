@@ -1,6 +1,6 @@
 # War 3D
 
-**War 3D v1.5** es un juego 3D de bloques para navegador pensado primero para móvil.
+**War 3D v1.6** es un juego 3D de bloques para navegador pensado primero para móvil.
 
 ## Jugar
 
@@ -8,14 +8,27 @@
 
 ## Contenido actual
 
-- Mundo ampliado de cubos con relieve, árboles y texturas generadas por código.
+- Mundos seleccionables de 64×64, 96×96 o 128×128 con relieve, árboles y texturas generadas por código.
 - Movimiento hacia delante, atrás y los lados.
 - Salto en ambos modos y vuelo con ascenso y descenso en Creativo.
 - Joystick táctil en el lado izquierdo.
 - Cámara táctil arrastrando el lado derecho de la pantalla.
 - Controles de escritorio con WASD o flechas y arrastre del ratón.
-- Inventario para recoger, seleccionar y colocar pasto, hojas y madera.
+- Barra de seis espacios para recoger, seleccionar y colocar pasto, hojas, madera y arena.
 - Render optimizado con mallas instanciadas por tipo y resolución limitada para móviles.
+
+## Cambios de la v1.6
+
+- Selector de tamaño al crear el mundo: pequeño (64×64), mediano (96×96) o grande (128×128).
+- Profundidad aumentada de tres a dieciséis capas completamente rompibles.
+- Render de superficie optimizado: los bloques enterrados existen, pero solo se envían a la GPU cuando quedan expuestos.
+- Lagos procedurales con agua transparente atravesable, fondos de arena y playas irregulares.
+- Movimiento acuático con avance reducido, hundimiento suave y ascenso usando el botón de salto.
+- Primer bloque de arena con textura procedural y stack máximo de 47.
+- Nueva barra compacta de seis espacios; pasto 35, hojas 36, madera 37 y arena 47, más dos espacios futuros.
+- Sol reconstruido con pequeños cubos para acompañar el estilo voxel de la luna.
+- Textura pixelada más detallada para el cuerpo y las patas de la Araña Umbral.
+- Protección adicional frente a errores de carga o ejecución y generación segura lejos del agua inicial.
 
 ## Cambios de la v1.5
 

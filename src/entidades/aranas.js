@@ -10,11 +10,13 @@ export function crearSistemaAranas(
   const partesPorArana = 22;
   const ojosPorArana = 4;
   const geometria = new THREE.BoxGeometry(1, 1, 1);
+  const texturaCuerpo = crearTexturaArana(THREE);
   const materialCuerpo = new THREE.MeshLambertMaterial({
     color: 0xffffff,
     emissive: 0x160b11,
     emissiveIntensity: 0.42,
     flatShading: true,
+    map: texturaCuerpo,
     vertexColors: true,
   });
   const materialOjos = new THREE.MeshBasicMaterial({ color: 0xffb43f, fog: false });
@@ -117,6 +119,7 @@ export function crearSistemaAranas(
         const z = limitar(camera.position.z + Math.sin(angulo) * distancia, -limiteMundo, limiteMundo);
         const suelo = terreno.obtenerAltura(x, z);
         if (
+          terreno.obtenerNivelAgua(x, z) === null &&
           !terreno.hayColisionCuerpo(
             x,
             z,
@@ -195,13 +198,18 @@ export function crearSistemaAranas(
       ajustes.radioCuerpo,
       ajustes.alturaEscalable,
     );
-    const bloqueada = terreno.hayColisionCuerpo(
-      siguienteX,
-      siguienteZ,
-      arana.y + 0.02,
-      arana.y + 0.82,
-      ajustes.radioCuerpo,
-    );
+    const nivelAguaSiguiente = terreno.obtenerNivelAgua(siguienteX, siguienteZ);
+    const bloqueadaPorAgua =
+      nivelAguaSiguiente !== null && nivelAguaSiguiente > arana.y - 0.15;
+    const bloqueada =
+      bloqueadaPorAgua ||
+      terreno.hayColisionCuerpo(
+        siguienteX,
+        siguienteZ,
+        arana.y + 0.02,
+        arana.y + 0.82,
+        ajustes.radioCuerpo,
+      );
 
     if (bloqueada && alturaEscalable > arana.y + 0.001) {
       arana.subiendo = true;
@@ -406,4 +414,32 @@ function moverHacia(actual, objetivo, pasoMaximo) {
 
 function limitar(valor, minimo, maximo) {
   return Math.max(minimo, Math.min(maximo, valor));
+}
+
+function crearTexturaArana(THREE) {
+  const tamano = 16;
+  const datos = new Uint8Array(tamano * tamano * 4);
+  for (let y = 0; y < tamano; y += 1) {
+    for (let x = 0; x < tamano; x += 1) {
+      const ruido = hash(x + 137, y + 211);
+      const franja = (x * 3 + y * 5) % 11;
+      let color = ruido > 0.52 ? [222, 190, 170] : [181, 145, 135];
+      if (franja === 0 || ruido < 0.12) color = [105, 79, 82];
+      else if (franja === 6 && ruido > 0.6) color = [244, 214, 179];
+      const indice = (y * tamano + x) * 4;
+      datos[indice] = color[0];
+      datos[indice + 1] = color[1];
+      datos[indice + 2] = color[2];
+      datos[indice + 3] = 255;
+    }
+  }
+
+  const textura = new THREE.DataTexture(datos, tamano, tamano, THREE.RGBAFormat);
+  textura.name = "piel-pixelada-arana-umbral";
+  textura.colorSpace = THREE.SRGBColorSpace;
+  textura.magFilter = THREE.NearestFilter;
+  textura.minFilter = THREE.NearestMipmapNearestFilter;
+  textura.generateMipmaps = true;
+  textura.needsUpdate = true;
+  return textura;
 }

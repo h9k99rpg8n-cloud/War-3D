@@ -8,6 +8,15 @@ import {
 } from "./src/interfaz/interfaz.js";
 
 const interfaz = obtenerInterfaz();
+let errorMostrado = false;
+
+window.addEventListener("error", (event) => {
+  if (event.error) manejarError(event.error);
+});
+window.addEventListener("unhandledrejection", (event) => {
+  event.preventDefault();
+  manejarError(event.reason);
+});
 
 try {
   const opcionesMundo = await esperarCreacionMundo(interfaz);
@@ -15,9 +24,15 @@ try {
   const THREE = await import(URL_THREE);
   iniciarJuego(THREE, interfaz, opcionesMundo);
 } catch (error) {
+  manejarError(error);
+}
+
+function manejarError(error) {
   console.error(error);
+  if (errorMostrado) return;
+  errorMostrado = true;
   mostrarError(
     interfaz,
-    "No se pudo cargar el motor 3D. Comprueba tu conexión a internet y recarga la página.",
+    "War 3D no pudo continuar. Comprueba la conexión, cierra otras pestañas y recarga la página.",
   );
 }

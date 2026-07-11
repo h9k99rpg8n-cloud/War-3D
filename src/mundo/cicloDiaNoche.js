@@ -59,7 +59,7 @@ export function crearCicloDiaNoche(
       hemisferio = interpolar(1.42, 1.55, progreso);
       intensidadSol = interpolar(1.55, 1.85, Math.sin(progreso * Math.PI));
       intensidadLuna = 0;
-      sol.material.color.copy(colorSolarDia);
+      sol.userData.materialSolar.color.copy(colorSolarDia);
     } else if (fase === "atardecer") {
       if (progreso < 0.55) {
         mezclarColor(0x76afd4, 0xe18a58, progreso / 0.55, colorCielo);
@@ -70,14 +70,14 @@ export function crearCicloDiaNoche(
       hemisferio = interpolar(1.45, 0.3, progreso);
       intensidadSol = interpolar(1.55, 0, progreso);
       intensidadLuna = interpolar(0, 0.48, progreso);
-      sol.material.color.copy(colorSolarDia).lerp(colorSolarOcaso, progreso);
+      sol.userData.materialSolar.color.copy(colorSolarDia).lerp(colorSolarOcaso, progreso);
     } else if (fase === "noche") {
       mezclarColor(0x101a35, 0x071426, Math.sin(progreso * Math.PI), colorCielo);
       ambiente = 0.46;
       hemisferio = 0.3;
       intensidadSol = 0;
       intensidadLuna = 0.56;
-      sol.material.color.copy(colorSolarOcaso);
+      sol.userData.materialSolar.color.copy(colorSolarOcaso);
     } else {
       if (progreso < 0.48) {
         mezclarColor(0x071426, 0xd79472, progreso / 0.48, colorCielo);
@@ -88,7 +88,7 @@ export function crearCicloDiaNoche(
       hemisferio = interpolar(0.3, 1.42, progreso);
       intensidadSol = interpolar(0, 1.55, progreso);
       intensidadLuna = interpolar(0.5, 0, progreso);
-      sol.material.color.copy(colorSolarOcaso).lerp(colorSolarDia, progreso);
+      sol.userData.materialSolar.color.copy(colorSolarOcaso).lerp(colorSolarDia, progreso);
     }
 
     scene.background.copy(colorCielo);
@@ -120,6 +120,7 @@ export function crearCicloDiaNoche(
     sol.visible = Math.sin(angulo) > -0.13;
     luna.visible = Math.sin(anguloLuna) > -0.13;
     luna.lookAt(camera.position);
+    sol.lookAt(camera.position);
 
     sistemaRenderizado.luces.solar.position.copy(sol.position);
     sistemaRenderizado.luces.solar.target.position.copy(camera.position);

@@ -2,6 +2,7 @@ export const NOMBRES_BLOQUE = Object.freeze({
   pasto: "Bloque de pasto",
   hojas: "Bloque de hojas",
   madera: "Bloque de madera",
+  arena: "Bloque de arena",
 });
 
 export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
@@ -11,6 +12,7 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
     pasto: crearEstado(interfaz.espacioPasto, interfaz.contadorPasto),
     hojas: crearEstado(interfaz.espacioHojas, interfaz.contadorHojas),
     madera: crearEstado(interfaz.espacioMadera, interfaz.contadorMadera),
+    arena: crearEstado(interfaz.espacioArena, interfaz.contadorArena),
   };
   let seleccionado = "pasto";
 
@@ -85,11 +87,17 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
 
   function actualizarInterfaz() {
     for (const [tipo, estado] of Object.entries(estados)) {
-      estado.contador.textContent = creativo ? "∞" : `${estado.cantidad} / ${limites[tipo]}`;
+      estado.contador.textContent = creativo ? "∞" : String(estado.cantidad);
       estado.espacio.classList.toggle("is-empty", !creativo && estado.cantidad === 0);
       estado.espacio.classList.toggle("is-unlimited", creativo);
       estado.espacio.classList.toggle("is-selected", tipo === seleccionado);
       estado.espacio.setAttribute("aria-pressed", String(tipo === seleccionado));
+      estado.espacio.setAttribute(
+        "aria-label",
+        creativo
+          ? `${NOMBRES_BLOQUE[tipo]}: ilimitado`
+          : `${NOMBRES_BLOQUE[tipo]}: ${estado.cantidad} de ${limites[tipo]}`,
+      );
     }
     interfaz.botonColocar.disabled = !creativo && estados[seleccionado].cantidad === 0;
     interfaz.botonColocar.setAttribute(

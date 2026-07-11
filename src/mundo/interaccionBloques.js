@@ -241,12 +241,21 @@ export function crearInteraccionBloques(
     punteroNormalizado.set(ndcX, ndcY);
     raycaster.setFromCamera(punteroNormalizado, camera);
     const impactos = raycaster.intersectObjects(terreno.mallas, false);
-    const impacto = impactos.find((candidato) => candidato.distance <= interaccion.alcance);
-    if (!impacto || impacto.instanceId === undefined || !impacto.face) return null;
-
-    const bloque = terreno.obtenerBloquePorInstancia(impacto.object, impacto.instanceId);
-    if (!bloque) return null;
-    return { bloque, normal: impacto.face.normal.clone(), distancia: impacto.distance };
+    for (const impacto of impactos) {
+      if (impacto.distance > interaccion.alcance) break;
+      if (impacto.instanceId === undefined || !impacto.face) continue;
+      const bloque = terreno.obtenerBloquePorInstancia(
+        impacto.object,
+        impacto.instanceId,
+      );
+      if (!bloque || bloque.tipo === "agua") continue;
+      return {
+        bloque,
+        normal: impacto.face.normal.clone(),
+        distancia: impacto.distance,
+      };
+    }
+    return null;
   }
 
   function intersectaJugador(posicionBloque) {

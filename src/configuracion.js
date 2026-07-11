@@ -1,12 +1,13 @@
-export const VERSION_JUEGO = "1.5";
+export const VERSION_JUEGO = "1.6";
 export const VERSION_THREE = "0.185.1";
 export const URL_THREE = `https://cdn.jsdelivr.net/npm/three@${VERSION_THREE}/build/three.module.js`;
 
 export const CONFIGURACION = Object.freeze({
   mundo: Object.freeze({
-    tamanoCuadricula: 96,
+    tamanoCuadricula: 128,
+    tamanosDisponibles: Object.freeze([64, 96, 128]),
     tamanoBloque: 2,
-    nivelFondo: -2,
+    nivelFondo: -15,
     nivelMaximoColocacion: 10,
     margenLimite: 2.2,
   }),
@@ -23,7 +24,7 @@ export const CONFIGURACION = Object.freeze({
   camara: Object.freeze({
     campoVision: 70,
     planoCercano: 0.08,
-    planoLejano: 210,
+    planoLejano: 300,
     velocidadMirada: 0.0036,
     inclinacionMinima: -1.12,
     inclinacionMaxima: 1.12,
@@ -35,8 +36,8 @@ export const CONFIGURACION = Object.freeze({
     proporcionPixelesMovil: 1.5,
     exposicion: 1,
     colorCielo: 0x87b9d9,
-    nieblaCercana: 45,
-    nieblaLejana: 138,
+    nieblaCercana: 60,
+    nieblaLejana: 190,
   }),
   iluminacion: Object.freeze({
     ambiente: 1.8,
@@ -45,10 +46,21 @@ export const CONFIGURACION = Object.freeze({
   }),
   inventario: Object.freeze({
     limites: Object.freeze({
-      pasto: 32,
-      hojas: 32,
-      madera: 35,
+      pasto: 35,
+      hojas: 36,
+      madera: 37,
+      arena: 47,
     }),
+  }),
+  lagos: Object.freeze({
+    nivelAgua: 0,
+    profundidadMaxima: 2,
+  }),
+  agua: Object.freeze({
+    multiplicadorMovimiento: 0.58,
+    gravedad: 3.4,
+    velocidadAscenso: 4.2,
+    velocidadHundimiento: 1.15,
   }),
   interaccion: Object.freeze({
     alcance: 14,

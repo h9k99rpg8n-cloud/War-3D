@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#87b9d9">
     <meta
       name="description"
-      content="War 3D v1.5: salto, vuelo creativo, mundo ampliado y arañas con ataque y escalada."
+      content="War 3D v1.6: mundos de hasta 128×128, lagos, arena, agua y nueva barra de inventario."
     >
-    <title>War 3D — v1.5</title>
+    <title>War 3D — v1.6</title>
     <link rel="stylesheet" href="./style.css">
   </head>
   <body>
@@ -77,13 +77,40 @@
                   </label>
                 </div>
               </fieldset>
+
+              <fieldset class="world-choice world-choice--size">
+                <legend>TAMAÑO DEL MUNDO</legend>
+                <div class="world-choice__grid world-choice__grid--three">
+                  <label class="choice-card choice-card--compact">
+                    <input type="radio" name="worldSize" value="64">
+                    <span>
+                      <b aria-hidden="true">64</b>
+                      <strong>PEQUEÑO</strong>
+                    </span>
+                  </label>
+                  <label class="choice-card choice-card--compact">
+                    <input type="radio" name="worldSize" value="96">
+                    <span>
+                      <b aria-hidden="true">96</b>
+                      <strong>MEDIANO</strong>
+                    </span>
+                  </label>
+                  <label class="choice-card choice-card--compact">
+                    <input type="radio" name="worldSize" value="128" checked>
+                    <span>
+                      <b aria-hidden="true">128</b>
+                      <strong>GRANDE</strong>
+                    </span>
+                  </label>
+                </div>
+              </fieldset>
             </div>
             <button type="submit">
               <span aria-hidden="true">＋</span>
               CREAR NUEVO MUNDO
             </button>
           </form>
-          <p class="start-screen__version">v1.5 • SALTO, VUELO Y ARAÑAS MEJORADAS</p>
+          <p class="start-screen__version">v1.6 • LAGOS, ARENA Y 16 CAPAS</p>
         </div>
       </section>
 
@@ -97,7 +124,7 @@
             <p>PROTOTIPO DE MOVIMIENTO</p>
           </div>
         </div>
-        <span id="version-badge" class="version-badge">v1.5 • THREE.JS</span>
+        <span id="version-badge" class="version-badge">v1.6 • THREE.JS</span>
       </header>
 
       <section id="health-hud" class="health-hud" aria-label="Salud del jugador" hidden>
@@ -149,21 +176,10 @@
           class="inventory-slot is-empty is-selected"
           type="button"
           aria-pressed="true"
+          aria-label="Bloque de pasto"
         >
-          <span class="mini-block-float" aria-hidden="true">
-            <span class="mini-block mini-block--grass">
-              <span class="mini-block__face mini-block__face--front"></span>
-              <span class="mini-block__face mini-block__face--back"></span>
-              <span class="mini-block__face mini-block__face--right"></span>
-              <span class="mini-block__face mini-block__face--left"></span>
-              <span class="mini-block__face mini-block__face--top"></span>
-              <span class="mini-block__face mini-block__face--bottom"></span>
-            </span>
-          </span>
-          <span class="inventory-slot__name">
-            <strong>Bloque de pasto</strong>
-          </span>
-          <b id="grass-count" class="inventory-slot__count">0 / 32</b>
+          <span class="inventory-tile inventory-tile--grass" aria-hidden="true"></span>
+          <b id="grass-count" class="inventory-slot__count">0</b>
         </button>
 
         <button
@@ -171,21 +187,10 @@
           class="inventory-slot is-empty"
           type="button"
           aria-pressed="false"
+          aria-label="Bloque de hojas"
         >
-          <span class="mini-block-float" aria-hidden="true">
-            <span class="mini-block mini-block--leaves">
-              <span class="mini-block__face mini-block__face--front"></span>
-              <span class="mini-block__face mini-block__face--back"></span>
-              <span class="mini-block__face mini-block__face--right"></span>
-              <span class="mini-block__face mini-block__face--left"></span>
-              <span class="mini-block__face mini-block__face--top"></span>
-              <span class="mini-block__face mini-block__face--bottom"></span>
-            </span>
-          </span>
-          <span class="inventory-slot__name">
-            <strong>Bloque de hojas</strong>
-          </span>
-          <b id="leaves-count" class="inventory-slot__count">0 / 32</b>
+          <span class="inventory-tile inventory-tile--leaves" aria-hidden="true"></span>
+          <b id="leaves-count" class="inventory-slot__count">0</b>
         </button>
 
         <button
@@ -193,21 +198,29 @@
           class="inventory-slot is-empty"
           type="button"
           aria-pressed="false"
+          aria-label="Bloque de madera"
         >
-          <span class="mini-block-float" aria-hidden="true">
-            <span class="mini-block mini-block--wood">
-              <span class="mini-block__face mini-block__face--front"></span>
-              <span class="mini-block__face mini-block__face--back"></span>
-              <span class="mini-block__face mini-block__face--right"></span>
-              <span class="mini-block__face mini-block__face--left"></span>
-              <span class="mini-block__face mini-block__face--top"></span>
-              <span class="mini-block__face mini-block__face--bottom"></span>
-            </span>
-          </span>
-          <span class="inventory-slot__name">
-            <strong>Bloque de madera</strong>
-          </span>
-          <b id="wood-count" class="inventory-slot__count">0 / 35</b>
+          <span class="inventory-tile inventory-tile--wood" aria-hidden="true"></span>
+          <b id="wood-count" class="inventory-slot__count">0</b>
+        </button>
+
+        <button
+          id="sand-slot"
+          class="inventory-slot is-empty"
+          type="button"
+          aria-pressed="false"
+          aria-label="Bloque de arena"
+        >
+          <span class="inventory-tile inventory-tile--sand" aria-hidden="true"></span>
+          <b id="sand-count" class="inventory-slot__count">0</b>
+        </button>
+
+        <button class="inventory-slot inventory-slot--future" type="button" disabled aria-label="Espacio futuro">
+          <span aria-hidden="true">·</span>
+        </button>
+
+        <button class="inventory-slot inventory-slot--future" type="button" disabled aria-label="Espacio futuro">
+          <span aria-hidden="true">·</span>
         </button>
       </div>
 

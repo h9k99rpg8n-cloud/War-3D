@@ -53,10 +53,7 @@ export function crearSistemaRenderizado(THREE, canvas, configuracion) {
   scene.add(luzSolar);
   scene.add(luzSolar.target);
 
-  const sol = new THREE.Mesh(
-    new THREE.SphereGeometry(3.4, 20, 12),
-    new THREE.MeshBasicMaterial({ color: 0xffe6a2, fog: false }),
-  );
+  const sol = crearSolVoxel(THREE);
   sol.position.set(-31, 33, -55);
   scene.add(sol);
 
@@ -71,6 +68,39 @@ export function crearSistemaRenderizado(THREE, canvas, configuracion) {
     },
     sol,
   };
+}
+
+function crearSolVoxel(THREE) {
+  const posiciones = [];
+  for (let y = -3; y <= 3; y += 1) {
+    for (let x = -3; x <= 3; x += 1) {
+      if (Math.hypot(x, y) <= 3.45) posiciones.push([x * 0.92, y * 0.92, 0]);
+    }
+  }
+
+  const geometria = new THREE.BoxGeometry(0.98, 0.98, 0.76);
+  const material = new THREE.MeshBasicMaterial({
+    color: 0xffe6a2,
+    fog: false,
+    vertexColors: true,
+  });
+  const malla = new THREE.InstancedMesh(geometria, material, posiciones.length);
+  const matriz = new THREE.Matrix4();
+  const color = new THREE.Color();
+  posiciones.forEach(([x, y, z], indice) => {
+    matriz.makeTranslation(x, y, z);
+    malla.setMatrixAt(indice, matriz);
+    color.setHex((indice + Math.round(x + y)) % 4 === 0 ? 0xffd66f : 0xffffff);
+    malla.setColorAt(indice, color);
+  });
+  malla.instanceMatrix.needsUpdate = true;
+  if (malla.instanceColor) malla.instanceColor.needsUpdate = true;
+  malla.frustumCulled = false;
+
+  const grupo = new THREE.Group();
+  grupo.userData.materialSolar = material;
+  grupo.add(malla);
+  return grupo;
 }
 
 export function ajustarRenderizado(renderer, camera, configuracion) {
