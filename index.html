@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#87b9d9">
     <meta
       name="description"
-      content="War 3D v1.4: supervivencia, modo creativo, ciclo de día y noche y arañas cúbicas."
+      content="War 3D v1.5: salto, vuelo creativo, mundo ampliado y arañas con ataque y escalada."
     >
-    <title>War 3D — v1.4</title>
+    <title>War 3D — v1.5</title>
     <link rel="stylesheet" href="./style.css">
   </head>
   <body>
@@ -83,7 +83,7 @@
               CREAR NUEVO MUNDO
             </button>
           </form>
-          <p class="start-screen__version">v1.4 • SUPERVIVENCIA Y CICLO NOCTURNO</p>
+          <p class="start-screen__version">v1.5 • SALTO, VUELO Y ARAÑAS MEJORADAS</p>
         </div>
       </section>
 
@@ -97,7 +97,7 @@
             <p>PROTOTIPO DE MOVIMIENTO</p>
           </div>
         </div>
-        <span id="version-badge" class="version-badge">v1.4 • THREE.JS</span>
+        <span id="version-badge" class="version-badge">v1.5 • THREE.JS</span>
       </header>
 
       <section id="health-hud" class="health-hud" aria-label="Salud del jugador" hidden>
@@ -132,6 +132,8 @@
       <div class="desktop-hint" aria-hidden="true">
         <span><b>WASD</b> MOVER</span>
         <span><b>ARRASTRAR</b> MIRAR</span>
+        <span><b>ESPACIO</b> SALTAR / SUBIR</span>
+        <span><b>F</b> VUELO CREATIVO</span>
       </div>
 
       <div id="break-progress" class="break-progress" role="status" aria-live="polite" hidden>
@@ -212,6 +214,33 @@
       <button id="place-block" class="place-block" type="button" aria-label="Colocar bloque de pasto">
         <span aria-hidden="true">＋</span>
         <small>COLOCAR</small>
+      </button>
+
+      <button id="jump-button" class="movement-action movement-action--jump" type="button" aria-label="Saltar">
+        <span aria-hidden="true">↑</span>
+        <small id="jump-label">SALTAR</small>
+      </button>
+
+      <button
+        id="flight-button"
+        class="movement-action movement-action--flight"
+        type="button"
+        aria-pressed="false"
+        hidden
+      >
+        <span aria-hidden="true">✦</span>
+        <small>VOLAR</small>
+      </button>
+
+      <button
+        id="descend-button"
+        class="movement-action movement-action--descend"
+        type="button"
+        aria-label="Descender mientras vuelas"
+        hidden
+      >
+        <span aria-hidden="true">↓</span>
+        <small>BAJAR</small>
       </button>
 
       <div id="action-message" class="action-message" role="status" aria-live="polite" hidden></div>

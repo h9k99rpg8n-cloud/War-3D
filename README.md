@@ -1,6 +1,6 @@
 # War 3D
 
-**War 3D v1.4** es un juego 3D de bloques para navegador pensado primero para móvil.
+**War 3D v1.5** es un juego 3D de bloques para navegador pensado primero para móvil.
 
 ## Jugar
 
@@ -10,11 +10,23 @@
 
 - Mundo ampliado de cubos con relieve, árboles y texturas generadas por código.
 - Movimiento hacia delante, atrás y los lados.
+- Salto en ambos modos y vuelo con ascenso y descenso en Creativo.
 - Joystick táctil en el lado izquierdo.
 - Cámara táctil arrastrando el lado derecho de la pantalla.
 - Controles de escritorio con WASD o flechas y arrastre del ratón.
 - Inventario para recoger, seleccionar y colocar pasto, hojas y madera.
 - Render optimizado con mallas instanciadas por tipo y resolución limitada para móviles.
+
+## Cambios de la v1.5
+
+- Mundo ampliado de 64×64 a 96×96 bloques para explorar mucho más terreno.
+- Nuevo botón de salto para móvil y tecla Espacio en escritorio.
+- Vuelo exclusivo de Creativo: se activa con el botón VOLAR o la tecla F, se asciende con salto y se desciende con BAJAR o Shift.
+- Los bloques del mundo y los objetos que sueltan comparten ahora exactamente los mismos materiales y texturas procedurales.
+- Animación completa de ataque para la Araña Umbral, con preparación, embestida, patas delanteras y golpe sincronizado.
+- Las arañas mueven las patas y el cuerpo al escalar bloques en vez de elevarse instantáneamente.
+- Detección enemiga limitada a cinco bloques, menor velocidad de persecución y ataques más espaciados.
+- Física vertical, aterrizaje sobre bloques y revisión de colisiones para evitar obstáculos invisibles.
 
 ## Cambios de la v1.4
 

@@ -1,10 +1,10 @@
-export const VERSION_JUEGO = "1.4";
+export const VERSION_JUEGO = "1.5";
 export const VERSION_THREE = "0.185.1";
 export const URL_THREE = `https://cdn.jsdelivr.net/npm/three@${VERSION_THREE}/build/three.module.js`;
 
 export const CONFIGURACION = Object.freeze({
   mundo: Object.freeze({
-    tamanoCuadricula: 64,
+    tamanoCuadricula: 96,
     tamanoBloque: 2,
     nivelFondo: -2,
     nivelMaximoColocacion: 10,
@@ -14,13 +14,16 @@ export const CONFIGURACION = Object.freeze({
     alturaOjos: 1.68,
     radio: 0.4,
     velocidad: 6.4,
+    velocidadSalto: 6.8,
+    gravedad: 18,
+    velocidadVuelo: 8.2,
     corazones: 5,
     invulnerabilidadMs: 850,
   }),
   camara: Object.freeze({
     campoVision: 70,
     planoCercano: 0.08,
-    planoLejano: 130,
+    planoLejano: 210,
     velocidadMirada: 0.0036,
     inclinacionMinima: -1.12,
     inclinacionMaxima: 1.12,
@@ -32,8 +35,8 @@ export const CONFIGURACION = Object.freeze({
     proporcionPixelesMovil: 1.5,
     exposicion: 1,
     colorCielo: 0x87b9d9,
-    nieblaCercana: 30,
-    nieblaLejana: 82,
+    nieblaCercana: 45,
+    nieblaLejana: 138,
   }),
   iluminacion: Object.freeze({
     ambiente: 1.8,
@@ -70,13 +73,17 @@ export const CONFIGURACION = Object.freeze({
   aranas: Object.freeze({
     maximo: 4,
     cantidadInicial: 3,
-    rangoVision: 18,
+    rangoVision: 10,
     semiAnguloVision: Math.PI * 0.3,
-    memoriaPersecucionMs: 2_000,
+    memoriaPersecucionMs: 1_200,
     velocidadPatrulla: 1.15,
-    velocidadPersecucion: 2.8,
+    velocidadPersecucion: 2.3,
     distanciaAtaque: 2.15,
-    intervaloAtaqueMs: 950,
+    intervaloAtaqueMs: 1_200,
+    duracionAtaqueMs: 480,
+    retrasoGolpeMs: 190,
+    velocidadEscalada: 3.6,
+    alturaEscalable: 2.2,
     radioCuerpo: 0.58,
     radioSpawnMinimo: 15,
     radioSpawnMaximo: 28,

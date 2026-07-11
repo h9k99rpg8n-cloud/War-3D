@@ -36,6 +36,7 @@ export function crearSistemaAranas(
   const escala = new THREE.Vector3();
   const cuaternion = new THREE.Quaternion();
   const cuaternionRaiz = new THREE.Quaternion();
+  const eulerRaiz = new THREE.Euler(0, 0, 0, "YXZ");
   const vectorDireccion = new THREE.Vector3();
   const vectorCentro = new THREE.Vector3();
   const cadera = new THREE.Vector3();
@@ -43,7 +44,6 @@ export function crearSistemaAranas(
   const pie = new THREE.Vector3();
   const vectorUno = new THREE.Vector3(1, 0, 0);
   const escalaRaiz = new THREE.Vector3(1, 1, 1);
-  const ejeVertical = new THREE.Vector3(0, 1, 0);
   const color = new THREE.Color();
   const mitadMundo =
     (configuracion.mundo.tamanoCuadricula * configuracion.mundo.tamanoBloque) / 2;
@@ -139,7 +139,11 @@ export function crearSistemaAranas(
         semilla: encontrada.semilla,
         vistoHasta: Number.NEGATIVE_INFINITY,
         ultimoAtaque: Number.NEGATIVE_INFINITY,
+        inicioAtaque: Number.NEGATIVE_INFINITY,
+        danoPendiente: false,
         alerta: 0,
+        subiendo: false,
+        inclinacion: 0,
       });
     }
   }
@@ -148,6 +152,9 @@ export function crearSistemaAranas(
     const haciaX = camera.position.x - arana.x;
     const haciaZ = camera.position.z - arana.z;
     const distancia = Math.hypot(haciaX, haciaZ);
+    const distanciaVertical = Math.abs(
+      camera.position.y - configuracion.jugador.alturaOjos - arana.y,
+    );
     const frenteX = Math.sin(arana.giro);
     const frenteZ = Math.cos(arana.giro);
     const producto =
@@ -181,31 +188,81 @@ export function crearSistemaAranas(
       -limiteMundo,
       limiteMundo,
     );
-    const siguienteSuelo = terreno.obtenerAltura(siguienteX, siguienteZ);
+    const alturaEscalable = terreno.obtenerAlturaEscalable(
+      siguienteX,
+      siguienteZ,
+      arana.y,
+      ajustes.radioCuerpo,
+      ajustes.alturaEscalable,
+    );
     const bloqueada = terreno.hayColisionCuerpo(
       siguienteX,
       siguienteZ,
-      siguienteSuelo + 0.02,
-      siguienteSuelo + 0.82,
+      arana.y + 0.02,
+      arana.y + 0.82,
       ajustes.radioCuerpo,
     );
 
-    if (bloqueada) {
+    if (bloqueada && alturaEscalable > arana.y + 0.001) {
+      arana.subiendo = true;
+      arana.y = moverHacia(
+        arana.y,
+        alturaEscalable,
+        ajustes.velocidadEscalada * delta,
+      );
+    } else if (bloqueada) {
+      arana.subiendo = false;
       arana.giro += Math.PI * (0.55 + hash(arana.semilla, Math.floor(now / 900)) * 0.35);
     } else {
       arana.x = siguienteX;
       arana.z = siguienteZ;
-      arana.y = siguienteSuelo;
+      const soporte = terreno.obtenerAlturaSoporte(
+        siguienteX,
+        siguienteZ,
+        arana.y + 0.18,
+        ajustes.radioCuerpo * 0.92,
+      );
+      arana.subiendo = soporte > arana.y + 0.035;
+      arana.y = moverHacia(
+        arana.y,
+        soporte,
+        ajustes.velocidadEscalada * delta,
+      );
     }
-    arana.fasePaso += delta * velocidad * 5.2;
+    const inclinacionObjetivo = arana.subiendo ? -0.46 : 0;
+    const mezclaInclinacion = 1 - Math.exp(-7.5 * delta);
+    arana.inclinacion +=
+      (inclinacionObjetivo - arana.inclinacion) * mezclaInclinacion;
+    arana.fasePaso += delta * velocidad * (arana.subiendo ? 7.4 : 5.2);
+
+    if (arana.danoPendiente && now - arana.inicioAtaque >= ajustes.retrasoGolpeMs) {
+      arana.danoPendiente = false;
+      const distanciaGolpe = Math.hypot(
+        camera.position.x - arana.x,
+        camera.position.z - arana.z,
+      );
+      if (
+        !salud.estaMuerto() &&
+        now <= arana.vistoHasta &&
+        distanciaGolpe <= ajustes.distanciaAtaque + 0.42 &&
+        Math.abs(
+          camera.position.y - configuracion.jugador.alturaOjos - arana.y,
+        ) <= 1.45
+      ) {
+        salud.recibirDano(ajustes.dano, now);
+      }
+    }
 
     if (
       persiguiendo &&
       distancia <= ajustes.distanciaAtaque &&
-      now - arana.ultimoAtaque >= ajustes.intervaloAtaqueMs
+      distanciaVertical <= 1.45 &&
+      now - arana.ultimoAtaque >= ajustes.intervaloAtaqueMs &&
+      !arana.danoPendiente
     ) {
       arana.ultimoAtaque = now;
-      salud.recibirDano(ajustes.dano, now);
+      arana.inicioAtaque = now;
+      arana.danoPendiente = true;
     }
   }
 
@@ -223,14 +280,26 @@ export function crearSistemaAranas(
   }
 
   function dibujarArana(arana, now) {
-    posicion.set(arana.x, arana.y, arana.z);
-    cuaternionRaiz.setFromAxisAngle(ejeVertical, arana.giro);
+    const progresoAtaque = (now - arana.inicioAtaque) / ajustes.duracionAtaqueMs;
+    const ataque =
+      progresoAtaque >= 0 && progresoAtaque <= 1
+        ? Math.sin(progresoAtaque * Math.PI)
+        : 0;
+    const escalada = limitar(Math.abs(arana.inclinacion) / 0.46, 0, 1);
+    const impulsoAtaque = ataque * 0.36;
+    posicion.set(
+      arana.x + Math.sin(arana.giro) * impulsoAtaque,
+      arana.y + ataque * 0.06,
+      arana.z + Math.cos(arana.giro) * impulsoAtaque,
+    );
+    eulerRaiz.set(arana.inclinacion, arana.giro, 0, "YXZ");
+    cuaternionRaiz.setFromEuler(eulerRaiz);
     matrizRaiz.compose(posicion, cuaternionRaiz, escalaRaiz);
 
-    agregarCaja(0, 0.4, -0.28, 0.92, 0.48, 1.08, 0x55283a);
-    agregarCaja(0, 0.4, 0.56, 0.72, 0.43, 0.66, 0x24171c);
-    agregarCaja(-0.17, 0.35, 0.96, 0.12, 0.18, 0.24, 0x8e5034);
-    agregarCaja(0.17, 0.35, 0.96, 0.12, 0.18, 0.24, 0x8e5034);
+    agregarCaja(0, 0.4 + ataque * 0.04, -0.28, 0.92, 0.48, 1.08, 0x55283a);
+    agregarCaja(0, 0.4 + ataque * 0.08, 0.56 + ataque * 0.18, 0.72, 0.43, 0.66, 0x24171c);
+    agregarCaja(-0.17, 0.35 - ataque * 0.05, 0.96 + ataque * 0.38, 0.12, 0.18, 0.24, 0x8e5034);
+    agregarCaja(0.17, 0.35 - ataque * 0.05, 0.96 + ataque * 0.38, 0.12, 0.18, 0.24, 0x8e5034);
     agregarCaja(-0.17, 0.37, -0.88, 0.13, 0.16, 0.25, 0x302026);
     agregarCaja(0.17, 0.37, -0.88, 0.13, 0.16, 0.25, 0x302026);
 
@@ -241,18 +310,30 @@ export function crearSistemaAranas(
         const paso = Math.sin(
           arana.fasePaso + fila * 1.42 + (lado > 0 ? Math.PI : 0),
         );
-        const elevacionPaso = Math.max(0, paso) * 0.12;
+        const elevacionPaso = Math.max(0, paso) * (0.12 + escalada * 0.22);
         const defensa = fila === 0 ? arana.alerta : 0;
+        const golpe = fila === 0 ? ataque : 0;
         cadera.set(lado * 0.31, 0.41, posicionesZ[fila]);
         rodilla.set(
           lado * 0.88,
-          0.27 + elevacionPaso + defensa * 0.5,
-          posicionesZ[fila] + aperturaZ[fila] * 0.45 + paso * 0.11,
+          0.27 + elevacionPaso + defensa * 0.36 + golpe * 0.22,
+          posicionesZ[fila] +
+            aperturaZ[fila] * 0.45 +
+            paso * 0.11 +
+            escalada * 0.22 +
+            golpe * 0.4,
         );
         pie.set(
           lado * 1.38,
-          0.08 + defensa * 0.46,
-          posicionesZ[fila] + aperturaZ[fila] + paso * 0.06,
+          0.08 +
+            defensa * 0.34 +
+            escalada * (0.2 + Math.max(0, -paso) * 0.34) +
+            golpe * 0.12,
+          posicionesZ[fila] +
+            aperturaZ[fila] +
+            paso * 0.06 +
+            escalada * 0.42 +
+            golpe * 0.7,
         );
         agregarSegmento(cadera, rodilla, 0.13, 0x3b2425);
         agregarSegmento(rodilla, pie, 0.11, 0x2d1c20);
@@ -316,6 +397,11 @@ function hash(a, b) {
 
 function interpolar(inicio, fin, progreso) {
   return inicio + (fin - inicio) * progreso;
+}
+
+function moverHacia(actual, objetivo, pasoMaximo) {
+  if (Math.abs(objetivo - actual) <= pasoMaximo) return objetivo;
+  return actual + Math.sign(objetivo - actual) * pasoMaximo;
 }
 
 function limitar(valor, minimo, maximo) {

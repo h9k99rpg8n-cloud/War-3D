@@ -10,35 +10,25 @@ export function crearBibliotecaBloques(THREE) {
     maderaLateral: crearTextura(THREE, "madera-lateral", pixelMaderaLateral),
   };
 
-  const materialesInstanciados = {
+  const materialesCompartidos = {
     pasto: carasCubo(
-      material(THREE, texturas.pastoLateral, 0x174a1c, 0.42, true),
-      material(THREE, texturas.pastoSuperior, 0x1b521d, 0.46, true),
-      material(THREE, texturas.tierra, 0x3b2415, 0.27, true),
+      material(THREE, texturas.pastoLateral, 0x174a1c, 0.54),
+      material(THREE, texturas.pastoSuperior, 0x1b521d, 0.58),
+      material(THREE, texturas.tierra, 0x3b2415, 0.38),
     ),
-    hojas: material(THREE, texturas.hojas, 0x103d1e, 0.38, true),
+    hojas: material(THREE, texturas.hojas, 0x103d1e, 0.5),
     madera: carasCubo(
-      material(THREE, texturas.maderaLateral, 0x3d2415, 0.31, true),
-      material(THREE, texturas.corteMadera, 0x4b2c18, 0.34, true),
-      material(THREE, texturas.corteMadera, 0x3a2114, 0.27, true),
+      material(THREE, texturas.maderaLateral, 0x3d2415, 0.43),
+      material(THREE, texturas.corteMadera, 0x4b2c18, 0.46),
+      material(THREE, texturas.corteMadera, 0x3a2114, 0.39),
     ),
   };
 
-  const materialesRecolectables = {
-    pasto: carasCubo(
-      material(THREE, texturas.pastoLateral, 0x174a1c, 0.54, false),
-      material(THREE, texturas.pastoSuperior, 0x1b521d, 0.58, false),
-      material(THREE, texturas.tierra, 0x3b2415, 0.38, false),
-    ),
-    hojas: material(THREE, texturas.hojas, 0x103d1e, 0.5, false),
-    madera: carasCubo(
-      material(THREE, texturas.maderaLateral, 0x3d2415, 0.43, false),
-      material(THREE, texturas.corteMadera, 0x4b2c18, 0.46, false),
-      material(THREE, texturas.corteMadera, 0x3a2114, 0.39, false),
-    ),
+  return {
+    materialesInstanciados: materialesCompartidos,
+    materialesRecolectables: materialesCompartidos,
+    texturas,
   };
-
-  return { materialesInstanciados, materialesRecolectables, texturas };
 }
 
 // BoxGeometry ordena sus grupos como derecha, izquierda, arriba, abajo, frente y atrás.
@@ -46,14 +36,14 @@ function carasCubo(lateral, superior, inferior) {
   return [lateral, lateral, superior, inferior, lateral, lateral];
 }
 
-function material(THREE, textura, emisivo, intensidad, coloresInstancia) {
+function material(THREE, textura, emisivo, intensidad) {
   return new THREE.MeshLambertMaterial({
     color: 0xffffff,
     emissive: emisivo,
     emissiveIntensity: intensidad,
     flatShading: true,
     map: textura,
-    vertexColors: coloresInstancia,
+    vertexColors: false,
   });
 }
 

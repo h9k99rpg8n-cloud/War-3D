@@ -36,7 +36,6 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
   const biblioteca = crearBibliotecaBloques(THREE);
   const matriz = new THREE.Matrix4();
   const posicion = new THREE.Vector3();
-  const tinte = new THREE.Color();
 
   for (const tipo of TIPOS_BLOQUE) {
     const cantidadInicial = bloquesPorTipo[tipo].size;
@@ -82,6 +81,20 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
         tamanoBloque,
         tamanoCuadricula,
       );
+    },
+
+    obtenerAlturaEscalable(worldX, worldZ, alturaActual, radio, maximoAscenso) {
+      return calcularAlturaEscalable(
+        worldX,
+        worldZ,
+        alturaActual,
+        radio,
+        maximoAscenso,
+      );
+    },
+
+    obtenerAlturaSoporte(worldX, worldZ, alturaMaxima, radio) {
+      return calcularAlturaSoporte(worldX, worldZ, alturaMaxima, radio);
     },
 
     obtenerCantidadTipo(tipo) {
@@ -200,6 +213,99 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
       }
     }
     return penetracion;
+  }
+
+  function calcularAlturaEscalable(
+    worldX,
+    worldZ,
+    alturaActual,
+    radio,
+    maximoAscenso,
+  ) {
+    let alturaObjetivo = interpolarAltura(
+      THREE,
+      alturasPasto,
+      worldX,
+      worldZ,
+      tamanoBloque,
+      tamanoCuadricula,
+    );
+    const gridX = worldX / tamanoBloque + (tamanoCuadricula - 1) / 2;
+    const gridZ = worldZ / tamanoBloque + (tamanoCuadricula - 1) / 2;
+    const alcanceCeldas = Math.ceil((radio + tamanoBloque / 2) / tamanoBloque);
+    const xMin = Math.max(0, Math.floor(gridX) - alcanceCeldas);
+    const xMax = Math.min(tamanoCuadricula - 1, Math.ceil(gridX) + alcanceCeldas);
+    const zMin = Math.max(0, Math.floor(gridZ) - alcanceCeldas);
+    const zMax = Math.min(tamanoCuadricula - 1, Math.ceil(gridZ) + alcanceCeldas);
+    const mitad = tamanoBloque / 2;
+
+    for (let z = zMin; z <= zMax; z += 1) {
+      for (let x = xMin; x <= xMax; x += 1) {
+        const centroX = indiceAMundo(x, tamanoCuadricula, tamanoBloque);
+        const centroZ = indiceAMundo(z, tamanoCuadricula, tamanoBloque);
+        if (
+          Math.abs(worldX - centroX) >= mitad + radio ||
+          Math.abs(worldZ - centroZ) >= mitad + radio
+        ) {
+          continue;
+        }
+
+        for (let y = nivelFondo; y <= nivelMaximoColocacion; y += 1) {
+          const bloque = bloques.get(claveBloque(x, y, z));
+          if (!bloque || bloque.tipo === "pasto") continue;
+          const superficie = y * tamanoBloque + mitad;
+          if (
+            superficie > alturaActual + 0.001 &&
+            superficie <= alturaActual + maximoAscenso + 0.04
+          ) {
+            alturaObjetivo = Math.max(alturaObjetivo, superficie);
+          }
+        }
+      }
+    }
+    return alturaObjetivo;
+  }
+
+  function calcularAlturaSoporte(worldX, worldZ, alturaMaxima, radio) {
+    let alturaObjetivo = interpolarAltura(
+      THREE,
+      alturasPasto,
+      worldX,
+      worldZ,
+      tamanoBloque,
+      tamanoCuadricula,
+    );
+    const gridX = worldX / tamanoBloque + (tamanoCuadricula - 1) / 2;
+    const gridZ = worldZ / tamanoBloque + (tamanoCuadricula - 1) / 2;
+    const alcanceCeldas = Math.ceil((radio + tamanoBloque / 2) / tamanoBloque);
+    const xMin = Math.max(0, Math.floor(gridX) - alcanceCeldas);
+    const xMax = Math.min(tamanoCuadricula - 1, Math.ceil(gridX) + alcanceCeldas);
+    const zMin = Math.max(0, Math.floor(gridZ) - alcanceCeldas);
+    const zMax = Math.min(tamanoCuadricula - 1, Math.ceil(gridZ) + alcanceCeldas);
+    const mitad = tamanoBloque / 2;
+
+    for (let z = zMin; z <= zMax; z += 1) {
+      for (let x = xMin; x <= xMax; x += 1) {
+        const centroX = indiceAMundo(x, tamanoCuadricula, tamanoBloque);
+        const centroZ = indiceAMundo(z, tamanoCuadricula, tamanoBloque);
+        if (
+          Math.abs(worldX - centroX) >= mitad + radio ||
+          Math.abs(worldZ - centroZ) >= mitad + radio
+        ) {
+          continue;
+        }
+
+        for (let y = nivelFondo; y <= nivelMaximoColocacion; y += 1) {
+          const bloque = bloques.get(claveBloque(x, y, z));
+          if (!bloque || bloque.tipo === "pasto") continue;
+          const superficie = y * tamanoBloque + mitad;
+          if (superficie <= alturaMaxima + 0.001) {
+            alturaObjetivo = Math.max(alturaObjetivo, superficie);
+          }
+        }
+      }
+    }
+    return alturaObjetivo;
   }
 
   function crearMallaTipo(tipo, capacidad) {
@@ -326,16 +432,12 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
       matriz.makeTranslation(posicion.x, posicion.y, posicion.z);
       malla.setMatrixAt(instancia, matriz);
 
-      const luminosidad = 0.91 + hash3D(bloque.x, bloque.y, bloque.z) * 0.09;
-      tinte.setRGB(luminosidad, luminosidad, luminosidad);
-      malla.setColorAt(instancia, tinte);
       orden.push(bloque);
       instancia += 1;
     }
 
     malla.count = instancia;
     malla.instanceMatrix.needsUpdate = true;
-    if (malla.instanceColor) malla.instanceColor.needsUpdate = true;
     malla.computeBoundingBox();
     malla.computeBoundingSphere();
   }

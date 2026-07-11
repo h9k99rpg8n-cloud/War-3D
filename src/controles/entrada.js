@@ -4,6 +4,10 @@ export function crearControles(interfaz, configuracion) {
   const teclas = new Set();
   let punteroJoystick = null;
   let punteroMirada = null;
+  let punteroSalto = null;
+  let punteroDescenso = null;
+  let saltoSolicitado = false;
+  let cambioVueloSolicitado = false;
   let ultimaMiradaX = 0;
   let ultimaMiradaY = 0;
   let giro = camara.giroInicial;
@@ -68,8 +72,61 @@ export function crearControles(interfaz, configuracion) {
     punteroMirada = null;
   });
 
+  interfaz.botonSaltar.addEventListener("pointerdown", (event) => {
+    if (punteroSalto !== null) return;
+    event.preventDefault();
+    event.stopPropagation();
+    punteroSalto = event.pointerId;
+    saltoSolicitado = true;
+    teclas.add("ascender");
+    interfaz.botonSaltar.setPointerCapture(event.pointerId);
+    marcarControlesUsados();
+  });
+
+  const soltarSalto = (event) => {
+    if (event.pointerId !== punteroSalto) return;
+    punteroSalto = null;
+    teclas.delete("ascender");
+  };
+  interfaz.botonSaltar.addEventListener("pointerup", soltarSalto);
+  interfaz.botonSaltar.addEventListener("pointercancel", soltarSalto);
+  interfaz.botonSaltar.addEventListener("lostpointercapture", () => {
+    punteroSalto = null;
+    teclas.delete("ascender");
+  });
+
+  interfaz.botonDescender.addEventListener("pointerdown", (event) => {
+    if (punteroDescenso !== null) return;
+    event.preventDefault();
+    event.stopPropagation();
+    punteroDescenso = event.pointerId;
+    teclas.add("descender");
+    interfaz.botonDescender.setPointerCapture(event.pointerId);
+    marcarControlesUsados();
+  });
+
+  const soltarDescenso = (event) => {
+    if (event.pointerId !== punteroDescenso) return;
+    punteroDescenso = null;
+    teclas.delete("descender");
+  };
+  interfaz.botonDescender.addEventListener("pointerup", soltarDescenso);
+  interfaz.botonDescender.addEventListener("pointercancel", soltarDescenso);
+  interfaz.botonDescender.addEventListener("lostpointercapture", () => {
+    punteroDescenso = null;
+    teclas.delete("descender");
+  });
+
+  interfaz.botonVuelo.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    cambioVueloSolicitado = true;
+    marcarControlesUsados();
+  });
+
   window.addEventListener("keydown", (event) => {
     const key = event.key.toLowerCase();
+    if (esCampoEditable(event.target)) return;
     if (
       ["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(
         key,
@@ -79,12 +136,35 @@ export function crearControles(interfaz, configuracion) {
       teclas.add(key);
       marcarControlesUsados();
     }
+    if (key === " " || key === "spacebar") {
+      event.preventDefault();
+      teclas.add("ascender");
+      if (!event.repeat) saltoSolicitado = true;
+      marcarControlesUsados();
+    }
+    if (key === "shift") {
+      event.preventDefault();
+      teclas.add("descender");
+      marcarControlesUsados();
+    }
+    if (key === "f" && !event.repeat) {
+      event.preventDefault();
+      cambioVueloSolicitado = true;
+      marcarControlesUsados();
+    }
   });
 
   window.addEventListener("keyup", (event) => {
-    teclas.delete(event.key.toLowerCase());
+    const key = event.key.toLowerCase();
+    teclas.delete(key);
+    if (key === " " || key === "spacebar") teclas.delete("ascender");
+    if (key === "shift") teclas.delete("descender");
   });
-  window.addEventListener("blur", () => teclas.clear());
+  window.addEventListener("blur", () => {
+    teclas.clear();
+    punteroSalto = null;
+    punteroDescenso = null;
+  });
 
   function actualizarJoystick(event) {
     const bounds = interfaz.joystick.getBoundingClientRect();
@@ -140,7 +220,29 @@ export function crearControles(interfaz, configuracion) {
     obtenerVista() {
       return { giro, inclinacion };
     },
+    obtenerMovimientoVertical() {
+      return Number(teclas.has("ascender")) - Number(teclas.has("descender"));
+    },
+    consumirSalto() {
+      const solicitado = saltoSolicitado;
+      saltoSolicitado = false;
+      return solicitado;
+    },
+    consumirCambioVuelo() {
+      const solicitado = cambioVueloSolicitado;
+      cambioVueloSolicitado = false;
+      return solicitado;
+    },
   };
+}
+
+function esCampoEditable(elemento) {
+  return Boolean(
+    elemento &&
+      (elemento.tagName === "INPUT" ||
+        elemento.tagName === "TEXTAREA" ||
+        elemento.isContentEditable),
+  );
 }
 
 function limitar(valor, minimo, maximo) {

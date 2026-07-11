@@ -11,8 +11,9 @@ import { ajustarRenderizado, crearSistemaRenderizado } from "./renderizado/escen
 
 export function iniciarJuego(THREE, interfaz, opcionesMundo = {}) {
   const opciones = normalizarOpcionesMundo(opcionesMundo);
+  const creativo = opciones.modo === "creativo";
   prepararInterfaz(interfaz);
-  interfaz.juego.classList.toggle("mode-creative", opciones.modo === "creativo");
+  interfaz.juego.classList.toggle("mode-creative", creativo);
 
   const sistemaRenderizado = crearSistemaRenderizado(
     THREE,
@@ -28,6 +29,11 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}) {
   const mitadMundo = (mundo.tamanoCuadricula * mundo.tamanoBloque) / 2;
   const limiteMundo = mitadMundo - mundo.margenLimite;
   const puntoInicio = { x: 0, z: 10 };
+  let velocidadVertical = 0;
+  let volando = false;
+
+  interfaz.botonVuelo.hidden = !creativo;
+  actualizarInterfazVuelo();
 
   camera.position.set(
     puntoInicio.x,
@@ -64,6 +70,8 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}) {
   );
 
   salud.establecerAlReaparecer(() => {
+    establecerVuelo(false);
+    velocidadVertical = 0;
     camera.position.set(
       puntoInicio.x,
       terreno.obtenerAltura(puntoInicio.x, puntoInicio.z) + jugador.alturaOjos,
@@ -88,6 +96,13 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}) {
     const delta = Math.min(deltaReal, 0.05);
     ultimoFrame = now;
 
+    const muerto = salud.estaMuerto();
+    const saltoSolicitado = controles.consumirSalto();
+    const cambioVueloSolicitado = controles.consumirCambioVuelo();
+    if (!muerto && creativo && cambioVueloSolicitado) {
+      establecerVuelo(!volando);
+    }
+
     const { lateral, adelante } = controles.obtenerMovimiento();
     const { giro, inclinacion } = controles.obtenerVista();
     const forwardX = -Math.sin(giro);
@@ -110,7 +125,7 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}) {
       cabezaJugador,
     );
 
-    if (!salud.estaMuerto()) {
+    if (!muerto) {
       camera.position.x = THREE.MathUtils.clamp(
         posicionAnteriorX + desplazamientoX,
         -limiteMundo,
@@ -150,14 +165,7 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}) {
       }
     }
 
-    const alturaObjetivo =
-      terreno.obtenerAltura(camera.position.x, camera.position.z) + jugador.alturaOjos;
-    const mezclaAltura = 1 - Math.exp(-10 * delta);
-    camera.position.y = THREE.MathUtils.lerp(
-      camera.position.y,
-      alturaObjetivo,
-      mezclaAltura,
-    );
+    if (!muerto) actualizarMovimientoVertical(delta, saltoSolicitado);
     camera.rotation.set(inclinacion, giro, 0);
     const estadoCiclo = cicloDiaNoche.actualizar(deltaReal);
     salud.actualizar(now);
@@ -165,6 +173,133 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}) {
     interaccionBloques.actualizar(now, !salud.estaMuerto());
 
     renderer.render(scene, camera);
+  }
+
+  function actualizarMovimientoVertical(delta, saltoSolicitado) {
+    if (volando) {
+      const movimientoVertical = THREE.MathUtils.clamp(
+        controles.obtenerMovimientoVertical() + Number(saltoSolicitado),
+        -1,
+        1,
+      );
+      if (movimientoVertical === 0) return;
+
+      const piesActuales = camera.position.y - jugador.alturaOjos;
+      const alturaMaxima =
+        mundo.nivelMaximoColocacion * mundo.tamanoBloque +
+        jugador.alturaOjos +
+        mundo.tamanoBloque * 4;
+      const siguienteY = THREE.MathUtils.clamp(
+        camera.position.y +
+          movimientoVertical * jugador.velocidadVuelo * delta,
+        terreno.obtenerAltura(camera.position.x, camera.position.z) +
+          jugador.alturaOjos,
+        alturaMaxima,
+      );
+      const siguientesPies = siguienteY - jugador.alturaOjos;
+      const siguienteCabeza = siguienteY + 0.18;
+
+      if (movimientoVertical < 0) {
+        const soporte = terreno.obtenerAlturaSoporte(
+          camera.position.x,
+          camera.position.z,
+          piesActuales + 0.08,
+          jugador.radio * 0.92,
+        );
+        if (siguientesPies <= soporte) {
+          camera.position.y = soporte + jugador.alturaOjos;
+          return;
+        }
+      }
+
+      if (
+        !terreno.hayColisionJugador(
+          camera.position.x,
+          camera.position.z,
+          siguientesPies,
+          siguienteCabeza,
+        )
+      ) {
+        camera.position.y = siguienteY;
+      }
+      return;
+    }
+
+    const piesActuales = camera.position.y - jugador.alturaOjos;
+    const soporteCercano = terreno.obtenerAlturaSoporte(
+      camera.position.x,
+      camera.position.z,
+      piesActuales + 0.42,
+      jugador.radio * 0.92,
+    );
+    const tocandoSuelo =
+      velocidadVertical <= 0 && Math.abs(piesActuales - soporteCercano) <= 0.44;
+
+    if (saltoSolicitado && tocandoSuelo) {
+      camera.position.y = soporteCercano + jugador.alturaOjos;
+      velocidadVertical = jugador.velocidadSalto;
+    } else if (tocandoSuelo) {
+      camera.position.y = soporteCercano + jugador.alturaOjos;
+      velocidadVertical = 0;
+      return;
+    }
+
+    velocidadVertical -= jugador.gravedad * delta;
+    const siguienteY = camera.position.y + velocidadVertical * delta;
+    const siguientesPies = siguienteY - jugador.alturaOjos;
+    const siguienteCabeza = siguienteY + 0.18;
+
+    if (velocidadVertical <= 0) {
+      const soporteCaida = terreno.obtenerAlturaSoporte(
+        camera.position.x,
+        camera.position.z,
+        piesActuales + 0.08,
+        jugador.radio * 0.92,
+      );
+      if (siguientesPies <= soporteCaida) {
+        camera.position.y = soporteCaida + jugador.alturaOjos;
+        velocidadVertical = 0;
+        return;
+      }
+    }
+
+    if (
+      terreno.hayColisionJugador(
+        camera.position.x,
+        camera.position.z,
+        siguientesPies,
+        siguienteCabeza,
+      )
+    ) {
+      velocidadVertical = 0;
+      return;
+    }
+    camera.position.y = siguienteY;
+  }
+
+  function establecerVuelo(activo) {
+    volando = creativo && activo;
+    velocidadVertical = 0;
+    actualizarInterfazVuelo();
+  }
+
+  function actualizarInterfazVuelo() {
+    interfaz.botonVuelo.hidden = !creativo;
+    interfaz.botonVuelo.classList.toggle("is-active", volando);
+    interfaz.botonVuelo.setAttribute("aria-pressed", String(volando));
+    interfaz.botonVuelo.setAttribute(
+      "aria-label",
+      volando ? "Desactivar vuelo" : "Activar vuelo",
+    );
+    interfaz.botonVuelo.querySelector("small").textContent = volando
+      ? "VUELO"
+      : "VOLAR";
+    interfaz.botonDescender.hidden = !volando;
+    interfaz.etiquetaSalto.textContent = volando ? "SUBIR" : "SALTAR";
+    interfaz.botonSaltar.setAttribute(
+      "aria-label",
+      volando ? "Ascender mientras vuelas" : "Saltar",
+    );
   }
 }
 
