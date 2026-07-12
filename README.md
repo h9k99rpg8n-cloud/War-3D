@@ -1,6 +1,6 @@
 # War 3D
 
-**War 3D v1.7** es un juego 3D de bloques para navegador pensado primero para móvil.
+**War 3D v1.7.1** es un juego 3D de bloques para navegador pensado primero para móvil.
 
 ## Jugar
 
@@ -14,8 +14,22 @@
 - Joystick táctil en el lado izquierdo.
 - Cámara táctil arrastrando el lado derecho de la pantalla.
 - Controles de escritorio con WASD o flechas y arrastre del ratón.
-- Barra táctil de seis espacios para recoger, reordenar, seleccionar y colocar pasto, hojas, madera y arena.
+- Barra táctil de seis espacios para recoger, reordenar y usar pasto, hojas, madera, arena, tierra y huevos de aparición.
 - Render optimizado con mallas instanciadas por tipo y resolución limitada para móviles.
+
+## Cambios de la v1.7.1
+
+- El agua ya no existe como bloque dentro del mapa: ahora es un volumen líquido independiente con superficie conectada.
+- Rapier detecta los lagos mediante sensores físicos sin convertirlos en paredes ni empujar al jugador.
+- Nuevo bloque de tierra con textura procedural propia y capas subterráneas diferenciadas del pasto.
+- Textura de arena renovada con granos y vetas más naturales, conservando el estilo de 16×16 píxeles.
+- Zombi rediseñado con piel verde claramente reconocible, ropa azul deteriorada y mayor contraste frente a las arañas.
+- Los zombis permanecen después de la noche, se incendian al recibir luz solar, emiten partículas y mueren tras quemarse.
+- Cada araña natural tiene 50% de probabilidad de permanecer durante el día.
+- Catálogo exclusivo de Creativo con todos los bloques disponibles y asignación directa a la barra rápida.
+- Huevos de aparición para generar manualmente una Araña Umbral o un Zombi Errante.
+- Reacción de daño ampliada: la cámara gira, se inclina y tiembla brevemente al recibir un ataque.
+- Correcciones de agua, colisiones, inventario, transición día/noche y aparición de entidades.
 
 ## Cambios de la v1.7
 
@@ -97,7 +111,7 @@
 ## Tecnología
 
 - Three.js `0.185.1` mediante módulo ES.
-- Rapier 3D `0.19.3` para la gravedad de la arena en Supervivencia.
+- Rapier 3D `0.19.3` para la gravedad de la arena y los sensores físicos del agua.
 - HTML, CSS y JavaScript modular sin proceso de compilación.
 - Despliegue automático con GitHub Pages.
 

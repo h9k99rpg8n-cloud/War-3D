@@ -3,6 +3,7 @@ export const TIPOS_BLOQUE = Object.freeze([
   "hojas",
   "madera",
   "arena",
+  "tierra",
   "agua",
 ]);
 
@@ -11,6 +12,7 @@ export const TIPOS_RECOLECTABLES = Object.freeze([
   "hojas",
   "madera",
   "arena",
+  "tierra",
 ]);
 
 export function crearBibliotecaBloques(THREE) {
@@ -22,6 +24,7 @@ export function crearBibliotecaBloques(THREE) {
     corteMadera: crearTextura(THREE, "corte-madera", pixelCorteMadera),
     maderaLateral: crearTextura(THREE, "madera-lateral", pixelMaderaLateral),
     arena: crearTextura(THREE, "arena", pixelArena),
+    tierraBloque: crearTextura(THREE, "tierra-bloque", pixelTierraBloque),
     agua: crearTextura(THREE, "agua", pixelAgua),
   };
 
@@ -38,6 +41,7 @@ export function crearBibliotecaBloques(THREE) {
       material(THREE, texturas.corteMadera, 0x3a2114, 0.39),
     ),
     arena: material(THREE, texturas.arena, 0x6b5527, 0.34),
+    tierra: material(THREE, texturas.tierraBloque, 0x3b2415, 0.38),
     agua: materialAgua(THREE, texturas.agua),
   };
 
@@ -163,10 +167,21 @@ function pixelCorteMadera(x, y) {
 
 function pixelArena(x, y) {
   const ruido = hashPixel(x, y, 97);
-  const grano = (x * 5 + y * 3 + Math.floor(ruido * 7)) % 13;
-  if (grano === 0 || ruido > 0.9) return [242, 214, 132];
-  if (grano === 6 || ruido < 0.13) return [164, 130, 72];
-  return ruido > 0.52 ? [219, 185, 103] : [198, 160, 84];
+  const grano = (x * 7 + y * 5 + Math.floor(ruido * 9)) % 17;
+  const veta = Math.sin((x + y * 0.72) * 0.92) + ruido * 0.55;
+  if (grano === 0 || ruido > 0.93) return [239, 218, 157];
+  if (grano === 8 || ruido < 0.09) return [139, 112, 69];
+  if (veta > 1.12) return [218, 192, 132];
+  return ruido > 0.5 ? [199, 169, 109] : [181, 149, 91];
+}
+
+function pixelTierraBloque(x, y) {
+  const ruido = hashPixel(x, y, 103);
+  const piedra = (x * 5 + y * 7 + Math.floor(ruido * 8)) % 19;
+  if (piedra === 0) return [173, 123, 72];
+  if (piedra === 9 || ruido < 0.12) return [74, 48, 34];
+  if (ruido > 0.72) return [139, 91, 52];
+  return ruido > 0.38 ? [112, 70, 43] : [94, 59, 39];
 }
 
 function pixelAgua(x, y) {

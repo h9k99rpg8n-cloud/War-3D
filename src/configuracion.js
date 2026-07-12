@@ -1,4 +1,4 @@
-export const VERSION_JUEGO = "1.7";
+export const VERSION_JUEGO = "1.7.1";
 export const VERSION_THREE = "0.185.1";
 export const VERSION_RAPIER = "0.19.3";
 export const URL_THREE = `https://cdn.jsdelivr.net/npm/three@${VERSION_THREE}/build/three.module.js`;
@@ -52,6 +52,7 @@ export const CONFIGURACION = Object.freeze({
       hojas: 36,
       madera: 37,
       arena: 47,
+      tierra: 40,
     }),
   }),
   lagos: Object.freeze({
@@ -63,6 +64,7 @@ export const CONFIGURACION = Object.freeze({
     gravedad: 3.4,
     velocidadAscenso: 4.2,
     velocidadHundimiento: 1.15,
+    margenSuperficie: 0.14,
   }),
   fisica: Object.freeze({
     gravedad: -18,
@@ -89,7 +91,7 @@ export const CONFIGURACION = Object.freeze({
     }),
   }),
   aranas: Object.freeze({
-    maximo: 4,
+    maximo: 12,
     cantidadInicial: 3,
     rangoVision: 10,
     semiAnguloVision: Math.PI * 0.3,
@@ -110,7 +112,7 @@ export const CONFIGURACION = Object.freeze({
   zombies: Object.freeze({
     tamanoGrupo: 3,
     cantidadGrupos: 1,
-    maximo: 6,
+    maximo: 12,
     rangoVision: 14,
     memoriaPersecucionMs: 1_600,
     velocidadCaminar: 0.9,
@@ -123,5 +125,7 @@ export const CONFIGURACION = Object.freeze({
     radioSpawnMinimo: 17,
     radioSpawnMaximo: 29,
     dano: 1,
+    duracionQuemaduraMs: 4_800,
+    particulasPorSegundo: 9,
   }),
 });

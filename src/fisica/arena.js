@@ -11,13 +11,16 @@ export function crearFisicaArena(
   const geometria = new THREE.BoxGeometry(tamanoBloque, tamanoBloque, tamanoBloque);
   const material = terreno.obtenerMaterialRecolectable("arena");
   const cuerpos = [];
-  const mundoFisico =
-    activo && RAPIER
-      ? new RAPIER.World({ x: 0, y: configuracion.fisica.gravedad, z: 0 })
-      : null;
+  const mundoFisico = RAPIER
+    ? new RAPIER.World({ x: 0, y: configuracion.fisica.gravedad, z: 0 })
+    : null;
 
   return {
     usaRapier: Boolean(mundoFisico),
+
+    obtenerContextoRapier() {
+      return mundoFisico ? { RAPIER, mundoFisico } : null;
+    },
 
     procesarBloqueColocado(bloque, posicion) {
       if (!activo || bloque?.tipo !== "arena") return false;
@@ -59,12 +62,12 @@ export function crearFisicaArena(
     },
 
     actualizar(delta) {
-      if (!activo || cuerpos.length === 0) return;
       const paso = Math.min(Math.max(delta, 0), 0.05);
       if (mundoFisico) {
-        mundoFisico.timestep = paso;
+        mundoFisico.timestep = Math.max(paso, 1 / 240);
         mundoFisico.step();
       }
+      if (!activo || cuerpos.length === 0) return;
 
       for (let indice = cuerpos.length - 1; indice >= 0; indice -= 1) {
         const item = cuerpos[indice];

@@ -3,6 +3,7 @@ import { crearControles } from "./controles/entrada.js";
 import { crearSistemaAranas } from "./entidades/aranas.js";
 import { crearSistemaZombies } from "./entidades/zombies.js";
 import { crearFisicaArena } from "./fisica/arena.js";
+import { crearFisicaAgua } from "./fisica/agua.js";
 import { ocultarCarga, prepararInterfaz } from "./interfaz/interfaz.js";
 import { crearInventario } from "./inventario/inventario.js";
 import { crearSistemaSalud } from "./jugador/salud.js";
@@ -33,6 +34,7 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}, RAPIER = null)
     configuracion,
     opciones,
   );
+  const fisicaAgua = crearFisicaAgua(terreno, fisicaArena);
   const controles = crearControles(interfaz, configuracion);
   const inventario = crearInventario(interfaz, configuracion, opciones);
   const salud = crearSistemaSalud(interfaz, configuracion, opciones);
@@ -89,6 +91,10 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}, RAPIER = null)
     configuracion,
     opciones,
     fisicaArena,
+    {
+      huevo_arana: (posicion) => aranas.invocar(posicion),
+      huevo_zombie: (posicion) => zombies.invocar(posicion),
+    },
   );
 
   salud.establecerAlReaparecer(() => {
@@ -142,7 +148,7 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}, RAPIER = null)
     const cabezaAntesMovimiento = camera.position.y + 0.18;
     const enAguaAntesMovimiento =
       !volando &&
-      terreno.estaEnAgua(
+      fisicaAgua.estaEnAgua(
         posicionAnteriorX,
         posicionAnteriorZ,
         piesAntesMovimiento,
@@ -212,10 +218,12 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}, RAPIER = null)
 
     if (!muerto) actualizarMovimientoVertical(delta, saltoSolicitado);
     const sacudida = salud.obtenerSacudida(now);
+    const arcoDano = Math.sin((1 - sacudida) * Math.PI) * sacudida;
+    const ladoDano = salud.obtenerLadoSacudida();
     camera.rotation.set(
-      inclinacion + Math.sin(now * 0.071) * 0.022 * sacudida,
-      giro + Math.cos(now * 0.057) * 0.017 * sacudida,
-      Math.sin(now * 0.089) * 0.026 * sacudida,
+      inclinacion + Math.sin(now * 0.071) * 0.035 * sacudida - arcoDano * 0.045,
+      giro + ladoDano * arcoDano * 0.13 + Math.cos(now * 0.057) * 0.024 * sacudida,
+      ladoDano * arcoDano * 0.1 + Math.sin(now * 0.089) * 0.035 * sacudida,
     );
     const estadoCiclo = cicloDiaNoche.actualizar(deltaReal);
     salud.actualizar(now);
@@ -281,7 +289,7 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}, RAPIER = null)
     const piesActuales = camera.position.y - jugador.alturaOjos;
     const cabezaActual = camera.position.y + 0.18;
     if (
-      terreno.estaEnAgua(
+      fisicaAgua.estaEnAgua(
         camera.position.x,
         camera.position.z,
         piesActuales,

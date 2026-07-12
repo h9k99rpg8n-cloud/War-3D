@@ -5,7 +5,7 @@ import {
 } from "../renderizado/texturasBloques.js";
 import { crearMapaLagos } from "./generadorLagos.js";
 
-const TIPOS_SUELO = new Set(["pasto", "arena"]);
+const TIPOS_SUELO = new Set(["pasto", "arena", "tierra"]);
 const DIRECCIONES = Object.freeze([
   [1, 0, 0],
   [-1, 0, 0],
@@ -138,10 +138,12 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
     },
 
     obtenerCantidadTipo(tipo) {
+      if (tipo === "agua") return contarColumnasAgua();
       return bloquesPorTipo[tipo]?.size ?? 0;
     },
 
     obtenerCantidadVisible(tipo) {
+      if (tipo === "agua") return contarColumnasAgua();
       return bloquesVisiblesPorTipo[tipo]?.size ?? 0;
     },
 
@@ -156,7 +158,11 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
         tamanoBloque,
         tamanoCuadricula,
       );
-      return nivelesAgua[z][x];
+      const columna = obtenerColumnaAgua(x, z);
+      return columna
+        ? columna.maximo * tamanoBloque + tamanoBloque / 2 -
+            configuracion.agua.margenSuperficie
+        : null;
     },
 
     estaEnAgua(worldX, worldZ, pies, cabeza) {
@@ -166,23 +172,46 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
         tamanoBloque,
         tamanoCuadricula,
       );
-      const yMin = Math.max(nivelFondo, Math.floor(pies / tamanoBloque) - 1);
-      const yMax = Math.min(
-        nivelMaximoColocacion,
-        Math.ceil(cabeza / tamanoBloque) + 1,
+      const columna = obtenerColumnaAgua(x, z);
+      if (!columna) return false;
+      const inferior = columna.minimo * tamanoBloque - tamanoBloque / 2;
+      const superior =
+        columna.maximo * tamanoBloque + tamanoBloque / 2 -
+        configuracion.agua.margenSuperficie;
+      return pies < superior && cabeza > inferior;
+    },
+
+    obtenerVolumenesAgua() {
+      return construirVolumenesAgua();
+    },
+
+    estaExpuestoAlCielo(worldX, worldZ, desdeY) {
+      const { x, z } = mundoAIndice(
+        worldX,
+        worldZ,
+        tamanoBloque,
+        tamanoCuadricula,
       );
-      const mitad = tamanoBloque / 2;
-      for (let y = yMin; y <= yMax; y += 1) {
-        const bloque = bloques.get(claveBloque(x, y, z));
-        if (
-          bloque?.tipo === "agua" &&
-          pies < y * tamanoBloque + mitad &&
-          cabeza > y * tamanoBloque - mitad
-        ) {
-          return true;
-        }
+      const inicioY = Math.max(
+        nivelFondo,
+        Math.floor(desdeY / tamanoBloque) + 1,
+      );
+      for (let y = inicioY; y <= nivelMaximoColocacion; y += 1) {
+        if (bloques.has(claveBloque(x, y, z))) return false;
       }
-      return false;
+      return true;
+    },
+
+    obtenerPosicionAdyacente(bloqueBase, normal) {
+      if (!bloqueBase || !normal) return null;
+      const posicionBase = this.obtenerCentroBloque(bloqueBase);
+      return posicionBase.add(
+        new THREE.Vector3(
+          Math.round(normal.x),
+          Math.round(normal.y),
+          Math.round(normal.z),
+        ).multiplyScalar(tamanoBloque),
+      );
     },
 
     hayColisionJugador(worldX, worldZ, pies, cabeza) {
@@ -216,7 +245,6 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
     romperBloque(bloque) {
       if (
         !bloque ||
-        bloque.tipo === "agua" ||
         !TIPOS_RECOLECTABLES.includes(bloque.tipo) ||
         !bloques.delete(bloque.clave)
       ) {
@@ -226,11 +254,13 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
       bloquesVisiblesPorTipo[bloque.tipo].delete(bloque.clave);
       const posicionRota = this.obtenerCentroBloque(bloque);
       if (TIPOS_SUELO.has(bloque.tipo)) recalcularAlturaSuelo(bloque.x, bloque.z);
+      const tiposAfectados = new Set([bloque.tipo]);
+      if (nivelesAgua[bloque.z][bloque.x] !== null) tiposAfectados.add("agua");
       actualizarVisibilidadAlrededor(
         bloque.x,
         bloque.y,
         bloque.z,
-        new Set([bloque.tipo]),
+        tiposAfectados,
       );
       return { bloque, posicion: posicionRota };
     },
@@ -246,11 +276,13 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
       bloquesPorTipo.arena.delete(bloque.clave);
       bloquesVisiblesPorTipo.arena.delete(bloque.clave);
       recalcularAlturaSuelo(bloque.x, bloque.z);
+      const tiposAfectados = new Set(["arena"]);
+      if (nivelesAgua[bloque.z][bloque.x] !== null) tiposAfectados.add("agua");
       actualizarVisibilidadAlrededor(
         bloque.x,
         bloque.y,
         bloque.z,
-        new Set(["arena"]),
+        tiposAfectados,
       );
       return true;
     },
@@ -262,7 +294,7 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
         y -= 1
       ) {
         const bloque = bloques.get(claveBloque(x, y, z));
-        if (bloque && bloque.tipo !== "agua") return y + 1;
+        if (bloque) return y + 1;
       }
       return nivelFondo;
     },
@@ -281,17 +313,11 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
       }
       const clave = claveBloque(x, y, z);
       const existente = bloques.get(clave);
-      if (existente && existente.tipo !== "agua") return null;
+      if (existente) return null;
       const tiposAfectados = new Set([tipo]);
-      if (existente?.tipo === "agua") {
-        bloques.delete(clave);
-        bloquesPorTipo.agua.delete(clave);
-        bloquesVisiblesPorTipo.agua.delete(clave);
-        tiposAfectados.add("agua");
-      }
+      if (nivelesAgua[z][x] !== null) tiposAfectados.add("agua");
       if (!agregarDatosBloque(x, y, z, tipo)) return null;
       if (TIPOS_SUELO.has(tipo)) recalcularAlturaSuelo(x, z);
-      if (existente?.tipo === "agua") recalcularNivelAgua(x, z);
       actualizarVisibilidadAlrededor(x, y, z, tiposAfectados);
       return bloques.get(clave);
     },
@@ -320,7 +346,7 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
 
       const bloque = crearDatosBloque(x, y, z, tipo);
       const existente = bloques.get(bloque.clave);
-      if (existente && existente.tipo !== "agua") {
+      if (existente) {
         return { ok: false, motivo: "ocupado" };
       }
       if (!asegurarCapacidad(tipo, mallasPorTipo[tipo].count + 1)) {
@@ -333,15 +359,9 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
       }
 
       const tiposAfectados = new Set([tipo]);
-      if (existente?.tipo === "agua") {
-        bloques.delete(existente.clave);
-        bloquesPorTipo.agua.delete(existente.clave);
-        bloquesVisiblesPorTipo.agua.delete(existente.clave);
-        tiposAfectados.add("agua");
-      }
+      if (nivelesAgua[z][x] !== null) tiposAfectados.add("agua");
       agregarDatosBloque(x, y, z, tipo);
       if (TIPOS_SUELO.has(tipo)) recalcularAlturaSuelo(x, z);
-      if (existente?.tipo === "agua") recalcularNivelAgua(x, z);
       actualizarVisibilidadAlrededor(x, y, z, tiposAfectados);
       return { ok: true, bloque, posicion: posicionBloque };
     },
@@ -366,11 +386,7 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
       for (let x = xMin; x <= xMax; x += 1) {
         for (let y = yMin; y <= yMax; y += 1) {
           const bloque = bloques.get(claveBloque(x, y, z));
-          if (
-            !bloque ||
-            TIPOS_SUELO.has(bloque.tipo) ||
-            bloque.tipo === "agua"
-          ) {
+          if (!bloque || TIPOS_SUELO.has(bloque.tipo)) {
             continue;
           }
 
@@ -427,11 +443,7 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
 
         for (let y = nivelFondo; y <= nivelMaximoColocacion; y += 1) {
           const bloque = bloques.get(claveBloque(x, y, z));
-          if (
-            !bloque ||
-            TIPOS_SUELO.has(bloque.tipo) ||
-            bloque.tipo === "agua"
-          ) {
+          if (!bloque || TIPOS_SUELO.has(bloque.tipo)) {
             continue;
           }
           const superficie = y * tamanoBloque + mitad;
@@ -478,11 +490,7 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
 
         for (let y = nivelFondo; y <= nivelMaximoColocacion; y += 1) {
           const bloque = bloques.get(claveBloque(x, y, z));
-          if (
-            !bloque ||
-            TIPOS_SUELO.has(bloque.tipo) ||
-            bloque.tipo === "agua"
-          ) {
+          if (!bloque || TIPOS_SUELO.has(bloque.tipo)) {
             continue;
           }
           const superficie = y * tamanoBloque + mitad;
@@ -565,15 +573,15 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
           const tipoCapa =
             tipoSuperficie === "arena" && y >= nivelSuperficie - 2
               ? "arena"
-              : "pasto";
+              : tipoSuperficie === "pasto" && y === nivelSuperficie
+                ? "pasto"
+                : "tierra";
           agregarDatosBloque(x, y, z, tipoCapa);
         }
         alturasSuelo[z][x] = (nivelSuperficie + 0.5) * tamanoBloque;
 
         if (profundidadLago) {
-          for (let y = nivelSuperficie + 1; y <= nivelAgua; y += 1) {
-            agregarDatosBloque(x, y, z, "agua");
-          }
+          // El agua es un volumen líquido, no un bloque sólido guardado en el mapa.
           nivelesAgua[z][x] = (nivelAgua + 0.5) * tamanoBloque;
         }
       }
@@ -688,7 +696,7 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
     const uvs = [];
     const indices = [];
     const mitad = tamanoBloque / 2;
-    const margenSuperficie = tamanoBloque * 0.08;
+    const margenSuperficie = configuracion.agua.margenSuperficie;
 
     for (let z = 0; z < tamanoCuadricula; z += 1) {
       for (let x = 0; x < tamanoCuadricula; x += 1) {
@@ -783,21 +791,69 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
     if (x < 0 || x >= tamanoCuadricula || z < 0 || z >= tamanoCuadricula) {
       return null;
     }
+    if (nivelesAgua[z][x] === null) return null;
     let minimo = null;
     let maximo = null;
-    for (let y = nivelFondo; y <= nivelMaximoColocacion; y += 1) {
-      if (bloques.get(claveBloque(x, y, z))?.tipo !== "agua") continue;
+    const inicio = nivelesSuelo[z][x] + 1;
+    const fin = configuracion.lagos.nivelAgua;
+    for (let y = inicio; y <= fin; y += 1) {
+      if (bloques.has(claveBloque(x, y, z))) continue;
       if (minimo === null) minimo = y;
       maximo = y;
     }
     return minimo === null ? null : { minimo, maximo };
   }
 
+  function construirVolumenesAgua() {
+    const volumenes = [];
+    const mitad = tamanoBloque / 2;
+    for (let z = 0; z < tamanoCuadricula; z += 1) {
+      let x = 0;
+      while (x < tamanoCuadricula) {
+        const columna = obtenerColumnaAgua(x, z);
+        if (!columna) {
+          x += 1;
+          continue;
+        }
+        const inicio = x;
+        let fin = x;
+        while (fin + 1 < tamanoCuadricula) {
+          const siguiente = obtenerColumnaAgua(fin + 1, z);
+          if (
+            !siguiente ||
+            siguiente.minimo !== columna.minimo ||
+            siguiente.maximo !== columna.maximo
+          ) {
+            break;
+          }
+          fin += 1;
+        }
+        const inferior = columna.minimo * tamanoBloque - mitad;
+        const superior =
+          columna.maximo * tamanoBloque + mitad -
+          configuracion.agua.margenSuperficie;
+        volumenes.push({
+          x:
+            (indiceAMundo(inicio, tamanoCuadricula, tamanoBloque) +
+              indiceAMundo(fin, tamanoCuadricula, tamanoBloque)) /
+            2,
+          y: (inferior + superior) / 2,
+          z: indiceAMundo(z, tamanoCuadricula, tamanoBloque),
+          ancho: (fin - inicio + 1) * tamanoBloque,
+          alto: superior - inferior,
+          profundidad: tamanoBloque,
+        });
+        x = fin + 1;
+      }
+    }
+    return volumenes;
+  }
+
   function contarColumnasAgua() {
     let cantidad = 0;
     for (let z = 0; z < tamanoCuadricula; z += 1) {
       for (let x = 0; x < tamanoCuadricula; x += 1) {
-        if (nivelesAgua[z][x] !== null) cantidad += 1;
+        if (obtenerColumnaAgua(x, z)) cantidad += 1;
       }
     }
     return cantidad;
@@ -824,8 +880,6 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
         claveBloque(vecinoX, vecinoY, vecinoZ),
       );
       if (!vecino) return true;
-      if (bloque.tipo === "agua" && vecino.tipo !== "agua") return true;
-      if (bloque.tipo !== "agua" && vecino.tipo === "agua") return true;
     }
     return false;
   }
@@ -835,6 +889,17 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
     for (const [dx, dy, dz] of posicionesAfectadas) {
       const clave = claveBloque(x + dx, y + dy, z + dz);
       const bloque = bloques.get(clave);
+      const celdaX = x + dx;
+      const celdaZ = z + dz;
+      if (
+        celdaX >= 0 &&
+        celdaX < tamanoCuadricula &&
+        celdaZ >= 0 &&
+        celdaZ < tamanoCuadricula &&
+        nivelesAgua[celdaZ][celdaX] !== null
+      ) {
+        tiposAfectados.add("agua");
+      }
       if (!bloque) continue;
       tiposAfectados.add(bloque.tipo);
       const visibles = bloquesVisiblesPorTipo[bloque.tipo];
@@ -858,18 +923,6 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
       nivelSuperior === null
         ? (nivelFondo - 0.5) * tamanoBloque
         : (nivelSuperior + 0.5) * tamanoBloque;
-  }
-
-  function recalcularNivelAgua(x, z) {
-    let nivelSuperior = null;
-    for (let y = nivelMaximoColocacion; y >= nivelFondo; y -= 1) {
-      if (bloques.get(claveBloque(x, y, z))?.tipo === "agua") {
-        nivelSuperior = y;
-        break;
-      }
-    }
-    nivelesAgua[z][x] =
-      nivelSuperior === null ? null : (nivelSuperior + 0.5) * tamanoBloque;
   }
 
   function limitarIndice(valor) {

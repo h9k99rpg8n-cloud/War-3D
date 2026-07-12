@@ -1,29 +1,62 @@
-export const NOMBRES_BLOQUE = Object.freeze({
-  pasto: "Bloque de pasto",
-  hojas: "Bloque de hojas",
-  madera: "Bloque de madera",
-  arena: "Bloque de arena",
+export const DEFINICIONES_INVENTARIO = Object.freeze({
+  pasto: Object.freeze({
+    nombre: "Bloque de pasto",
+    clase: "inventory-tile--grass",
+    categoria: "bloque",
+  }),
+  hojas: Object.freeze({
+    nombre: "Bloque de hojas",
+    clase: "inventory-tile--leaves",
+    categoria: "bloque",
+  }),
+  madera: Object.freeze({
+    nombre: "Bloque de madera",
+    clase: "inventory-tile--wood",
+    categoria: "bloque",
+  }),
+  arena: Object.freeze({
+    nombre: "Bloque de arena",
+    clase: "inventory-tile--sand",
+    categoria: "bloque",
+  }),
+  tierra: Object.freeze({
+    nombre: "Bloque de tierra",
+    clase: "inventory-tile--dirt",
+    categoria: "bloque",
+  }),
+  huevo_arana: Object.freeze({
+    nombre: "Huevo de Araña Umbral",
+    clase: "inventory-tile--spider-egg",
+    categoria: "entidad",
+  }),
+  huevo_zombie: Object.freeze({
+    nombre: "Huevo de Zombi",
+    clase: "inventory-tile--zombie-egg",
+    categoria: "entidad",
+  }),
 });
 
-const CLASES_ICONO = Object.freeze({
-  pasto: "inventory-tile--grass",
-  hojas: "inventory-tile--leaves",
-  madera: "inventory-tile--wood",
-  arena: "inventory-tile--sand",
-});
+export const NOMBRES_BLOQUE = Object.freeze(
+  Object.fromEntries(
+    Object.entries(DEFINICIONES_INVENTARIO).map(([tipo, definicion]) => [
+      tipo,
+      definicion.nombre,
+    ]),
+  ),
+);
 
 export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
   const limites = configuracion.inventario.limites;
   const creativo = opcionesMundo.modo === "creativo";
   const espacios = interfaz.espaciosInventario;
-  const tiposPorEspacio = ["pasto", "hojas", "madera", "arena", null, null];
+  const tiposPorEspacio = ["pasto", "hojas", "madera", "arena", "tierra", null];
   const estados = Object.fromEntries(
-    Object.keys(NOMBRES_BLOQUE).map((tipo) => [
+    Object.keys(DEFINICIONES_INVENTARIO).map((tipo) => [
       tipo,
       { cantidad: 0, reservas: 0 },
     ]),
   );
-  let seleccionado = "pasto";
+  let indiceSeleccionado = 0;
   let arrastre = null;
   let ignorarClickHasta = 0;
 
@@ -38,22 +71,32 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
     espacio.addEventListener("pointerup", terminarArrastre);
     espacio.addEventListener("pointercancel", cancelarArrastre);
   });
+
+  prepararCatalogo();
   actualizarInterfaz();
 
   return {
     tipoSeleccionado() {
-      return seleccionado;
+      return tiposPorEspacio[indiceSeleccionado] ?? null;
     },
 
     esCreativo() {
       return creativo;
     },
 
-    nombre(tipo) {
-      return NOMBRES_BLOQUE[tipo] ?? "Bloque";
+    esBloque(tipo) {
+      return DEFINICIONES_INVENTARIO[tipo]?.categoria === "bloque";
     },
 
-    cantidad(tipo = seleccionado) {
+    esHuevo(tipo) {
+      return DEFINICIONES_INVENTARIO[tipo]?.categoria === "entidad";
+    },
+
+    nombre(tipo) {
+      return NOMBRES_BLOQUE[tipo] ?? "Objeto";
+    },
+
+    cantidad(tipo = tiposPorEspacio[indiceSeleccionado]) {
       return creativo && estados[tipo]
         ? Number.POSITIVE_INFINITY
         : (estados[tipo]?.cantidad ?? 0);
@@ -62,13 +105,22 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
     estaLleno(tipo) {
       if (creativo) return false;
       const estado = estados[tipo];
-      return !estado || estado.cantidad + estado.reservas >= limites[tipo];
+      const limite = limites[tipo];
+      return !estado || !Number.isFinite(limite) ||
+        estado.cantidad + estado.reservas >= limite;
     },
 
     reservarEspacio(tipo) {
       if (creativo) return true;
       const estado = estados[tipo];
-      if (!estado || estado.cantidad + estado.reservas >= limites[tipo]) return false;
+      const limite = limites[tipo];
+      if (
+        !estado ||
+        !Number.isFinite(limite) ||
+        estado.cantidad + estado.reservas >= limite
+      ) {
+        return false;
+      }
       estado.reservas += 1;
       return true;
     },
@@ -82,16 +134,17 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
     confirmarRecoleccion(tipo) {
       if (creativo) return true;
       const estado = estados[tipo];
-      if (!estado) return false;
+      const limite = limites[tipo];
+      if (!estado || !Number.isFinite(limite)) return false;
       if (estado.reservas > 0) estado.reservas -= 1;
-      if (estado.cantidad >= limites[tipo]) return false;
+      if (estado.cantidad >= limite) return false;
       estado.cantidad += 1;
       actualizarInterfaz();
       return true;
     },
 
-    usarBloque(tipo = seleccionado) {
-      if (creativo) return true;
+    usarBloque(tipo = tiposPorEspacio[indiceSeleccionado]) {
+      if (creativo) return Boolean(estados[tipo]);
       const estado = estados[tipo];
       if (!estado || estado.cantidad <= 0) return false;
       estado.cantidad -= 1;
@@ -104,10 +157,60 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
     },
   };
 
+  function prepararCatalogo() {
+    interfaz.botonCatalogo.hidden = !creativo;
+    interfaz.catalogoCreativo.hidden = true;
+    if (!creativo) return;
+
+    interfaz.listaCatalogo.replaceChildren();
+    for (const [tipo, definicion] of Object.entries(DEFINICIONES_INVENTARIO)) {
+      const boton = document.createElement("button");
+      boton.type = "button";
+      boton.className = "catalog-item";
+      boton.dataset.itemType = tipo;
+      boton.setAttribute("aria-label", `Añadir ${definicion.nombre} a la barra`);
+      const icono = document.createElement("span");
+      icono.className = `inventory-tile ${definicion.clase}`;
+      icono.setAttribute("aria-hidden", "true");
+      const nombre = document.createElement("b");
+      nombre.textContent = definicion.nombre;
+      boton.append(icono, nombre);
+      boton.addEventListener("click", () => seleccionarDesdeCatalogo(tipo));
+      interfaz.listaCatalogo.append(boton);
+    }
+
+    interfaz.botonCatalogo.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const abrir = interfaz.catalogoCreativo.hidden;
+      interfaz.catalogoCreativo.hidden = !abrir;
+      interfaz.botonCatalogo.classList.toggle("is-active", abrir);
+      interfaz.botonCatalogo.setAttribute("aria-expanded", String(abrir));
+    });
+    interfaz.cerrarCatalogo.addEventListener("click", cerrarCatalogo);
+  }
+
+  function seleccionarDesdeCatalogo(tipo) {
+    const existente = tiposPorEspacio.indexOf(tipo);
+    if (existente >= 0) {
+      indiceSeleccionado = existente;
+    } else {
+      tiposPorEspacio[indiceSeleccionado] = tipo;
+    }
+    cerrarCatalogo();
+    actualizarInterfaz();
+  }
+
+  function cerrarCatalogo() {
+    interfaz.catalogoCreativo.hidden = true;
+    interfaz.botonCatalogo.classList.remove("is-active");
+    interfaz.botonCatalogo.setAttribute("aria-expanded", "false");
+  }
+
   function seleccionarEspacio(indice) {
     const tipo = tiposPorEspacio[indice];
     if (!tipo || (!creativo && estados[tipo].cantidad <= 0)) return;
-    seleccionado = tipo;
+    indiceSeleccionado = indice;
     actualizarInterfaz();
   }
 
@@ -182,6 +285,8 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
         const temporal = tiposPorEspacio[destino];
         tiposPorEspacio[destino] = tiposPorEspacio[arrastre.indice];
         tiposPorEspacio[arrastre.indice] = temporal;
+        if (indiceSeleccionado === arrastre.indice) indiceSeleccionado = destino;
+        else if (indiceSeleccionado === destino) indiceSeleccionado = arrastre.indice;
       }
       ignorarClickHasta = performance.now() + 280;
     } else {
@@ -214,19 +319,21 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
   function actualizarInterfaz() {
     espacios.forEach((espacio, indice) => {
       const tipo = tiposPorEspacio[indice];
-      const cantidad = tipo ? estados[tipo].cantidad : 0;
+      const estado = estados[tipo];
+      const cantidad = estado?.cantidad ?? 0;
       const visible = Boolean(tipo && (creativo || cantidad > 0));
+      const definicion = DEFINICIONES_INVENTARIO[tipo];
       espacio.replaceChildren();
       espacio.classList.toggle("is-unlimited", creativo && visible);
-      espacio.classList.toggle("is-selected", tipo === seleccionado);
-      espacio.setAttribute("aria-pressed", String(tipo === seleccionado));
+      espacio.classList.toggle("is-selected", indice === indiceSeleccionado);
+      espacio.setAttribute("aria-pressed", String(indice === indiceSeleccionado));
 
-      if (visible) {
+      if (visible && definicion) {
         const item = document.createElement("span");
         item.className = "inventory-item";
-        item.dataset.blockType = tipo;
+        item.dataset.itemType = tipo;
         const icono = document.createElement("span");
-        icono.className = `inventory-tile ${CLASES_ICONO[tipo]}`;
+        icono.className = `inventory-tile ${definicion.clase}`;
         icono.setAttribute("aria-hidden", "true");
         const contador = document.createElement("b");
         contador.className = "inventory-slot__count";
@@ -237,19 +344,26 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
 
       espacio.setAttribute(
         "aria-label",
-        visible
+        visible && definicion
           ? creativo
-            ? `${NOMBRES_BLOQUE[tipo]}: ilimitado. Arrastrable.`
-            : `${NOMBRES_BLOQUE[tipo]}: ${cantidad} de ${limites[tipo]}. Arrastrable.`
+            ? `${definicion.nombre}: ilimitado. Arrastrable.`
+            : `${definicion.nombre}: ${cantidad} de ${limites[tipo]}. Arrastrable.`
           : `Casilla ${indice + 1} vacía`,
       );
     });
 
+    const seleccionado = tiposPorEspacio[indiceSeleccionado];
+    const definicion = DEFINICIONES_INVENTARIO[seleccionado];
     const cantidadSeleccionada = estados[seleccionado]?.cantidad ?? 0;
-    interfaz.botonColocar.disabled = !creativo && cantidadSeleccionada === 0;
+    interfaz.botonColocar.disabled =
+      !seleccionado || (!creativo && cantidadSeleccionada === 0);
+    interfaz.etiquetaColocar.textContent =
+      definicion?.categoria === "entidad" ? "GENERAR" : "COLOCAR";
     interfaz.botonColocar.setAttribute(
       "aria-label",
-      `Colocar ${NOMBRES_BLOQUE[seleccionado].toLowerCase()}`,
+      definicion
+        ? `${definicion.categoria === "entidad" ? "Generar" : "Colocar"} ${definicion.nombre.toLowerCase()}`
+        : "Selecciona un objeto",
     );
   }
 }

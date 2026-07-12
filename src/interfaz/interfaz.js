@@ -29,7 +29,12 @@ export function obtenerInterfaz() {
     espaciosInventario: [
       ...document.querySelectorAll("#inventory-bar .inventory-slot"),
     ],
+    botonCatalogo: document.querySelector("#creative-catalog-button"),
+    catalogoCreativo: document.querySelector("#creative-catalog"),
+    cerrarCatalogo: document.querySelector("#creative-catalog-close"),
+    listaCatalogo: document.querySelector("#creative-catalog-list"),
     botonColocar: document.querySelector("#place-block"),
+    etiquetaColocar: document.querySelector("#place-label"),
     botonSaltar: document.querySelector("#jump-button"),
     etiquetaSalto: document.querySelector("#jump-label"),
     botonVuelo: document.querySelector("#flight-button"),

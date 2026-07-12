@@ -10,6 +10,7 @@ export function crearInteraccionBloques(
   configuracion,
   opcionesMundo = {},
   fisicaArena = null,
+  accionesEntidades = {},
 ) {
   const { interaccion, jugador, mundo } = configuracion;
   const raycaster = new THREE.Raycaster();
@@ -200,6 +201,10 @@ export function crearInteraccionBloques(
 
   function colocarBloque() {
     const tipo = inventario.tipoSeleccionado();
+    if (!tipo) {
+      mostrarMensaje("Selecciona un objeto del inventario");
+      return;
+    }
     if (inventario.cantidad(tipo) <= 0) {
       mostrarMensaje(`No tienes ${NOMBRES_BLOQUE[tipo].toLowerCase()}`);
       return;
@@ -208,6 +213,21 @@ export function crearInteraccionBloques(
     const impacto = buscarImpacto(0, 0);
     if (!impacto) {
       mostrarMensaje("Apunta la mira hacia un bloque cercano");
+      return;
+    }
+
+    if (inventario.esHuevo(tipo)) {
+      const posicion = terreno.obtenerPosicionAdyacente(
+        impacto.bloque,
+        impacto.normal,
+      );
+      const generado = accionesEntidades[tipo]?.(posicion) ?? false;
+      if (!generado) {
+        mostrarMensaje("No hay espacio suficiente para generar la criatura");
+        return;
+      }
+      inventario.usarBloque(tipo);
+      mostrarMensaje(`${NOMBRES_BLOQUE[tipo]} utilizado`);
       return;
     }
 

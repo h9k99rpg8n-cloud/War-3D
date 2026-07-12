@@ -5,6 +5,7 @@ export function crearSistemaSalud(interfaz, configuracion, opcionesMundo = {}) {
   let invulnerableHasta = 0;
   let destelloHasta = 0;
   let sacudidaHasta = 0;
+  let ladoSacudida = 1;
   let muerto = false;
   let alReaparecer = () => {};
 
@@ -36,6 +37,7 @@ export function crearSistemaSalud(interfaz, configuracion, opcionesMundo = {}) {
       invulnerableHasta = now + configuracion.jugador.invulnerabilidadMs;
       destelloHasta = now + 280;
       sacudidaHasta = now + 340;
+      ladoSacudida *= -1;
       interfaz.destelloDano.classList.remove("is-active");
       // Reinicia el destello aunque dos ataques ocurran tras la misma animación CSS.
       void interfaz.destelloDano.offsetWidth;
@@ -61,6 +63,10 @@ export function crearSistemaSalud(interfaz, configuracion, opcionesMundo = {}) {
     obtenerSacudida(now = performance.now()) {
       if (!activo || now >= sacudidaHasta) return 0;
       return Math.max(0, Math.min(1, (sacudidaHasta - now) / 340));
+    },
+
+    obtenerLadoSacudida() {
+      return ladoSacudida;
     },
 
     establecerAlReaparecer(callback) {

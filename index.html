@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#87b9d9">
     <meta
       name="description"
-      content="War 3D v1.7: zombis nocturnos, agua conectada, arena con física e inventario táctil."
+      content="War 3D v1.7.1: agua física, catálogo creativo, tierra, huevos de aparición y criaturas diurnas."
     >
-    <title>War 3D — v1.7</title>
+    <title>War 3D — v1.7.1</title>
     <link rel="stylesheet" href="./style.css">
   </head>
   <body>
@@ -110,7 +110,7 @@
               CREAR NUEVO MUNDO
             </button>
           </form>
-          <p class="start-screen__version">v1.7 • ZOMBIS, FÍSICA Y AGUA VIVA</p>
+          <p class="start-screen__version">v1.7.1 • AGUA FÍSICA Y CATÁLOGO CREATIVO</p>
         </div>
       </section>
 
@@ -124,7 +124,7 @@
             <p>PROTOTIPO DE MOVIMIENTO</p>
           </div>
         </div>
-        <span id="version-badge" class="version-badge">v1.7 • THREE.JS</span>
+        <span id="version-badge" class="version-badge">v1.7.1 • THREE.JS</span>
       </header>
 
       <section id="health-hud" class="health-hud" aria-label="Salud del jugador" hidden>
@@ -179,9 +179,38 @@
         <button class="inventory-slot" data-slot-index="5" type="button" aria-pressed="false" aria-label="Casilla 6 vacía"></button>
       </div>
 
+      <button
+        id="creative-catalog-button"
+        class="catalog-toggle"
+        type="button"
+        aria-expanded="false"
+        aria-controls="creative-catalog"
+        hidden
+      >
+        <span aria-hidden="true">▦</span>
+        <small>CATÁLOGO</small>
+      </button>
+
+      <section
+        id="creative-catalog"
+        class="creative-catalog"
+        aria-labelledby="creative-catalog-title"
+        hidden
+      >
+        <header>
+          <div>
+            <small>MODO CREATIVO</small>
+            <h2 id="creative-catalog-title">CATÁLOGO</h2>
+          </div>
+          <button id="creative-catalog-close" type="button" aria-label="Cerrar catálogo">×</button>
+        </header>
+        <p>Toca un objeto para colocarlo en la casilla seleccionada.</p>
+        <div id="creative-catalog-list" class="creative-catalog__grid"></div>
+      </section>
+
       <button id="place-block" class="place-block" type="button" aria-label="Colocar bloque de pasto">
         <span aria-hidden="true">＋</span>
-        <small>COLOCAR</small>
+        <small id="place-label">COLOCAR</small>
       </button>
 
       <button id="jump-button" class="movement-action movement-action--jump" type="button" aria-label="Saltar">

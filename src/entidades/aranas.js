@@ -78,7 +78,14 @@ export function crearSistemaAranas(
         }
       } else if (nocheActiva) {
         nocheActiva = false;
-        aranas.length = 0;
+        for (let indice = aranas.length - 1; indice >= 0; indice -= 1) {
+          if (aranas[indice].invocada) continue;
+          const permanece = hash(
+            aranas[indice].semilla,
+            ultimaNoche + 1,
+          ) >= 0.5;
+          if (!permanece) aranas.splice(indice, 1);
+        }
       }
 
       for (const arana of aranas) actualizarArana(arana, now, delta);
@@ -87,6 +94,33 @@ export function crearSistemaAranas(
 
     obtenerCantidad() {
       return aranas.length;
+    },
+
+    invocar(posicionInvocacion) {
+      if (!posicionInvocacion || aranas.length >= ajustes.maximo) return false;
+      const x = limitar(posicionInvocacion.x, -limiteMundo, limiteMundo);
+      const z = limitar(posicionInvocacion.z, -limiteMundo, limiteMundo);
+      const suelo = Math.max(
+        terreno.obtenerAltura(x, z),
+        posicionInvocacion.y - configuracion.mundo.tamanoBloque / 2,
+      );
+      if (
+        terreno.obtenerNivelAgua(x, z) !== null ||
+        terreno.hayColisionCuerpo(
+          x,
+          z,
+          suelo + 0.02,
+          suelo + 0.82,
+          ajustes.radioCuerpo,
+        )
+      ) {
+        return false;
+      }
+      const semilla = Math.floor(
+        performance.now() + x * 47 + z * 83 + aranas.length * 113,
+      );
+      aranas.push(crearDatosArana(x, z, suelo, semilla, true));
+      return true;
     },
 
     despejarAlrededor(posicionJugador, radio = 12) {
@@ -104,8 +138,13 @@ export function crearSistemaAranas(
   };
 
   function generarNoche(numeroNoche) {
+    const invocadas = aranas.filter((arana) => arana.invocada);
     aranas.length = 0;
-    const cantidad = Math.min(ajustes.cantidadInicial, ajustes.maximo);
+    aranas.push(...invocadas);
+    const cantidad = Math.min(
+      ajustes.cantidadInicial,
+      ajustes.maximo - aranas.length,
+    );
 
     for (let indice = 0; indice < cantidad; indice += 1) {
       let encontrada = null;
@@ -135,22 +174,35 @@ export function crearSistemaAranas(
       }
 
       if (!encontrada) continue;
-      aranas.push({
-        x: encontrada.x,
-        z: encontrada.z,
-        y: encontrada.suelo,
-        giro: hash(encontrada.semilla, 4) * Math.PI * 2,
-        fasePaso: hash(encontrada.semilla, 5) * Math.PI * 2,
-        semilla: encontrada.semilla,
-        vistoHasta: Number.NEGATIVE_INFINITY,
-        ultimoAtaque: Number.NEGATIVE_INFINITY,
-        inicioAtaque: Number.NEGATIVE_INFINITY,
-        danoPendiente: false,
-        alerta: 0,
-        subiendo: false,
-        inclinacion: 0,
-      });
+      aranas.push(
+        crearDatosArana(
+          encontrada.x,
+          encontrada.z,
+          encontrada.suelo,
+          encontrada.semilla,
+          false,
+        ),
+      );
     }
+  }
+
+  function crearDatosArana(x, z, y, semilla, invocada) {
+    return {
+      x,
+      z,
+      y,
+      giro: hash(semilla, 4) * Math.PI * 2,
+      fasePaso: hash(semilla, 5) * Math.PI * 2,
+      semilla,
+      invocada,
+      vistoHasta: Number.NEGATIVE_INFINITY,
+      ultimoAtaque: Number.NEGATIVE_INFINITY,
+      inicioAtaque: Number.NEGATIVE_INFINITY,
+      danoPendiente: false,
+      alerta: 0,
+      subiendo: false,
+      inclinacion: 0,
+    };
   }
 
   function actualizarArana(arana, now, delta) {
