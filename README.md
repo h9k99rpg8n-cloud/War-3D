@@ -1,6 +1,6 @@
 # War 3D
 
-**War 3D v1.7.1** es un juego 3D de bloques para navegador pensado primero para móvil.
+**War 3D v1.7.2** es un juego 3D de bloques para navegador pensado primero para móvil.
 
 ## Jugar
 
@@ -16,6 +16,20 @@
 - Controles de escritorio con WASD o flechas y arrastre del ratón.
 - Barra táctil de seis espacios para recoger, reordenar y usar pasto, hojas, madera, arena, tierra y huevos de aparición.
 - Render optimizado con mallas instanciadas por tipo y resolución limitada para móviles.
+
+## Cambios de la v1.7.2
+
+- Nuevo lanzador animado: el logotipo pixelado se escribe, se borra y vuelve a aparecer antes de jugar.
+- Biblioteca de mundos múltiples con tarjetas, vista previa voxel, fecha de creación y última modificación.
+- Estado vacío ilustrado con una Araña Umbral confundida que todavía no encuentra un mundo.
+- Creador reorganizado con nombre de hasta 24 caracteres, Supervivencia o Creativo, tipo y tamaño del mundo.
+- Tres dificultades: Pacífica sin aparición natural de hostiles, Normal con tres arañas y cuatro zombis, y Difícil con grupos más numerosos y agresivos.
+- Tiempo configurable por mundo: ciclo normal, día permanente o noche permanente.
+- Guardado automático con `idb` e IndexedDB cada diez segundos, al ocultar la pestaña y al salir del juego.
+- Persistencia de bloques rotos y colocados, inventario, salud, posición, cámara, vuelo y avance del ciclo solar.
+- Menú de tres puntos dentro de la partida con la acción segura **Guardar y salir**.
+- Sol renovado como disco voxel tridimensional formado por pequeños cubos pixelados, en armonía con la luna.
+- Cada mundo utiliza una semilla propia para variar el relieve, los lagos, las playas y los árboles.
 
 ## Cambios de la v1.7.1
 
@@ -112,6 +126,7 @@
 
 - Three.js `0.185.1` mediante módulo ES.
 - Rapier 3D `0.19.3` para la gravedad de la arena y los sensores físicos del agua.
+- idb `8.0.3` sobre IndexedDB para mundos múltiples y guardado automático.
 - HTML, CSS y JavaScript modular sin proceso de compilación.
 - Despliegue automático con GitHub Pages.
 

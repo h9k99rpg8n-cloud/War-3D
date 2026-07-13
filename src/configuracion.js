@@ -1,8 +1,10 @@
-export const VERSION_JUEGO = "1.7.1";
+export const VERSION_JUEGO = "1.7.2";
 export const VERSION_THREE = "0.185.1";
 export const VERSION_RAPIER = "0.19.3";
+export const VERSION_IDB = "8.0.3";
 export const URL_THREE = `https://cdn.jsdelivr.net/npm/three@${VERSION_THREE}/build/three.module.js`;
 export const URL_RAPIER = `https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@${VERSION_RAPIER}/rapier.mjs`;
+export const URL_IDB = `https://cdn.jsdelivr.net/npm/idb@${VERSION_IDB}/+esm`;
 
 export const CONFIGURACION = Object.freeze({
   mundo: Object.freeze({
@@ -89,6 +91,10 @@ export const CONFIGURACION = Object.freeze({
       noche: 120_000,
       amanecer: 60_000,
     }),
+  }),
+  guardado: Object.freeze({
+    intervaloMs: 10_000,
+    versionProgreso: 1,
   }),
   aranas: Object.freeze({
     maximo: 12,

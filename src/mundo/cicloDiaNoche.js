@@ -6,6 +6,7 @@ export function crearCicloDiaNoche(
   camera,
   sistemaRenderizado,
   configuracion,
+  opcionesMundo = {},
 ) {
   const duraciones = configuracion.cicloDiaNoche.duraciones;
   const duracionTotal = ORDEN_FASES.reduce((total, fase) => total + duraciones[fase], 0);
@@ -18,33 +19,57 @@ export function crearCicloDiaNoche(
     fase: "dia",
     progresoFase: 0,
     esNoche: false,
-    numeroNoche: 0,
+    numeroNoche: Math.max(0, Math.floor(Number(opcionesMundo.progreso?.ciclo?.numeroNoche) || 0)),
   };
-  let tiempoCiclo = 0;
-  let faseAnterior = "dia";
+  const modoTiempo = ["siempre_dia", "siempre_noche"].includes(opcionesMundo.tiempo)
+    ? opcionesMundo.tiempo
+    : "normal";
+  let tiempoCiclo = Math.max(
+    0,
+    Number(opcionesMundo.progreso?.ciclo?.tiempoCiclo) || 0,
+  ) % duracionTotal;
+  const faseInicial = obtenerEstadoTiempo();
+  let faseAnterior = faseInicial.nombre;
+  if (faseInicial.nombre === "noche") estado.numeroNoche = Math.max(1, estado.numeroNoche);
 
   scene.add(luna);
   scene.add(luzLunar);
   scene.add(luzLunar.target);
-  aplicarEstadoVisual("dia", 0);
+  actualizarEstado(faseInicial);
 
   return {
     actualizar(deltaSegundos) {
-      tiempoCiclo = (tiempoCiclo + Math.max(0, deltaSegundos) * 1000) % duracionTotal;
-      const fase = obtenerFase(tiempoCiclo, duraciones);
-      estado.fase = fase.nombre;
-      estado.progresoFase = fase.progreso;
-      estado.esNoche = fase.nombre === "noche";
-      if (fase.nombre === "noche" && faseAnterior !== "noche") estado.numeroNoche += 1;
-      faseAnterior = fase.nombre;
-      aplicarEstadoVisual(fase.nombre, fase.progreso);
+      if (modoTiempo === "normal") {
+        tiempoCiclo = (tiempoCiclo + Math.max(0, deltaSegundos) * 1000) % duracionTotal;
+      }
+      actualizarEstado(obtenerEstadoTiempo());
       return estado;
     },
 
     obtenerEstado() {
       return estado;
     },
+
+    exportarEstado() {
+      return { tiempoCiclo, numeroNoche: estado.numeroNoche };
+    },
   };
+
+  function obtenerEstadoTiempo() {
+    if (modoTiempo === "siempre_dia") return { nombre: "dia", progreso: 0.48 };
+    if (modoTiempo === "siempre_noche") return { nombre: "noche", progreso: 0.48 };
+    return obtenerFase(tiempoCiclo, duraciones);
+  }
+
+  function actualizarEstado(fase) {
+    estado.fase = fase.nombre;
+    estado.progresoFase = fase.progreso;
+    estado.esNoche = fase.nombre === "noche";
+    if (fase.nombre === "noche" && faseAnterior !== "noche") estado.numeroNoche += 1;
+    if (fase.nombre === "noche") estado.numeroNoche = Math.max(1, estado.numeroNoche);
+    faseAnterior = fase.nombre;
+    aplicarEstadoVisual(fase.nombre, fase.progreso);
+  }
 
   function aplicarEstadoVisual(fase, progreso) {
     const { luces, sol } = sistemaRenderizado;

@@ -49,14 +49,27 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
   const limites = configuracion.inventario.limites;
   const creativo = opcionesMundo.modo === "creativo";
   const espacios = interfaz.espaciosInventario;
-  const tiposPorEspacio = ["pasto", "hojas", "madera", "arena", "tierra", null];
+  const progresoGuardado = opcionesMundo.progreso?.inventario;
+  const tiposPorEspacio = restaurarOrden(
+    progresoGuardado?.orden,
+    espacios.length,
+  );
   const estados = Object.fromEntries(
     Object.keys(DEFINICIONES_INVENTARIO).map((tipo) => [
       tipo,
-      { cantidad: 0, reservas: 0 },
+      {
+        cantidad: restaurarCantidad(
+          progresoGuardado?.cantidades?.[tipo],
+          limites[tipo],
+        ),
+        reservas: 0,
+      },
     ]),
   );
-  let indiceSeleccionado = 0;
+  let indiceSeleccionado = limitarIndice(
+    progresoGuardado?.indiceSeleccionado,
+    espacios.length,
+  );
   let arrastre = null;
   let ignorarClickHasta = 0;
 
@@ -154,6 +167,16 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
 
     ordenEspacios() {
       return [...tiposPorEspacio];
+    },
+
+    exportarEstado() {
+      return {
+        orden: [...tiposPorEspacio],
+        cantidades: Object.fromEntries(
+          Object.entries(estados).map(([tipo, estado]) => [tipo, estado.cantidad]),
+        ),
+        indiceSeleccionado,
+      };
     },
   };
 
@@ -366,4 +389,33 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
         : "Selecciona un objeto",
     );
   }
+}
+
+function restaurarOrden(orden, cantidadEspacios) {
+  const predeterminado = ["pasto", "hojas", "madera", "arena", "tierra", null];
+  if (!Array.isArray(orden)) return predeterminado.slice(0, cantidadEspacios);
+  const resultado = [];
+  const usados = new Set();
+  for (let indice = 0; indice < cantidadEspacios; indice += 1) {
+    const tipo = orden[indice];
+    if (tipo === null || tipo === undefined) {
+      resultado.push(null);
+    } else if (DEFINICIONES_INVENTARIO[tipo] && !usados.has(tipo)) {
+      usados.add(tipo);
+      resultado.push(tipo);
+    } else {
+      resultado.push(null);
+    }
+  }
+  return resultado;
+}
+
+function restaurarCantidad(valor, limite) {
+  if (!Number.isFinite(limite)) return 0;
+  return Math.max(0, Math.min(limite, Math.floor(Number(valor) || 0)));
+}
+
+function limitarIndice(valor, cantidad) {
+  const indice = Math.floor(Number(valor));
+  return Number.isInteger(indice) && indice >= 0 && indice < cantidad ? indice : 0;
 }

@@ -1,7 +1,10 @@
 export function crearSistemaSalud(interfaz, configuracion, opcionesMundo = {}) {
   const activo = opcionesMundo.modo === "supervivencia";
   const maximo = configuracion.jugador.corazones;
-  let corazones = maximo;
+  const corazonesGuardados = Number(opcionesMundo.progreso?.salud?.corazones);
+  let corazones = activo && Number.isFinite(corazonesGuardados)
+    ? Math.max(1, Math.min(maximo, Math.floor(corazonesGuardados)))
+    : maximo;
   let invulnerableHasta = 0;
   let destelloHasta = 0;
   let sacudidaHasta = 0;
@@ -58,6 +61,10 @@ export function crearSistemaSalud(interfaz, configuracion, opcionesMundo = {}) {
 
     obtenerCorazones() {
       return corazones;
+    },
+
+    exportarEstado() {
+      return { corazones };
     },
 
     obtenerSacudida(now = performance.now()) {

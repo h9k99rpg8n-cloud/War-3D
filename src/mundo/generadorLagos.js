@@ -1,4 +1,9 @@
-export function crearMapaLagos(tamanoCuadricula, tipoMundo, profundidadMaxima = 2) {
+export function crearMapaLagos(
+  tamanoCuadricula,
+  tipoMundo,
+  profundidadMaxima = 2,
+  semillaMundo = 0,
+) {
   const total = tamanoCuadricula * tamanoCuadricula;
   const profundidades = new Uint8Array(total);
   const playas = new Uint8Array(total);
@@ -9,14 +14,16 @@ export function crearMapaLagos(tamanoCuadricula, tipoMundo, profundidadMaxima = 
   const lagos = [];
 
   for (let indice = 0; indice < cantidad; indice += 1) {
-    const angulo = (indice / cantidad) * Math.PI * 2 + hash(indice, 17) * 0.72;
-    const distancia = tamanoCuadricula * (0.3 + hash(indice, 29) * 0.08);
+    const angulo =
+      (indice / cantidad) * Math.PI * 2 + hash(indice, 17, semillaMundo) * 0.72;
+    const distancia =
+      tamanoCuadricula * (0.3 + hash(indice, 29, semillaMundo) * 0.08);
     lagos.push({
       x: centro + Math.cos(angulo) * distancia,
       z: centro + Math.sin(angulo) * distancia,
-      radioX: 5.8 + hash(indice, 41) * 4.4,
-      radioZ: 5.4 + hash(indice, 53) * 4.8,
-      semilla: 71 + indice * 19,
+      radioX: 5.8 + hash(indice, 41, semillaMundo) * 4.4,
+      radioZ: 5.4 + hash(indice, 53, semillaMundo) * 4.8,
+      semilla: 71 + indice * 19 + (semillaMundo % 431),
     });
   }
 
@@ -27,7 +34,7 @@ export function crearMapaLagos(tamanoCuadricula, tipoMundo, profundidadMaxima = 
         const dx = (x - lago.x) / lago.radioX;
         const dz = (z - lago.z) / lago.radioZ;
         const irregularidad =
-          (hash(x + lago.semilla, z - lago.semilla) - 0.5) * 0.16 +
+          (hash(x + lago.semilla, z - lago.semilla, semillaMundo) - 0.5) * 0.16 +
           Math.sin((x + z + lago.semilla) * 0.43) * 0.045;
         distanciaMinima = Math.min(
           distanciaMinima,
@@ -74,7 +81,7 @@ export function crearMapaLagos(tamanoCuadricula, tipoMundo, profundidadMaxima = 
   }
 }
 
-function hash(a, b) {
-  const valor = Math.sin(a * 127.1 + b * 311.7) * 43758.5453;
+function hash(a, b, semilla = 0) {
+  const valor = Math.sin(a * 127.1 + b * 311.7 + semilla * 0.000173) * 43758.5453;
   return valor - Math.floor(valor);
 }

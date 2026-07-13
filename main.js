@@ -1,11 +1,12 @@
-import { URL_RAPIER, URL_THREE } from "./src/configuracion.js";
+import { URL_IDB, URL_RAPIER, URL_THREE } from "./src/configuracion.js";
+import { crearAlmacenMundos } from "./src/guardado/almacenMundos.js";
 import { iniciarJuego } from "./src/juego.js";
 import {
-  esperarCreacionMundo,
   mostrarCargaMundo,
   mostrarError,
   obtenerInterfaz,
 } from "./src/interfaz/interfaz.js";
+import { esperarSeleccionMundo } from "./src/interfaz/lanzador.js";
 
 const interfaz = obtenerInterfaz();
 let errorMostrado = false;
@@ -19,7 +20,14 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 try {
-  const opcionesMundo = await esperarCreacionMundo(interfaz);
+  let openDB = null;
+  try {
+    ({ openDB } = await import(URL_IDB));
+  } catch (errorIdb) {
+    console.warn("La librería idb no cargó; se usará IndexedDB nativo.", errorIdb);
+  }
+  const almacenMundos = await crearAlmacenMundos(openDB);
+  const opcionesMundo = await esperarSeleccionMundo(interfaz, almacenMundos);
   await mostrarCargaMundo(interfaz, opcionesMundo);
   const THREE = await import(URL_THREE);
   let RAPIER = null;
@@ -30,7 +38,11 @@ try {
   } catch (errorRapier) {
     console.warn("Rapier no cargó; se usará la gravedad de respaldo.", errorRapier);
   }
-  iniciarJuego(THREE, interfaz, opcionesMundo, RAPIER);
+  iniciarJuego(THREE, interfaz, opcionesMundo, RAPIER, {
+    guardarProgreso: (progreso) =>
+      almacenMundos.guardarProgreso(opcionesMundo.id, progreso),
+    salirAlMenu: () => window.location.reload(),
+  });
 } catch (error) {
   manejarError(error);
 }

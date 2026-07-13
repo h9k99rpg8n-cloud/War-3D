@@ -1,4 +1,4 @@
-export function crearControles(interfaz, configuracion) {
+export function crearControles(interfaz, configuracion, estadoInicial = {}) {
   const { camara } = configuracion;
   const entradaJoystick = { x: 0, adelante: 0 };
   const teclas = new Set();
@@ -10,8 +10,12 @@ export function crearControles(interfaz, configuracion) {
   let cambioVueloSolicitado = false;
   let ultimaMiradaX = 0;
   let ultimaMiradaY = 0;
-  let giro = camara.giroInicial;
-  let inclinacion = camara.inclinacionInicial;
+  let giro = numeroFinito(estadoInicial.giro, camara.giroInicial);
+  let inclinacion = limitar(
+    numeroFinito(estadoInicial.inclinacion, camara.inclinacionInicial),
+    camara.inclinacionMinima,
+    camara.inclinacionMaxima,
+  );
 
   interfaz.joystick.addEventListener("pointerdown", (event) => {
     if (punteroJoystick !== null) return;
@@ -247,4 +251,8 @@ function esCampoEditable(elemento) {
 
 function limitar(valor, minimo, maximo) {
   return Math.max(minimo, Math.min(maximo, valor));
+}
+
+function numeroFinito(valor, respaldo) {
+  return Number.isFinite(Number(valor)) ? Number(valor) : respaldo;
 }

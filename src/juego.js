@@ -12,12 +12,19 @@ import { crearInteraccionBloques } from "./mundo/interaccionBloques.js";
 import { crearTerreno } from "./mundo/terreno.js";
 import { ajustarRenderizado, crearSistemaRenderizado } from "./renderizado/escena.js";
 
-export function iniciarJuego(THREE, interfaz, opcionesMundo = {}, RAPIER = null) {
+export function iniciarJuego(
+  THREE,
+  interfaz,
+  opcionesMundo = {},
+  RAPIER = null,
+  servicios = {},
+) {
   const opciones = normalizarOpcionesMundo(opcionesMundo);
   const configuracion = crearConfiguracionJuego(opciones);
   const creativo = opciones.modo === "creativo";
   prepararInterfaz(interfaz);
   interfaz.juego.classList.toggle("mode-creative", creativo);
+  interfaz.nombreMundoActual.textContent = opciones.nombreMundo;
 
   const sistemaRenderizado = crearSistemaRenderizado(
     THREE,
@@ -35,7 +42,8 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}, RAPIER = null)
     opciones,
   );
   const fisicaAgua = crearFisicaAgua(terreno, fisicaArena);
-  const controles = crearControles(interfaz, configuracion);
+  const estadoJugador = opciones.progreso?.jugador ?? {};
+  const controles = crearControles(interfaz, configuracion, estadoJugador);
   const inventario = crearInventario(interfaz, configuracion, opciones);
   const salud = crearSistemaSalud(interfaz, configuracion, opciones);
   const { agua, camara, jugador, mundo } = configuracion;
@@ -43,17 +51,14 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}, RAPIER = null)
   const limiteMundo = mitadMundo - mundo.margenLimite;
   const puntoInicio = { x: 0, z: 10 };
   let velocidadVertical = 0;
-  let volando = false;
+  let volando = creativo && Boolean(estadoJugador.volando);
 
   interfaz.botonVuelo.hidden = !creativo;
   actualizarInterfazVuelo();
 
-  camera.position.set(
-    puntoInicio.x,
-    terreno.obtenerAltura(puntoInicio.x, puntoInicio.z) + jugador.alturaOjos,
-    puntoInicio.z,
-  );
-  camera.rotation.set(camara.inclinacionInicial, camara.giroInicial, 0);
+  restaurarPosicionJugador();
+  const vistaInicial = controles.obtenerVista();
+  camera.rotation.set(vistaInicial.inclinacion, vistaInicial.giro, 0);
 
   const cicloDiaNoche = crearCicloDiaNoche(
     THREE,
@@ -61,6 +66,7 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}, RAPIER = null)
     camera,
     sistemaRenderizado,
     configuracion,
+    opciones,
   );
   const aranas = crearSistemaAranas(
     THREE,
@@ -113,11 +119,22 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}, RAPIER = null)
   });
 
   let ultimoFrame = performance.now();
+  let promesaGuardado = null;
 
   const redimensionar = () => ajustarRenderizado(renderer, camera, configuracion);
   window.addEventListener("resize", redimensionar);
   window.addEventListener("orientationchange", redimensionar);
   document.addEventListener("contextmenu", (event) => event.preventDefault());
+  configurarMenuJuego();
+
+  const intervaloGuardado = window.setInterval(
+    () => void guardarAhora(),
+    configuracion.guardado.intervaloMs,
+  );
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") void guardarAhora();
+  });
+  window.addEventListener("pagehide", () => void guardarAhora());
 
   renderer.setAnimationLoop(renderFrame);
   renderer.render(scene, camera);
@@ -234,6 +251,113 @@ export function iniciarJuego(THREE, interfaz, opcionesMundo = {}, RAPIER = null)
     interaccionBloques.actualizar(now, !salud.estaMuerto());
 
     renderer.render(scene, camera);
+  }
+
+  function restaurarPosicionJugador() {
+    const x = THREE.MathUtils.clamp(
+      numeroFinito(estadoJugador.x, puntoInicio.x),
+      -limiteMundo,
+      limiteMundo,
+    );
+    const z = THREE.MathUtils.clamp(
+      numeroFinito(estadoJugador.z, puntoInicio.z),
+      -limiteMundo,
+      limiteMundo,
+    );
+    const suelo = terreno.obtenerAltura(x, z) + jugador.alturaOjos;
+    const alturaMaxima =
+      mundo.nivelMaximoColocacion * mundo.tamanoBloque +
+      jugador.alturaOjos +
+      mundo.tamanoBloque * 4;
+    let y = THREE.MathUtils.clamp(
+      numeroFinito(estadoJugador.y, suelo),
+      suelo,
+      alturaMaxima,
+    );
+    if (
+      terreno.hayColisionJugador(
+        x,
+        z,
+        y - jugador.alturaOjos,
+        y + 0.18,
+      )
+    ) {
+      y = suelo;
+    }
+    camera.position.set(x, y, z);
+  }
+
+  function configurarMenuJuego() {
+    interfaz.menuJuego.hidden = true;
+    interfaz.botonMenuJuego.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const abrir = interfaz.menuJuego.hidden;
+      interfaz.menuJuego.hidden = !abrir;
+      interfaz.botonMenuJuego.setAttribute("aria-expanded", String(abrir));
+    });
+    document.addEventListener("pointerdown", (event) => {
+      if (interfaz.menuJuego.hidden || event.target.closest?.(".game-menu")) return;
+      interfaz.menuJuego.hidden = true;
+      interfaz.botonMenuJuego.setAttribute("aria-expanded", "false");
+    });
+    interfaz.botonSalirMundo.addEventListener("click", async () => {
+      interfaz.botonSalirMundo.disabled = true;
+      const guardado = await guardarAhora();
+      if (!guardado) {
+        interfaz.botonSalirMundo.disabled = false;
+        return;
+      }
+      window.clearInterval(intervaloGuardado);
+      servicios.salirAlMenu?.();
+    });
+  }
+
+  function guardarAhora() {
+    if (typeof servicios.guardarProgreso !== "function") return Promise.resolve(true);
+    if (promesaGuardado) return promesaGuardado;
+    actualizarEstadoGuardado("GUARDANDO MUNDO…", "is-saving");
+    promesaGuardado = Promise.resolve(servicios.guardarProgreso(crearProgreso()))
+      .then(() => {
+        actualizarEstadoGuardado("MUNDO GUARDADO", "");
+        return true;
+      })
+      .catch((error) => {
+        console.error("No se pudo guardar el mundo.", error);
+        actualizarEstadoGuardado("NO SE PUDO GUARDAR · REINTENTA", "is-error");
+        return false;
+      })
+      .finally(() => {
+        promesaGuardado = null;
+      });
+    return promesaGuardado;
+  }
+
+  function crearProgreso() {
+    const { giro, inclinacion } = controles.obtenerVista();
+    return {
+      version: configuracion.guardado.versionProgreso,
+      jugador: {
+        x: redondear(camera.position.x),
+        y: redondear(camera.position.y),
+        z: redondear(camera.position.z),
+        giro: redondear(giro),
+        inclinacion: redondear(inclinacion),
+        volando,
+      },
+      inventario: inventario.exportarEstado(),
+      salud: salud.exportarEstado(),
+      terreno: terreno.exportarCambios(),
+      ciclo: cicloDiaNoche.exportarEstado(),
+    };
+  }
+
+  function actualizarEstadoGuardado(texto, clase) {
+    interfaz.estadoGuardado.textContent = texto;
+    const indicador = document.createElement("i");
+    interfaz.estadoGuardado.prepend(indicador);
+    interfaz.estadoGuardado.classList.remove("is-saving", "is-error");
+    if (clase) interfaz.estadoGuardado.classList.add(clase);
   }
 
   function actualizarMovimientoVertical(delta, saltoSolicitado) {
@@ -422,19 +546,57 @@ function normalizarOpcionesMundo(opciones) {
     ? tamanoSolicitado
     : CONFIGURACION.mundo.tamanoCuadricula;
   return {
-    nombreMundo: opciones.nombreMundo || "Mi mundo",
+    id: String(opciones.id || "mundo"),
+    nombreMundo: String(opciones.nombreMundo || "Mi mundo").slice(0, 24),
     modo,
     tipoMundo,
     tamanoMundo,
+    dificultad: ["pacifica", "normal", "dificil"].includes(opciones.dificultad)
+      ? opciones.dificultad
+      : "normal",
+    tiempo: ["normal", "siempre_dia", "siempre_noche"].includes(opciones.tiempo)
+      ? opciones.tiempo
+      : "normal",
+    semilla: Number.isFinite(Number(opciones.semilla)) ? Number(opciones.semilla) : 0,
+    progreso:
+      opciones.progreso && typeof opciones.progreso === "object"
+        ? opciones.progreso
+        : null,
   };
 }
 
-function crearConfiguracionJuego(opciones) {
+export function crearConfiguracionJuego(opciones) {
+  const hostiles = opciones.modo === "supervivencia" && opciones.dificultad !== "pacifica";
+  const dificil = hostiles && opciones.dificultad === "dificil";
   return Object.freeze({
     ...CONFIGURACION,
     mundo: Object.freeze({
       ...CONFIGURACION.mundo,
       tamanoCuadricula: opciones.tamanoMundo,
     }),
+    aranas: Object.freeze({
+      ...CONFIGURACION.aranas,
+      cantidadInicial: hostiles ? (dificil ? 6 : 3) : 0,
+      maximo: dificil ? 18 : CONFIGURACION.aranas.maximo,
+      rangoVision: dificil ? 12 : CONFIGURACION.aranas.rangoVision,
+      velocidadPersecucion: dificil ? 2.65 : CONFIGURACION.aranas.velocidadPersecucion,
+    }),
+    zombies: Object.freeze({
+      ...CONFIGURACION.zombies,
+      tamanoGrupo: hostiles ? (dificil ? 5 : 4) : 0,
+      cantidadGrupos: hostiles ? (dificil ? 2 : 1) : 0,
+      maximo: dificil ? 20 : CONFIGURACION.zombies.maximo,
+      rangoVision: dificil ? 17 : CONFIGURACION.zombies.rangoVision,
+      velocidadCorrer: dificil ? 2.45 : CONFIGURACION.zombies.velocidadCorrer,
+      dano: dificil ? 2 : CONFIGURACION.zombies.dano,
+    }),
   });
+}
+
+function numeroFinito(valor, respaldo) {
+  return Number.isFinite(Number(valor)) ? Number(valor) : respaldo;
+}
+
+function redondear(valor) {
+  return Math.round(Number(valor) * 10_000) / 10_000;
 }

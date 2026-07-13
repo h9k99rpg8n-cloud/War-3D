@@ -71,46 +71,47 @@ export function crearSistemaRenderizado(THREE, canvas, configuracion) {
 }
 
 export function crearSolPixelado(THREE) {
-  const tamano = 16;
-  const datos = new Uint8Array(tamano * tamano * 4);
-  for (let y = 0; y < tamano; y += 1) {
-    for (let x = 0; x < tamano; x += 1) {
-      const borde = x < 2 || x > 13 || y < 2 || y > 13;
-      const brillo = (x * 7 + y * 11 + Math.floor(x / 4) * 3) % 13;
-      const color = borde
-        ? [255, 187, 62]
-        : brillo < 3
-          ? [255, 239, 152]
-          : brillo > 10
-            ? [255, 203, 73]
-            : [255, 222, 105];
-      const indice = (y * tamano + x) * 4;
-      datos[indice] = color[0];
-      datos[indice + 1] = color[1];
-      datos[indice + 2] = color[2];
-      datos[indice + 3] = 255;
+  const posiciones = [];
+  for (let y = -4; y <= 4; y += 1) {
+    for (let x = -4; x <= 4; x += 1) {
+      const distancia = Math.hypot(x, y);
+      if (distancia > 4.45) continue;
+      posiciones.push({ x, y, distancia });
     }
   }
-  const textura = new THREE.DataTexture(datos, tamano, tamano, THREE.RGBAFormat);
-  textura.name = "sol-cuadrado-pixelado";
-  textura.colorSpace = THREE.SRGBColorSpace;
-  textura.magFilter = THREE.NearestFilter;
-  textura.minFilter = THREE.NearestFilter;
-  textura.generateMipmaps = false;
-  textura.needsUpdate = true;
-
   const material = new THREE.MeshBasicMaterial({
     color: 0xffffff,
     fog: false,
-    map: textura,
+    vertexColors: true,
   });
-  const malla = new THREE.Mesh(new THREE.BoxGeometry(6.6, 6.6, 0.42), material);
-  malla.name = "Sol cuadrado pixelado";
+  const geometria = new THREE.BoxGeometry(0.82, 0.82, 0.74);
+  const malla = new THREE.InstancedMesh(geometria, material, posiciones.length);
+  const matriz = new THREE.Matrix4();
+  const color = new THREE.Color();
+  posiciones.forEach(({ x, y, distancia }, indice) => {
+    const profundidad = distancia > 3.6 ? -0.12 : distancia < 1.7 ? 0.13 : 0;
+    matriz.makeTranslation(x * 0.77, y * 0.77, profundidad);
+    malla.setMatrixAt(indice, matriz);
+    const patron = Math.abs(x * 5 + y * 7) % 6;
+    color.setHex(
+      distancia > 3.6
+        ? 0xffb83f
+        : patron === 0
+          ? 0xfff0a1
+          : patron >= 4
+            ? 0xffca49
+            : 0xffdd69,
+    );
+    malla.setColorAt(indice, color);
+  });
+  malla.instanceMatrix.needsUpdate = true;
+  malla.instanceColor.needsUpdate = true;
+  malla.name = "Sol voxel pixelado";
   malla.frustumCulled = false;
 
   const grupo = new THREE.Group();
   grupo.userData.materialSolar = material;
-  grupo.userData.estilo = "pixel-cuadrado";
+  grupo.userData.estilo = "voxel-pixelado";
   grupo.add(malla);
   return grupo;
 }
