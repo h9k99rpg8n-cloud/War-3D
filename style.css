@@ -2522,3 +2522,18 @@ section {
     padding-bottom: calc(8px + var(--safe-bottom));
   }
 }
+
+/* Separa las opciones del catálogo creativo y de la insignia de versión. */
+.version-badge {
+  margin-right: 52px;
+}
+
+.game-menu {
+  top: calc(14px + var(--safe-top));
+}
+
+@media (max-width: 600px) {
+  .version-badge {
+    display: none;
+  }
+}
