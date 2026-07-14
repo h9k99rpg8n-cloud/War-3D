@@ -119,6 +119,8 @@ export function iniciarJuego(
   });
 
   let ultimoFrame = performance.now();
+  let tiempoSimulado = ultimoFrame;
+  let ultimoRenderInterfaz = 0;
   let promesaGuardado = null;
 
   const redimensionar = () => ajustarRenderizado(renderer, camera, configuracion);
@@ -146,13 +148,21 @@ export function iniciarJuego(
     ultimoFrame = now;
 
     const muerto = salud.estaMuerto();
-    const saltoSolicitado = controles.consumirSalto();
+    const interfazBloqueada =
+      inventario.estaAbierto() || !interfaz.menuJuego.hidden;
+    if (!interfazBloqueada) tiempoSimulado += deltaReal * 1000;
+    const nowJuego = tiempoSimulado;
+    const deltaJuego = interfazBloqueada ? 0 : delta;
+    const saltoPendiente = controles.consumirSalto();
+    const saltoSolicitado = !interfazBloqueada && saltoPendiente;
     const cambioVueloSolicitado = controles.consumirCambioVuelo();
-    if (!muerto && creativo && cambioVueloSolicitado) {
+    if (!muerto && !interfazBloqueada && creativo && cambioVueloSolicitado) {
       establecerVuelo(!volando);
     }
 
-    const { lateral, adelante } = controles.obtenerMovimiento();
+    const { lateral, adelante } = interfazBloqueada
+      ? { lateral: 0, adelante: 0 }
+      : controles.obtenerMovimiento();
     const { giro, inclinacion } = controles.obtenerVista();
     const forwardX = -Math.sin(giro);
     const forwardZ = -Math.cos(giro);
@@ -178,12 +188,12 @@ export function iniciarJuego(
       (rightX * lateral + forwardX * adelante) *
       jugador.velocidad *
       multiplicadorMovimiento *
-      delta;
+      deltaJuego;
     const desplazamientoZ =
       (rightZ * lateral + forwardZ * adelante) *
       jugador.velocidad *
       multiplicadorMovimiento *
-      delta;
+      deltaJuego;
     const piesJugador = camera.position.y - jugador.alturaOjos;
     const cabezaJugador = camera.position.y + 0.18;
     let penetracionActual = terreno.obtenerPenetracionJugador(
@@ -233,24 +243,39 @@ export function iniciarJuego(
       }
     }
 
-    if (!muerto) actualizarMovimientoVertical(delta, saltoSolicitado);
-    const sacudida = salud.obtenerSacudida(now);
+    if (!muerto && !interfazBloqueada) {
+      actualizarMovimientoVertical(deltaJuego, saltoSolicitado);
+    }
+    const sacudida = salud.obtenerSacudida(nowJuego);
     const arcoDano = Math.sin((1 - sacudida) * Math.PI) * sacudida;
     const ladoDano = salud.obtenerLadoSacudida();
     camera.rotation.set(
-      inclinacion + Math.sin(now * 0.071) * 0.035 * sacudida - arcoDano * 0.045,
-      giro + ladoDano * arcoDano * 0.13 + Math.cos(now * 0.057) * 0.024 * sacudida,
-      ladoDano * arcoDano * 0.1 + Math.sin(now * 0.089) * 0.035 * sacudida,
+      inclinacion + Math.sin(nowJuego * 0.071) * 0.035 * sacudida - arcoDano * 0.045,
+      giro + ladoDano * arcoDano * 0.13 + Math.cos(nowJuego * 0.057) * 0.024 * sacudida,
+      ladoDano * arcoDano * 0.1 + Math.sin(nowJuego * 0.089) * 0.035 * sacudida,
     );
-    const estadoCiclo = cicloDiaNoche.actualizar(deltaReal);
-    salud.actualizar(now);
-    aranas.actualizar(now, delta, estadoCiclo);
-    zombies.actualizar(now, delta, estadoCiclo);
-    fisicaArena.actualizar(delta);
-    terreno.actualizar(now);
-    interaccionBloques.actualizar(now, !salud.estaMuerto());
+    const estadoCiclo = cicloDiaNoche.actualizar(
+      interfazBloqueada ? 0 : deltaReal,
+    );
+    if (!interfazBloqueada) {
+      salud.actualizar(nowJuego);
+      aranas.actualizar(nowJuego, deltaJuego, estadoCiclo);
+      zombies.actualizar(nowJuego, deltaJuego, estadoCiclo);
+      fisicaArena.actualizar(deltaJuego);
+      terreno.actualizar(nowJuego);
+    }
+    interaccionBloques.actualizar(
+      nowJuego,
+      !salud.estaMuerto() && !interfazBloqueada,
+      !interfazBloqueada,
+    );
 
-    renderer.render(scene, camera);
+    // Con un menú de pantalla completa el mundo está pausado y solo necesita
+    // refrescarse a 15 FPS. La interfaz DOM conserva respuesta inmediata.
+    if (!interfazBloqueada || now - ultimoRenderInterfaz >= 66) {
+      renderer.render(scene, camera);
+      ultimoRenderInterfaz = now;
+    }
   }
 
   function restaurarPosicionJugador() {
@@ -293,6 +318,7 @@ export function iniciarJuego(
       event.preventDefault();
       event.stopPropagation();
       const abrir = interfaz.menuJuego.hidden;
+      if (abrir) inventario.cerrar();
       interfaz.menuJuego.hidden = !abrir;
       interfaz.botonMenuJuego.setAttribute("aria-expanded", String(abrir));
     });

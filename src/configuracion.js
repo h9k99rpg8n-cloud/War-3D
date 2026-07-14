@@ -1,4 +1,4 @@
-export const VERSION_JUEGO = "1.7.2";
+export const VERSION_JUEGO = "1.7.3";
 export const VERSION_THREE = "0.185.1";
 export const VERSION_RAPIER = "0.19.3";
 export const VERSION_IDB = "8.0.3";
@@ -49,6 +49,7 @@ export const CONFIGURACION = Object.freeze({
     sol: 1.8,
   }),
   inventario: Object.freeze({
+    espaciosMochila: 18,
     limites: Object.freeze({
       pasto: 35,
       hojas: 36,
@@ -94,7 +95,7 @@ export const CONFIGURACION = Object.freeze({
   }),
   guardado: Object.freeze({
     intervaloMs: 10_000,
-    versionProgreso: 1,
+    versionProgreso: 2,
   }),
   aranas: Object.freeze({
     maximo: 12,

@@ -1,16 +1,38 @@
 export function crearSistemaRenderizado(THREE, canvas, configuracion) {
   const { camara, iluminacion, renderizado } = configuracion;
   let renderer;
+  const perfilReducido = esPerfilReducido();
 
   try {
     renderer = new THREE.WebGLRenderer({
       canvas,
-      antialias: true,
+      antialias: !perfilReducido,
       alpha: false,
-      powerPreference: "high-performance",
+      depth: true,
+      stencil: false,
+      precision: perfilReducido ? "mediump" : "highp",
+      powerPreference: perfilReducido ? "default" : "high-performance",
     });
   } catch (error) {
-    throw new Error("WebGL no está disponible en este navegador.", { cause: error });
+    if (!perfilReducido) {
+      try {
+        renderer = new THREE.WebGLRenderer({
+          canvas,
+          antialias: false,
+          alpha: false,
+          depth: true,
+          stencil: false,
+          precision: "mediump",
+          powerPreference: "default",
+        });
+      } catch (errorRespaldo) {
+        throw new Error("WebGL no está disponible en este navegador.", {
+          cause: errorRespaldo,
+        });
+      }
+    } else {
+      throw new Error("WebGL no está disponible en este navegador.", { cause: error });
+    }
   }
 
   renderer.setPixelRatio(obtenerProporcionPixeles(renderizado));
@@ -130,5 +152,12 @@ function obtenerProporcionPixeles(renderizado) {
   const limite = esDispositivoTactil
     ? renderizado.proporcionPixelesMovil
     : renderizado.proporcionPixelesMaxima;
-  return Math.min(window.devicePixelRatio || 1, limite);
+  const limiteAjustado = esPerfilReducido() ? Math.min(limite, 1.25) : limite;
+  return Math.min(window.devicePixelRatio || 1, limiteAjustado);
+}
+
+function esPerfilReducido() {
+  const tactil = window.matchMedia?.("(pointer: coarse)").matches ?? false;
+  const nucleos = Number(globalThis.navigator?.hardwareConcurrency);
+  return tactil && Number.isFinite(nucleos) && nucleos > 0 && nucleos <= 4;
 }

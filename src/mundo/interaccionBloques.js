@@ -74,7 +74,11 @@ export function crearInteraccionBloques(
   });
 
   return {
-    actualizar(now, jugadorActivo = true) {
+    actualizar(now, jugadorActivo = true, simular = true) {
+      if (!simular) {
+        if (rotura) cancelarRotura();
+        return;
+      }
       if (jugadorActivo) actualizarRotura(now);
       else if (rotura) cancelarRotura();
       actualizarRecolectables(now);

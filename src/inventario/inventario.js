@@ -45,52 +45,82 @@ export const NOMBRES_BLOQUE = Object.freeze(
   ),
 );
 
+const TIPOS_INICIALES = Object.freeze([
+  "pasto",
+  "hojas",
+  "madera",
+  "arena",
+  "tierra",
+]);
+const LIMITE_RESPALDO = 32;
+
 export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
   const limites = configuracion.inventario.limites;
   const creativo = opcionesMundo.modo === "creativo";
-  const espacios = interfaz.espaciosInventario;
+  const cantidadRapida = interfaz.espaciosInventario.length;
+  const cantidadMochila = Math.max(
+    1,
+    Math.floor(configuracion.inventario.espaciosMochila || 18),
+  );
+  const cantidadTotal = cantidadRapida + cantidadMochila;
   const progresoGuardado = opcionesMundo.progreso?.inventario;
-  const tiposPorEspacio = restaurarOrden(
-    progresoGuardado?.orden,
-    espacios.length,
+  const ranuras = restaurarRanuras(
+    progresoGuardado,
+    cantidadRapida,
+    cantidadTotal,
+    limites,
+    creativo,
   );
-  const estados = Object.fromEntries(
-    Object.keys(DEFINICIONES_INVENTARIO).map((tipo) => [
-      tipo,
-      {
-        cantidad: restaurarCantidad(
-          progresoGuardado?.cantidades?.[tipo],
-          limites[tipo],
-        ),
-        reservas: 0,
-      },
-    ]),
+  const reservas = Object.fromEntries(
+    Object.keys(DEFINICIONES_INVENTARIO).map((tipo) => [tipo, 0]),
   );
+  const espaciosPanelRapido = crearEspaciosPanel(
+    interfaz.rejillaAccesoRapido,
+    0,
+    cantidadRapida,
+    "Acceso rápido",
+  );
+  const espaciosMochila = crearEspaciosPanel(
+    interfaz.rejillaMochila,
+    cantidadRapida,
+    cantidadMochila,
+    "Mochila",
+  );
+  const vistasEspacios = [
+    ...interfaz.espaciosInventario.map((elemento, indice) => ({
+      elemento,
+      indice,
+      panel: false,
+    })),
+    ...espaciosPanelRapido.map((elemento, indice) => ({
+      elemento,
+      indice,
+      panel: true,
+    })),
+    ...espaciosMochila.map((elemento, indice) => ({
+      elemento,
+      indice: cantidadRapida + indice,
+      panel: true,
+    })),
+  ];
+
   let indiceSeleccionado = limitarIndice(
     progresoGuardado?.indiceSeleccionado,
-    espacios.length,
+    cantidadRapida,
   );
+  let indiceEnFoco = indiceSeleccionado;
+  let inventarioAbierto = false;
   let arrastre = null;
   let ignorarClickHasta = 0;
 
-  espacios.forEach((espacio, indice) => {
-    espacio.dataset.slotIndex = String(indice);
-    espacio.addEventListener("click", () => {
-      if (performance.now() < ignorarClickHasta) return;
-      seleccionarEspacio(indice);
-    });
-    espacio.addEventListener("pointerdown", (event) => iniciarArrastre(event, indice));
-    espacio.addEventListener("pointermove", moverArrastre);
-    espacio.addEventListener("pointerup", terminarArrastre);
-    espacio.addEventListener("pointercancel", cancelarArrastre);
-  });
-
-  prepararCatalogo();
+  for (const vista of vistasEspacios) registrarEspacio(vista);
+  configurarPanel();
+  prepararCatalogoCreativo();
   actualizarInterfaz();
 
   return {
     tipoSeleccionado() {
-      return tiposPorEspacio[indiceSeleccionado] ?? null;
+      return ranuras[indiceSeleccionado]?.tipo ?? null;
     },
 
     esCreativo() {
@@ -109,142 +139,197 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
       return NOMBRES_BLOQUE[tipo] ?? "Objeto";
     },
 
-    cantidad(tipo = tiposPorEspacio[indiceSeleccionado]) {
-      return creativo && estados[tipo]
-        ? Number.POSITIVE_INFINITY
-        : (estados[tipo]?.cantidad ?? 0);
+    cantidad(tipo = ranuras[indiceSeleccionado]?.tipo) {
+      if (!DEFINICIONES_INVENTARIO[tipo]) return 0;
+      if (creativo) return Number.POSITIVE_INFINITY;
+      const seleccionada = ranuras[indiceSeleccionado];
+      if (seleccionada?.tipo === tipo) return seleccionada.cantidad;
+      return cantidadTotalTipo(ranuras, tipo);
     },
 
     estaLleno(tipo) {
       if (creativo) return false;
-      const estado = estados[tipo];
-      const limite = limites[tipo];
-      return !estado || !Number.isFinite(limite) ||
-        estado.cantidad + estado.reservas >= limite;
+      return capacidadLibre(tipo) <= (reservas[tipo] ?? 0);
     },
 
     reservarEspacio(tipo) {
       if (creativo) return true;
-      const estado = estados[tipo];
-      const limite = limites[tipo];
-      if (
-        !estado ||
-        !Number.isFinite(limite) ||
-        estado.cantidad + estado.reservas >= limite
-      ) {
-        return false;
-      }
-      estado.reservas += 1;
+      if (!DEFINICIONES_INVENTARIO[tipo]) return false;
+      if (capacidadLibre(tipo) <= (reservas[tipo] ?? 0)) return false;
+      reservas[tipo] = (reservas[tipo] ?? 0) + 1;
       return true;
     },
 
     liberarReserva(tipo) {
-      if (creativo) return;
-      const estado = estados[tipo];
-      if (estado) estado.reservas = Math.max(0, estado.reservas - 1);
+      if (creativo || !DEFINICIONES_INVENTARIO[tipo]) return;
+      reservas[tipo] = Math.max(0, (reservas[tipo] ?? 0) - 1);
     },
 
     confirmarRecoleccion(tipo) {
       if (creativo) return true;
-      const estado = estados[tipo];
-      const limite = limites[tipo];
-      if (!estado || !Number.isFinite(limite)) return false;
-      if (estado.reservas > 0) estado.reservas -= 1;
-      if (estado.cantidad >= limite) return false;
-      estado.cantidad += 1;
+      if (!DEFINICIONES_INVENTARIO[tipo]) return false;
+      reservas[tipo] = Math.max(0, (reservas[tipo] ?? 0) - 1);
+      const agregado = agregarUnidad(tipo);
+      if (agregado) actualizarInterfaz();
+      return agregado;
+    },
+
+    usarBloque(tipo = ranuras[indiceSeleccionado]?.tipo) {
+      const ranura = ranuras[indiceSeleccionado];
+      if (!ranura || ranura.tipo !== tipo) return false;
+      if (creativo) return true;
+      if (ranura.cantidad <= 0) return false;
+      ranura.cantidad -= 1;
+      if (ranura.cantidad === 0) ranuras[indiceSeleccionado] = null;
       actualizarInterfaz();
       return true;
     },
 
-    usarBloque(tipo = tiposPorEspacio[indiceSeleccionado]) {
-      if (creativo) return Boolean(estados[tipo]);
-      const estado = estados[tipo];
-      if (!estado || estado.cantidad <= 0) return false;
-      estado.cantidad -= 1;
-      actualizarInterfaz();
-      return true;
+    estaAbierto() {
+      return inventarioAbierto;
+    },
+
+    abrir() {
+      establecerPanelAbierto(true);
+    },
+
+    cerrar() {
+      establecerPanelAbierto(false);
     },
 
     ordenEspacios() {
-      return [...tiposPorEspacio];
+      return ranuras.slice(0, cantidadRapida).map((ranura) => ranura?.tipo ?? null);
     },
 
     exportarEstado() {
       return {
-        orden: [...tiposPorEspacio],
+        version: 2,
+        espacios: ranuras.map((ranura) =>
+          ranura ? { tipo: ranura.tipo, cantidad: ranura.cantidad } : null,
+        ),
+        // Se conservan estas dos propiedades para que una versión anterior
+        // todavía pueda leer la barra rápida y los totales básicos.
+        orden: ranuras
+          .slice(0, cantidadRapida)
+          .map((ranura) => ranura?.tipo ?? null),
         cantidades: Object.fromEntries(
-          Object.entries(estados).map(([tipo, estado]) => [tipo, estado.cantidad]),
+          Object.keys(DEFINICIONES_INVENTARIO).map((tipo) => [
+            tipo,
+            cantidadTotalTipo(ranuras, tipo),
+          ]),
         ),
         indiceSeleccionado,
       };
     },
   };
 
-  function prepararCatalogo() {
-    interfaz.botonCatalogo.hidden = !creativo;
-    interfaz.catalogoCreativo.hidden = true;
+  function configurarPanel() {
+    interfaz.panelInventario.hidden = true;
+    interfaz.botonInventario.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      establecerPanelAbierto(!inventarioAbierto);
+    });
+    interfaz.cerrarInventario.addEventListener("click", () => {
+      establecerPanelAbierto(false);
+    });
+    interfaz.ordenarInventario.addEventListener("click", ordenarMochila);
+    interfaz.panelInventario.addEventListener("pointerdown", (event) => {
+      if (event.target === interfaz.panelInventario) establecerPanelAbierto(false);
+    });
+    window.addEventListener("keydown", (event) => {
+      if (esCampoEditable(event.target)) return;
+      const tecla = event.key.toLowerCase();
+      if ((tecla === "e" || tecla === "i") && !event.repeat) {
+        event.preventDefault();
+        establecerPanelAbierto(!inventarioAbierto);
+      } else if (tecla === "escape" && inventarioAbierto) {
+        event.preventDefault();
+        establecerPanelAbierto(false);
+      }
+    });
+  }
+
+  function establecerPanelAbierto(abierto) {
+    const siguiente = Boolean(abierto);
+    if (inventarioAbierto === siguiente) return;
+    inventarioAbierto = siguiente;
+    interfaz.panelInventario.hidden = !siguiente;
+    interfaz.botonInventario.setAttribute("aria-expanded", String(siguiente));
+    interfaz.botonInventario.classList.toggle("is-active", siguiente);
+    interfaz.juego.classList.toggle("inventory-open", siguiente);
+    if (siguiente) {
+      interfaz.menuJuego.hidden = true;
+      interfaz.botonMenuJuego.setAttribute("aria-expanded", "false");
+      actualizarInterfaz();
+      requestAnimationFrame(() => {
+        interfaz.cerrarInventario.focus({ preventScroll: true });
+      });
+    } else {
+      limpiarArrastre();
+      interfaz.botonInventario.focus({ preventScroll: true });
+    }
+  }
+
+  function prepararCatalogoCreativo() {
+    interfaz.seccionCatalogoInventario.hidden = !creativo;
+    interfaz.listaCatalogoInventario.replaceChildren();
     if (!creativo) return;
 
-    interfaz.listaCatalogo.replaceChildren();
     for (const [tipo, definicion] of Object.entries(DEFINICIONES_INVENTARIO)) {
       const boton = document.createElement("button");
       boton.type = "button";
-      boton.className = "catalog-item";
+      boton.className = "inventory-catalog-item";
       boton.dataset.itemType = tipo;
-      boton.setAttribute("aria-label", `Añadir ${definicion.nombre} a la barra`);
-      const icono = document.createElement("span");
-      icono.className = `inventory-tile ${definicion.clase}`;
-      icono.setAttribute("aria-hidden", "true");
-      const nombre = document.createElement("b");
-      nombre.textContent = definicion.nombre;
-      boton.append(icono, nombre);
-      boton.addEventListener("click", () => seleccionarDesdeCatalogo(tipo));
-      interfaz.listaCatalogo.append(boton);
+      boton.setAttribute("aria-label", `Añadir ${definicion.nombre} a la casilla marcada`);
+      boton.append(
+        crearIcono(definicion),
+        crearTexto("b", definicion.nombre),
+        crearTexto("span", "∞"),
+      );
+      boton.addEventListener("click", () => {
+        ranuras[indiceEnFoco] = { tipo, cantidad: 1 };
+        if (indiceEnFoco < cantidadRapida) indiceSeleccionado = indiceEnFoco;
+        actualizarInterfaz();
+      });
+      interfaz.listaCatalogoInventario.append(boton);
     }
+  }
 
-    interfaz.botonCatalogo.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const abrir = interfaz.catalogoCreativo.hidden;
-      interfaz.catalogoCreativo.hidden = !abrir;
-      interfaz.botonCatalogo.classList.toggle("is-active", abrir);
-      interfaz.botonCatalogo.setAttribute("aria-expanded", String(abrir));
+  function registrarEspacio(vista) {
+    const { elemento, indice, panel } = vista;
+    elemento.dataset.slotIndex = String(indice);
+    elemento.dataset.slotArea = indice < cantidadRapida ? "rapido" : "mochila";
+    elemento.classList.toggle("inventory-slot--panel", panel);
+    elemento.addEventListener("click", () => {
+      if (ahora() < ignorarClickHasta) return;
+      seleccionarEspacio(indice);
     });
-    interfaz.cerrarCatalogo.addEventListener("click", cerrarCatalogo);
-  }
-
-  function seleccionarDesdeCatalogo(tipo) {
-    const existente = tiposPorEspacio.indexOf(tipo);
-    if (existente >= 0) {
-      indiceSeleccionado = existente;
-    } else {
-      tiposPorEspacio[indiceSeleccionado] = tipo;
-    }
-    cerrarCatalogo();
-    actualizarInterfaz();
-  }
-
-  function cerrarCatalogo() {
-    interfaz.catalogoCreativo.hidden = true;
-    interfaz.botonCatalogo.classList.remove("is-active");
-    interfaz.botonCatalogo.setAttribute("aria-expanded", "false");
+    elemento.addEventListener("pointerdown", (event) =>
+      iniciarArrastre(event, vista),
+    );
+    elemento.addEventListener("pointermove", moverArrastre);
+    elemento.addEventListener("pointerup", terminarArrastre);
+    elemento.addEventListener("pointercancel", cancelarArrastre);
   }
 
   function seleccionarEspacio(indice) {
-    const tipo = tiposPorEspacio[indice];
-    if (!tipo || (!creativo && estados[tipo].cantidad <= 0)) return;
-    indiceSeleccionado = indice;
+    indiceEnFoco = indice;
+    if (indice < cantidadRapida) indiceSeleccionado = indice;
     actualizarInterfaz();
   }
 
-  function iniciarArrastre(event, indice) {
+  function iniciarArrastre(event, vista) {
     if (event.button !== undefined && event.button !== 0) return;
-    const tipo = tiposPorEspacio[indice];
-    if (!tipo || (!creativo && estados[tipo].cantidad <= 0)) return;
+    if (!ranuras[vista.indice]) {
+      seleccionarEspacio(vista.indice);
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     arrastre = {
-      indice,
+      indice: vista.indice,
+      elementoOrigen: vista.elemento,
       pointerId: event.pointerId,
       inicioX: event.clientX,
       inicioY: event.clientY,
@@ -252,7 +337,7 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
       fantasma: null,
       destino: null,
     };
-    espacios[indice].setPointerCapture?.(event.pointerId);
+    vista.elemento.setPointerCapture?.(event.pointerId);
   }
 
   function moverArrastre(event) {
@@ -269,13 +354,13 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
   }
 
   function activarArrastre(event) {
-    arrastre.activo = true;
-    const elemento = espacios[arrastre.indice].querySelector(".inventory-item");
+    const elemento = arrastre.elementoOrigen.querySelector(".inventory-item");
     if (!elemento) return;
+    arrastre.activo = true;
     arrastre.fantasma = elemento.cloneNode(true);
     arrastre.fantasma.classList.add("inventory-drag-ghost");
     document.body.append(arrastre.fantasma);
-    espacios[arrastre.indice].classList.add("is-dragging");
+    arrastre.elementoOrigen.classList.add("is-dragging");
     posicionarFantasma(event.clientX, event.clientY);
   }
 
@@ -286,16 +371,18 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
   }
 
   function marcarDestino(x, y) {
-    espacios.forEach((espacio) => espacio.classList.remove("is-drop-target"));
+    for (const vista of vistasEspacios) {
+      vista.elemento.classList.remove("is-drop-target");
+    }
     const elemento = document.elementFromPoint?.(x, y);
-    const espacio = elemento?.closest?.(".inventory-slot");
+    const espacio = elemento?.closest?.(".inventory-slot[data-slot-index]");
     const indice = Number(espacio?.dataset?.slotIndex);
-    if (!Number.isInteger(indice) || indice < 0 || indice >= espacios.length) {
+    if (!Number.isInteger(indice) || indice < 0 || indice >= cantidadTotal) {
       arrastre.destino = null;
       return;
     }
     arrastre.destino = indice;
-    espacios[indice].classList.add("is-drop-target");
+    espacio.classList.add("is-drop-target");
   }
 
   function terminarArrastre(event) {
@@ -305,16 +392,14 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
       marcarDestino(event.clientX, event.clientY);
       const destino = arrastre.destino;
       if (destino !== null && destino !== arrastre.indice) {
-        const temporal = tiposPorEspacio[destino];
-        tiposPorEspacio[destino] = tiposPorEspacio[arrastre.indice];
-        tiposPorEspacio[arrastre.indice] = temporal;
-        if (indiceSeleccionado === arrastre.indice) indiceSeleccionado = destino;
-        else if (indiceSeleccionado === destino) indiceSeleccionado = arrastre.indice;
+        moverOCombinar(arrastre.indice, destino);
+        indiceEnFoco = destino;
+        if (destino < cantidadRapida) indiceSeleccionado = destino;
       }
-      ignorarClickHasta = performance.now() + 280;
+      ignorarClickHasta = ahora() + 280;
     } else {
       seleccionarEspacio(arrastre.indice);
-      ignorarClickHasta = performance.now() + 80;
+      ignorarClickHasta = ahora() + 80;
     }
     limpiarArrastre();
     actualizarInterfaz();
@@ -326,60 +411,99 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
     actualizarInterfaz();
   }
 
+  function moverOCombinar(origen, destino) {
+    const fuente = ranuras[origen];
+    const objetivo = ranuras[destino];
+    if (!fuente) return;
+    if (!creativo && objetivo?.tipo === fuente.tipo) {
+      const libre = limitePila(limites, fuente.tipo) - objetivo.cantidad;
+      const movidos = Math.min(libre, fuente.cantidad);
+      objetivo.cantidad += movidos;
+      fuente.cantidad -= movidos;
+      if (fuente.cantidad === 0) ranuras[origen] = null;
+      return;
+    }
+    ranuras[destino] = fuente;
+    ranuras[origen] = objetivo;
+  }
+
   function limpiarArrastre() {
     if (!arrastre) return;
-    const origen = espacios[arrastre.indice];
-    if (origen.hasPointerCapture?.(arrastre.pointerId)) {
-      origen.releasePointerCapture(arrastre.pointerId);
+    if (arrastre.elementoOrigen.hasPointerCapture?.(arrastre.pointerId)) {
+      arrastre.elementoOrigen.releasePointerCapture(arrastre.pointerId);
     }
     arrastre.fantasma?.remove();
-    espacios.forEach((espacio) => {
-      espacio.classList.remove("is-dragging", "is-drop-target");
-    });
+    for (const vista of vistasEspacios) {
+      vista.elemento.classList.remove("is-dragging", "is-drop-target");
+    }
     arrastre = null;
   }
 
-  function actualizarInterfaz() {
-    espacios.forEach((espacio, indice) => {
-      const tipo = tiposPorEspacio[indice];
-      const estado = estados[tipo];
-      const cantidad = estado?.cantidad ?? 0;
-      const visible = Boolean(tipo && (creativo || cantidad > 0));
-      const definicion = DEFINICIONES_INVENTARIO[tipo];
-      espacio.replaceChildren();
-      espacio.classList.toggle("is-unlimited", creativo && visible);
-      espacio.classList.toggle("is-selected", indice === indiceSeleccionado);
-      espacio.setAttribute("aria-pressed", String(indice === indiceSeleccionado));
+  function ordenarMochila() {
+    const inicio = cantidadRapida;
+    const contenido = ranuras.slice(inicio).filter(Boolean);
+    const orden = new Map(
+      Object.keys(DEFINICIONES_INVENTARIO).map((tipo, indice) => [tipo, indice]),
+    );
+    let organizadas = [];
 
-      if (visible && definicion) {
-        const item = document.createElement("span");
-        item.className = "inventory-item";
-        item.dataset.itemType = tipo;
-        const icono = document.createElement("span");
-        icono.className = `inventory-tile ${definicion.clase}`;
-        icono.setAttribute("aria-hidden", "true");
-        const contador = document.createElement("b");
-        contador.className = "inventory-slot__count";
-        contador.textContent = creativo ? "∞" : String(cantidad);
-        item.append(icono, contador);
-        espacio.append(item);
-      }
-
-      espacio.setAttribute(
-        "aria-label",
-        visible && definicion
-          ? creativo
-            ? `${definicion.nombre}: ilimitado. Arrastrable.`
-            : `${definicion.nombre}: ${cantidad} de ${limites[tipo]}. Arrastrable.`
-          : `Casilla ${indice + 1} vacía`,
+    if (creativo) {
+      organizadas = contenido.sort(
+        (a, b) => (orden.get(a.tipo) ?? 99) - (orden.get(b.tipo) ?? 99),
       );
-    });
+    } else {
+      const totales = new Map();
+      for (const ranura of contenido) {
+        totales.set(ranura.tipo, (totales.get(ranura.tipo) ?? 0) + ranura.cantidad);
+      }
+      for (const tipo of Object.keys(DEFINICIONES_INVENTARIO)) {
+        let restante = totales.get(tipo) ?? 0;
+        const limite = limitePila(limites, tipo);
+        while (restante > 0) {
+          const cantidad = Math.min(limite, restante);
+          organizadas.push({ tipo, cantidad });
+          restante -= cantidad;
+        }
+      }
+    }
 
-    const seleccionado = tiposPorEspacio[indiceSeleccionado];
-    const definicion = DEFINICIONES_INVENTARIO[seleccionado];
-    const cantidadSeleccionada = estados[seleccionado]?.cantidad ?? 0;
+    for (let indice = inicio; indice < cantidadTotal; indice += 1) {
+      ranuras[indice] = organizadas[indice - inicio] ?? null;
+    }
+    indiceEnFoco = organizadas.length ? inicio : indiceSeleccionado;
+    actualizarInterfaz();
+  }
+
+  function capacidadLibre(tipo) {
+    const limite = limitePila(limites, tipo);
+    let capacidad = 0;
+    for (const ranura of ranuras) {
+      if (!ranura) capacidad += limite;
+      else if (ranura.tipo === tipo) capacidad += Math.max(0, limite - ranura.cantidad);
+    }
+    return capacidad;
+  }
+
+  function agregarUnidad(tipo) {
+    const limite = limitePila(limites, tipo);
+    let destino = ranuras.findIndex(
+      (ranura) => ranura?.tipo === tipo && ranura.cantidad < limite,
+    );
+    if (destino < 0) destino = ranuras.findIndex((ranura) => ranura === null);
+    if (destino < 0) return false;
+    if (!ranuras[destino]) ranuras[destino] = { tipo, cantidad: 0 };
+    ranuras[destino].cantidad += 1;
+    if (!ranuras[indiceSeleccionado]) indiceSeleccionado = Math.min(destino, cantidadRapida - 1);
+    return true;
+  }
+
+  function actualizarInterfaz() {
+    for (const vista of vistasEspacios) pintarEspacio(vista);
+
+    const seleccionada = ranuras[indiceSeleccionado];
+    const definicion = DEFINICIONES_INVENTARIO[seleccionada?.tipo];
     interfaz.botonColocar.disabled =
-      !seleccionado || (!creativo && cantidadSeleccionada === 0);
+      !seleccionada || (!creativo && seleccionada.cantidad <= 0);
     interfaz.etiquetaColocar.textContent =
       definicion?.categoria === "entidad" ? "GENERAR" : "COLOCAR";
     interfaz.botonColocar.setAttribute(
@@ -388,34 +512,211 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
         ? `${definicion.categoria === "entidad" ? "Generar" : "Colocar"} ${definicion.nombre.toLowerCase()}`
         : "Selecciona un objeto",
     );
+    actualizarDetalle();
+  }
+
+  function pintarEspacio({ elemento, indice, panel }) {
+    const ranura = ranuras[indice];
+    const definicion = DEFINICIONES_INVENTARIO[ranura?.tipo];
+    const visible = Boolean(definicion && (creativo || ranura.cantidad > 0));
+    elemento.replaceChildren();
+    elemento.classList.toggle("is-unlimited", creativo && visible);
+    elemento.classList.toggle(
+      "is-selected",
+      indice < cantidadRapida && indice === indiceSeleccionado,
+    );
+    elemento.classList.toggle("is-focused", panel && indice === indiceEnFoco);
+    elemento.setAttribute(
+      "aria-pressed",
+      String(indice < cantidadRapida && indice === indiceSeleccionado),
+    );
+
+    if (visible) elemento.append(crearItem(ranura, definicion, creativo));
+    const zona = indice < cantidadRapida ? "acceso rápido" : "mochila";
+    elemento.setAttribute(
+      "aria-label",
+      visible
+        ? creativo
+          ? `${definicion.nombre}: ilimitado, en ${zona}`
+          : `${definicion.nombre}: ${ranura.cantidad} de ${limitePila(limites, ranura.tipo)}, en ${zona}`
+        : `Casilla ${indice + 1} vacía de ${zona}`,
+    );
+  }
+
+  function actualizarDetalle() {
+    const ranura = ranuras[indiceEnFoco];
+    const definicion = DEFINICIONES_INVENTARIO[ranura?.tipo];
+    const icono = interfaz.iconoInventarioSeleccionado;
+    icono.className = "inventory-tile inventory-detail__icon";
+
+    if (ranura && definicion) {
+      icono.hidden = false;
+      icono.classList.add(definicion.clase);
+      interfaz.nombreInventarioSeleccionado.textContent = definicion.nombre;
+      interfaz.metaInventarioSeleccionado.textContent = creativo
+        ? `ILIMITADO · ${definicion.categoria.toUpperCase()}`
+        : `${ranura.cantidad} / ${limitePila(limites, ranura.tipo)} · ${definicion.categoria.toUpperCase()}`;
+    } else {
+      icono.hidden = true;
+      interfaz.nombreInventarioSeleccionado.textContent = "Espacio vacío";
+      interfaz.metaInventarioSeleccionado.textContent =
+        indiceEnFoco < cantidadRapida
+          ? "Listo para recibir un objeto de uso rápido."
+          : "Arrastra aquí un objeto para guardarlo.";
+    }
+
+    const ocupados = ranuras.filter(Boolean).length;
+    const objetos = creativo
+      ? "OBJETOS ILIMITADOS"
+      : `${ranuras.reduce((total, actual) => total + (actual?.cantidad ?? 0), 0)} OBJETOS`;
+    interfaz.resumenInventario.textContent =
+      `${ocupados} / ${cantidadTotal} ESPACIOS · ${objetos}`;
+    interfaz.insigniaInventario.textContent = String(ocupados);
+    interfaz.ordenarInventario.disabled = !ranuras.slice(cantidadRapida).some(Boolean);
   }
 }
 
-function restaurarOrden(orden, cantidadEspacios) {
-  const predeterminado = ["pasto", "hojas", "madera", "arena", "tierra", null];
-  if (!Array.isArray(orden)) return predeterminado.slice(0, cantidadEspacios);
-  const resultado = [];
-  const usados = new Set();
-  for (let indice = 0; indice < cantidadEspacios; indice += 1) {
+function crearEspaciosPanel(contenedor, inicio, cantidad, etiqueta) {
+  const espacios = [];
+  contenedor.replaceChildren();
+  for (let desplazamiento = 0; desplazamiento < cantidad; desplazamiento += 1) {
+    const boton = document.createElement("button");
+    boton.type = "button";
+    boton.className = "inventory-slot inventory-slot--panel";
+    boton.dataset.slotIndex = String(inicio + desplazamiento);
+    boton.setAttribute("role", "gridcell");
+    boton.setAttribute("aria-label", `${etiqueta}, casilla ${desplazamiento + 1}`);
+    contenedor.append(boton);
+    espacios.push(boton);
+  }
+  return espacios;
+}
+
+function crearItem(ranura, definicion, ilimitado) {
+  const item = document.createElement("span");
+  item.className = "inventory-item";
+  item.dataset.itemType = ranura.tipo;
+  const contador = crearTexto(
+    "b",
+    ilimitado ? "∞" : String(ranura.cantidad),
+    "inventory-slot__count",
+  );
+  item.append(crearIcono(definicion), contador);
+  return item;
+}
+
+function crearIcono(definicion) {
+  const icono = document.createElement("span");
+  icono.className = `inventory-tile ${definicion.clase}`;
+  icono.setAttribute("aria-hidden", "true");
+  return icono;
+}
+
+function crearTexto(etiqueta, texto, clase = "") {
+  const elemento = document.createElement(etiqueta);
+  elemento.textContent = texto;
+  if (clase) elemento.className = clase;
+  return elemento;
+}
+
+function restaurarRanuras(
+  progreso,
+  cantidadRapida,
+  cantidadTotal,
+  limites,
+  creativo,
+) {
+  const resultado = Array(cantidadTotal).fill(null);
+  if (Array.isArray(progreso?.espacios)) {
+    for (let indice = 0; indice < cantidadTotal; indice += 1) {
+      resultado[indice] = normalizarRanura(
+        progreso.espacios[indice],
+        limites,
+        creativo,
+      );
+    }
+    return resultado;
+  }
+
+  const orden = Array.isArray(progreso?.orden)
+    ? progreso.orden
+    : [...TIPOS_INICIALES, null];
+  if (creativo) {
+    for (let indice = 0; indice < cantidadRapida; indice += 1) {
+      const tipo = orden[indice];
+      if (DEFINICIONES_INVENTARIO[tipo]) resultado[indice] = { tipo, cantidad: 1 };
+    }
+    return resultado;
+  }
+
+  const restantes = Object.fromEntries(
+    Object.keys(DEFINICIONES_INVENTARIO).map((tipo) => [
+      tipo,
+      cantidadSegura(progreso?.cantidades?.[tipo]),
+    ]),
+  );
+  for (let indice = 0; indice < cantidadRapida; indice += 1) {
     const tipo = orden[indice];
-    if (tipo === null || tipo === undefined) {
-      resultado.push(null);
-    } else if (DEFINICIONES_INVENTARIO[tipo] && !usados.has(tipo)) {
-      usados.add(tipo);
-      resultado.push(tipo);
-    } else {
-      resultado.push(null);
+    if (!DEFINICIONES_INVENTARIO[tipo] || restantes[tipo] <= 0) continue;
+    const cantidad = Math.min(limitePila(limites, tipo), restantes[tipo]);
+    resultado[indice] = { tipo, cantidad };
+    restantes[tipo] -= cantidad;
+  }
+
+  let destino = cantidadRapida;
+  for (const tipo of Object.keys(DEFINICIONES_INVENTARIO)) {
+    while (restantes[tipo] > 0 && destino < cantidadTotal) {
+      while (resultado[destino] && destino < cantidadTotal) destino += 1;
+      if (destino >= cantidadTotal) break;
+      const cantidad = Math.min(limitePila(limites, tipo), restantes[tipo]);
+      resultado[destino] = { tipo, cantidad };
+      restantes[tipo] -= cantidad;
+      destino += 1;
     }
   }
   return resultado;
 }
 
-function restaurarCantidad(valor, limite) {
-  if (!Number.isFinite(limite)) return 0;
-  return Math.max(0, Math.min(limite, Math.floor(Number(valor) || 0)));
+function normalizarRanura(ranura, limites, creativo) {
+  if (!ranura || !DEFINICIONES_INVENTARIO[ranura.tipo]) return null;
+  if (creativo) return { tipo: ranura.tipo, cantidad: 1 };
+  const cantidad = Math.min(
+    limitePila(limites, ranura.tipo),
+    cantidadSegura(ranura.cantidad),
+  );
+  return cantidad > 0 ? { tipo: ranura.tipo, cantidad } : null;
+}
+
+function limitePila(limites, tipo) {
+  const limite = Math.floor(Number(limites[tipo]));
+  return Number.isFinite(limite) && limite > 0 ? limite : LIMITE_RESPALDO;
+}
+
+function cantidadSegura(valor) {
+  return Math.max(0, Math.floor(Number(valor) || 0));
+}
+
+function cantidadTotalTipo(ranuras, tipo) {
+  return ranuras.reduce(
+    (total, ranura) => total + (ranura?.tipo === tipo ? ranura.cantidad : 0),
+    0,
+  );
 }
 
 function limitarIndice(valor, cantidad) {
   const indice = Math.floor(Number(valor));
   return Number.isInteger(indice) && indice >= 0 && indice < cantidad ? indice : 0;
+}
+
+function esCampoEditable(elemento) {
+  return Boolean(
+    elemento &&
+      (elemento.tagName === "INPUT" ||
+        elemento.tagName === "TEXTAREA" ||
+        elemento.isContentEditable),
+  );
+}
+
+function ahora() {
+  return globalThis.performance?.now?.() ?? Date.now();
 }

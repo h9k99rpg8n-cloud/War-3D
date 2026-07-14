@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#87b9d9">
     <meta
       name="description"
-      content="War 3D v1.7.2: mundos guardados, selector de dificultad y ciclos de tiempo personalizados."
+      content="War 3D v1.7.3: Inventario 2.0, mundos guardados e interfaz móvil refinada."
     >
-    <title>War 3D — v1.7.2</title>
+    <title>War 3D — v1.7.3</title>
     <link rel="stylesheet" href="./style.css">
   </head>
   <body>
@@ -27,7 +27,7 @@
           <button id="play-button" class="launcher-primary launcher-primary--play" type="button">
             <span aria-hidden="true">▶</span><b>JUGAR</b>
           </button>
-          <p class="launcher-version">VERSIÓN 1.7.2 · TUS MUNDOS, TU AVENTURA</p>
+          <p class="launcher-version">VERSIÓN 1.7.3 · INVENTARIO 2.0</p>
         </div>
 
         <div id="launcher-worlds" class="launcher-view launcher-panel launcher-worlds" hidden>
@@ -129,7 +129,7 @@
             <p>PROTOTIPO DE MOVIMIENTO</p>
           </div>
         </div>
-        <span id="version-badge" class="version-badge">v1.7.2 • THREE.JS</span>
+        <span id="version-badge" class="version-badge">v1.7.3 • THREE.JS</span>
       </header>
 
       <div class="game-menu">
@@ -197,32 +197,69 @@
       </div>
 
       <button
-        id="creative-catalog-button"
-        class="catalog-toggle"
+        id="inventory-button"
+        class="inventory-toggle"
         type="button"
         aria-expanded="false"
-        aria-controls="creative-catalog"
-        hidden
+        aria-controls="inventory-panel"
       >
         <span aria-hidden="true">▦</span>
-        <small>CATÁLOGO</small>
+        <small>MOCHILA</small>
+        <b id="inventory-badge" aria-hidden="true">0</b>
       </button>
 
       <section
-        id="creative-catalog"
-        class="creative-catalog"
-        aria-labelledby="creative-catalog-title"
+        id="inventory-panel"
+        class="inventory-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="inventory-title"
         hidden
       >
-        <header>
-          <div>
-            <small>MODO CREATIVO</small>
-            <h2 id="creative-catalog-title">CATÁLOGO</h2>
+        <div class="inventory-panel__shell">
+          <header class="inventory-panel__header">
+            <div class="inventory-panel__title">
+              <span class="launcher-logo__mark" aria-hidden="true">W</span>
+              <div>
+                <small>WAR 3D · ORGANIZACIÓN TÁCTIL</small>
+                <h2 id="inventory-title">INVENTARIO 2.0</h2>
+              </div>
+            </div>
+            <div class="inventory-panel__actions">
+              <button id="inventory-sort" type="button"><span aria-hidden="true">⇅</span> ORDENAR</button>
+              <button id="inventory-close" type="button" aria-label="Cerrar inventario">×</button>
+            </div>
+          </header>
+
+          <div class="inventory-panel__body">
+            <aside class="inventory-detail" aria-live="polite">
+              <small>OBJETO MARCADO</small>
+              <span id="inventory-selected-icon" class="inventory-tile inventory-detail__icon" aria-hidden="true" hidden></span>
+              <h3 id="inventory-selected-name">Espacio vacío</h3>
+              <p id="inventory-selected-meta">Arrastra aquí un objeto para guardarlo.</p>
+              <div id="inventory-summary" class="inventory-summary">0 / 24 ESPACIOS</div>
+            </aside>
+
+            <div class="inventory-spaces">
+              <div class="inventory-section-label"><b>MOCHILA</b><span>18 ESPACIOS</span></div>
+              <div id="inventory-storage-grid" class="inventory-storage-grid" role="grid" aria-label="Espacios de la mochila"></div>
+              <div class="inventory-section-label inventory-section-label--quick"><b>ACCESO RÁPIDO</b><span>6 ESPACIOS</span></div>
+              <div id="inventory-panel-hotbar" class="inventory-panel-hotbar" role="grid" aria-label="Acceso rápido"></div>
+            </div>
+
+            <section id="inventory-creative-section" class="inventory-creative" aria-labelledby="inventory-creative-title" hidden>
+              <small>MODO CREATIVO</small>
+              <h3 id="inventory-creative-title">CATÁLOGO ∞</h3>
+              <p>Marca una casilla y toca un objeto ilimitado.</p>
+              <div id="inventory-catalog-list" class="inventory-catalog-grid"></div>
+            </section>
           </div>
-          <button id="creative-catalog-close" type="button" aria-label="Cerrar catálogo">×</button>
-        </header>
-        <p>Toca un objeto para colocarlo en la casilla seleccionada.</p>
-        <div id="creative-catalog-list" class="creative-catalog__grid"></div>
+
+          <footer class="inventory-panel__hint">
+            <span aria-hidden="true">☝</span>
+            ARRASTRA PARA MOVER · SUELTA SOBRE LA MISMA CLASE PARA COMBINAR PILAS
+          </footer>
+        </div>
       </section>
 
       <button id="place-block" class="place-block" type="button" aria-label="Colocar bloque de pasto">

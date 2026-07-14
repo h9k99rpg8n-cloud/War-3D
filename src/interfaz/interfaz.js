@@ -46,10 +46,19 @@ export function obtenerInterfaz() {
     espaciosInventario: [
       ...document.querySelectorAll("#inventory-bar .inventory-slot"),
     ],
-    botonCatalogo: document.querySelector("#creative-catalog-button"),
-    catalogoCreativo: document.querySelector("#creative-catalog"),
-    cerrarCatalogo: document.querySelector("#creative-catalog-close"),
-    listaCatalogo: document.querySelector("#creative-catalog-list"),
+    botonInventario: document.querySelector("#inventory-button"),
+    insigniaInventario: document.querySelector("#inventory-badge"),
+    panelInventario: document.querySelector("#inventory-panel"),
+    cerrarInventario: document.querySelector("#inventory-close"),
+    ordenarInventario: document.querySelector("#inventory-sort"),
+    rejillaMochila: document.querySelector("#inventory-storage-grid"),
+    rejillaAccesoRapido: document.querySelector("#inventory-panel-hotbar"),
+    seccionCatalogoInventario: document.querySelector("#inventory-creative-section"),
+    listaCatalogoInventario: document.querySelector("#inventory-catalog-list"),
+    iconoInventarioSeleccionado: document.querySelector("#inventory-selected-icon"),
+    nombreInventarioSeleccionado: document.querySelector("#inventory-selected-name"),
+    metaInventarioSeleccionado: document.querySelector("#inventory-selected-meta"),
+    resumenInventario: document.querySelector("#inventory-summary"),
     botonColocar: document.querySelector("#place-block"),
     etiquetaColocar: document.querySelector("#place-label"),
     botonSaltar: document.querySelector("#jump-button"),
@@ -84,6 +93,11 @@ export async function mostrarCargaMundo(interfaz, opcionesMundo) {
     `${opcionesMundo.progreso ? "Abriendo" : "Generando"} ${opcionesMundo.nombreMundo} · ${tamanoMundo}×${tamanoMundo}…`;
   interfaz.carga.hidden = false;
   interfaz.carga.classList.remove("is-leaving");
+  interfaz.carga.dataset.origen = opcionesMundo.progreso ? "guardado" : "nuevo";
+  // Fuerza que la capa de carga se pinte antes de retirar el lanzador.
+  // Así nunca asoma la tarjeta anterior al abrir un mundo guardado.
+  void interfaz.carga.offsetWidth;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
   interfaz.pantallaInicio.classList.add("is-leaving");
   await new Promise((resolve) => window.setTimeout(resolve, 280));
   interfaz.pantallaInicio.hidden = true;
