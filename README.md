@@ -1,6 +1,6 @@
 # War 3D
 
-**War 3D v1.7.3** es un juego 3D de bloques para navegador pensado primero para móvil.
+**War 3D v1.7.4** es un juego 3D de bloques para navegador pensado primero para móvil.
 
 ## Jugar
 
@@ -16,6 +16,17 @@
 - Controles de escritorio con WASD o flechas y arrastre del ratón.
 - Inventario 2.0 con seis espacios rápidos, mochila de 18 espacios y pilas táctiles combinables mediante drag & drop.
 - Render optimizado con mallas instanciadas por tipo y resolución limitada para móviles.
+
+## Cambios de la v1.7.4
+
+- Recolección protegida: dos objetos de distinto tipo ya no pueden reservar la misma última casilla del inventario.
+- Los objetos que no logren entrar al inventario regresan al mundo en lugar de desaparecer.
+- Los bloques rotos caen sobre el soporte que tienen debajo y ya no saltan a la superficie desde otra altura.
+- Joystick, cámara, salto, vuelo y teclado se reinician al abrir un menú o perder el foco, evitando controles pegados.
+- Cola de autoguardado corregida: si hay cambios durante una escritura, se guarda una segunda instantánea actualizada.
+- Terreno de 128×128 optimizado con claves numéricas y un solo índice de bloques, reduciendo considerablemente la memoria sin quitar capas ni contenido.
+- Compatibilidad reforzada con Safari y dispositivos antiguos al capturar punteros y solicitar almacenamiento persistente.
+- Conserva el Inventario 2.0, mundos existentes, entidades, agua, físicas, ciclo de día y noche y todos los modos de la v1.7.3.
 
 ## Cambios de la v1.7.3
 

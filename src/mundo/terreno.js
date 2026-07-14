@@ -27,11 +27,14 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
   const semillaMundo = Number.isFinite(Number(opcionesMundo.semilla))
     ? Number(opcionesMundo.semilla)
     : 0;
+  const anchoClave = tamanoCuadricula + 2;
+  const areaClave = anchoClave * anchoClave;
+  const nivelBaseClave = nivelFondo - 1;
   const bloques = new Map();
   const cambiosEliminados = new Map();
   const cambiosColocados = new Map();
-  const bloquesPorTipo = Object.fromEntries(
-    TIPOS_BLOQUE.map((tipo) => [tipo, new Map()]),
+  const cantidadesPorTipo = Object.fromEntries(
+    TIPOS_BLOQUE.map((tipo) => [tipo, 0]),
   );
   const bloquesPorInstancia = Object.fromEntries(
     TIPOS_BLOQUE.map((tipo) => [tipo, []]),
@@ -163,7 +166,7 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
 
     obtenerCantidadTipo(tipo) {
       if (tipo === "agua") return contarColumnasAgua();
-      return bloquesPorTipo[tipo]?.size ?? 0;
+      return cantidadesPorTipo[tipo] ?? 0;
     },
 
     obtenerCantidadVisible(tipo) {
@@ -274,7 +277,7 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
       ) {
         return null;
       }
-      bloquesPorTipo[bloque.tipo].delete(bloque.clave);
+      reducirCantidad(bloque.tipo);
       bloquesVisiblesPorTipo[bloque.tipo].delete(bloque.clave);
       registrarEliminacion(bloque);
       const posicionRota = this.obtenerCentroBloque(bloque);
@@ -298,7 +301,7 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
       ) {
         return false;
       }
-      bloquesPorTipo.arena.delete(bloque.clave);
+      reducirCantidad("arena");
       bloquesVisiblesPorTipo.arena.delete(bloque.clave);
       registrarEliminacion(bloque);
       recalcularAlturaSuelo(bloque.x, bloque.z);
@@ -758,7 +761,7 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
 
   function eliminarDatosBloque(bloque) {
     bloques.delete(bloque.clave);
-    bloquesPorTipo[bloque.tipo].delete(bloque.clave);
+    reducirCantidad(bloque.tipo);
     bloquesVisiblesPorTipo[bloque.tipo].delete(bloque.clave);
   }
 
@@ -777,7 +780,7 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
     if (bloques.has(clave)) return false;
     const bloque = crearDatosBloque(x, y, z, tipo, generado);
     bloques.set(clave, bloque);
-    bloquesPorTipo[tipo].set(clave, bloque);
+    cantidadesPorTipo[tipo] = (cantidadesPorTipo[tipo] ?? 0) + 1;
     return true;
   }
 
@@ -993,10 +996,13 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
 
   function inicializarVisibilidad() {
     for (const tipo of TIPOS_BLOQUE) {
-      const visibles = bloquesVisiblesPorTipo[tipo];
-      visibles.clear();
-      for (const bloque of bloquesPorTipo[tipo].values()) {
-        if (esBloqueVisible(bloque)) visibles.set(bloque.clave, bloque);
+      bloquesVisiblesPorTipo[tipo].clear();
+    }
+    // Un único recorrido sustituye a un segundo índice completo por tipo.
+    // En 128×128 esto evita cientos de miles de entradas Map duplicadas.
+    for (const bloque of bloques.values()) {
+      if (esBloqueVisible(bloque)) {
+        bloquesVisiblesPorTipo[bloque.tipo].set(bloque.clave, bloque);
       }
     }
   }
@@ -1060,14 +1066,24 @@ export function crearTerreno(THREE, scene, configuracion, opcionesMundo = {}) {
   function limitarIndice(valor) {
     return Math.max(2, Math.min(tamanoCuadricula - 3, valor));
   }
-}
 
-function crearDatosBloque(x, y, z, tipo, generado = true) {
-  return { x, y, z, clave: claveBloque(x, y, z), tipo, generado };
-}
+  function reducirCantidad(tipo) {
+    cantidadesPorTipo[tipo] = Math.max(0, (cantidadesPorTipo[tipo] ?? 0) - 1);
+  }
 
-function claveBloque(x, y, z) {
-  return `${x}|${y}|${z}`;
+  function crearDatosBloque(x, y, z, tipo, generado = true) {
+    return { x, y, z, clave: claveBloque(x, y, z), tipo, generado };
+  }
+
+  function claveBloque(x, y, z) {
+    // También reserva un borde para que las consultas x/z ±1 nunca colisionen
+    // con otra celda. Las claves numéricas consumen mucho menos que "x|y|z".
+    return (
+      (y - nivelBaseClave) * areaClave +
+      (z + 1) * anchoClave +
+      (x + 1)
+    );
+  }
 }
 
 function indiceAMundo(indice, tamanoCuadricula, tamanoBloque) {

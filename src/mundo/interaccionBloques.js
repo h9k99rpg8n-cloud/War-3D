@@ -76,6 +76,7 @@ export function crearInteraccionBloques(
   return {
     actualizar(now, jugadorActivo = true, simular = true) {
       if (!simular) {
+        punteroActivo = null;
         if (rotura) cancelarRotura();
         return;
       }
@@ -142,7 +143,12 @@ export function crearInteraccionBloques(
     const malla = new THREE.Mesh(geometriaRecolectable, material);
     malla.position.copy(posicion);
     const posicionBase = posicion.clone();
-    posicionBase.y = terreno.obtenerAltura(posicion.x, posicion.z);
+    posicionBase.y = terreno.obtenerAlturaSoporte(
+      posicion.x,
+      posicion.z,
+      posicion.y + mundo.tamanoBloque * 0.2,
+      mundo.tamanoBloque * 0.12,
+    );
     scene.add(malla);
     recolectables.push({
       malla,
@@ -196,9 +202,17 @@ export function crearInteraccionBloques(
       item.malla.scale.setScalar(escala);
 
       if (progreso < 1) continue;
+      if (!inventario.confirmarRecoleccion(item.tipo)) {
+        // Si el jugador reorganizó el inventario durante el vuelo, el objeto
+        // vuelve al mundo en vez de perderse.
+        item.recogiendo = false;
+        item.inicio = now;
+        item.origenCaida = item.malla.position.clone();
+        item.malla.scale.setScalar(1);
+        continue;
+      }
       scene.remove(item.malla);
       recolectables.splice(i, 1);
-      inventario.confirmarRecoleccion(item.tipo);
       mostrarMensaje(`+1 ${NOMBRES_BLOQUE[item.tipo]}`);
     }
   }

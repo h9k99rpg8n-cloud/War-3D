@@ -122,6 +122,8 @@ export function iniciarJuego(
   let tiempoSimulado = ultimoFrame;
   let ultimoRenderInterfaz = 0;
   let promesaGuardado = null;
+  let guardadoSolicitado = false;
+  let interfazBloqueadaAnterior = false;
 
   const redimensionar = () => ajustarRenderizado(renderer, camera, configuracion);
   window.addEventListener("resize", redimensionar);
@@ -150,6 +152,10 @@ export function iniciarJuego(
     const muerto = salud.estaMuerto();
     const interfazBloqueada =
       inventario.estaAbierto() || !interfaz.menuJuego.hidden;
+    if (interfazBloqueada && !interfazBloqueadaAnterior) {
+      controles.reiniciar();
+    }
+    interfazBloqueadaAnterior = interfazBloqueada;
     if (!interfazBloqueada) tiempoSimulado += deltaReal * 1000;
     const nowJuego = tiempoSimulado;
     const deltaJuego = interfazBloqueada ? 0 : delta;
@@ -318,7 +324,10 @@ export function iniciarJuego(
       event.preventDefault();
       event.stopPropagation();
       const abrir = interfaz.menuJuego.hidden;
-      if (abrir) inventario.cerrar();
+      if (abrir) {
+        inventario.cerrar();
+        controles.reiniciar();
+      }
       interfaz.menuJuego.hidden = !abrir;
       interfaz.botonMenuJuego.setAttribute("aria-expanded", String(abrir));
     });
@@ -341,22 +350,34 @@ export function iniciarJuego(
 
   function guardarAhora() {
     if (typeof servicios.guardarProgreso !== "function") return Promise.resolve(true);
+    guardadoSolicitado = true;
     if (promesaGuardado) return promesaGuardado;
-    actualizarEstadoGuardado("GUARDANDO MUNDO…", "is-saving");
-    promesaGuardado = Promise.resolve(servicios.guardarProgreso(crearProgreso()))
-      .then(() => {
+    promesaGuardado = procesarColaGuardado().finally(() => {
+      promesaGuardado = null;
+      // Una solicitud que llegó justo al finalizar no debe quedarse sin guardar.
+      if (guardadoSolicitado) return guardarAhora();
+      return undefined;
+    });
+    return promesaGuardado;
+  }
+
+  async function procesarColaGuardado() {
+    while (guardadoSolicitado) {
+      guardadoSolicitado = false;
+      actualizarEstadoGuardado("GUARDANDO MUNDO…", "is-saving");
+      try {
+        // La instantánea se crea al iniciar cada escritura, no al entrar a la
+        // cola, para conservar los cambios hechos durante un guardado anterior.
+        await servicios.guardarProgreso(crearProgreso());
         actualizarEstadoGuardado("MUNDO GUARDADO", "");
-        return true;
-      })
-      .catch((error) => {
+      } catch (error) {
+        guardadoSolicitado = false;
         console.error("No se pudo guardar el mundo.", error);
         actualizarEstadoGuardado("NO SE PUDO GUARDAR · REINTENTA", "is-error");
         return false;
-      })
-      .finally(() => {
-        promesaGuardado = null;
-      });
-    return promesaGuardado;
+      }
+    }
+    return true;
   }
 
   function crearProgreso() {

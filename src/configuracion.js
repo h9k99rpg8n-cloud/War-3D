@@ -1,4 +1,4 @@
-export const VERSION_JUEGO = "1.7.3";
+export const VERSION_JUEGO = "1.7.4";
 export const VERSION_THREE = "0.185.1";
 export const VERSION_RAPIER = "0.19.3";
 export const VERSION_IDB = "8.0.3";

@@ -20,7 +20,7 @@ export function crearControles(interfaz, configuracion, estadoInicial = {}) {
   interfaz.joystick.addEventListener("pointerdown", (event) => {
     if (punteroJoystick !== null) return;
     punteroJoystick = event.pointerId;
-    interfaz.joystick.setPointerCapture(event.pointerId);
+    capturarPunteroSeguro(interfaz.joystick, event.pointerId);
     actualizarJoystick(event);
     marcarControlesUsados();
   });
@@ -49,7 +49,7 @@ export function crearControles(interfaz, configuracion, estadoInicial = {}) {
     punteroMirada = event.pointerId;
     ultimaMiradaX = event.clientX;
     ultimaMiradaY = event.clientY;
-    interfaz.zonaMirada.setPointerCapture(event.pointerId);
+    capturarPunteroSeguro(interfaz.zonaMirada, event.pointerId);
     marcarControlesUsados();
   });
 
@@ -83,7 +83,7 @@ export function crearControles(interfaz, configuracion, estadoInicial = {}) {
     punteroSalto = event.pointerId;
     saltoSolicitado = true;
     teclas.add("ascender");
-    interfaz.botonSaltar.setPointerCapture(event.pointerId);
+    capturarPunteroSeguro(interfaz.botonSaltar, event.pointerId);
     marcarControlesUsados();
   });
 
@@ -105,7 +105,7 @@ export function crearControles(interfaz, configuracion, estadoInicial = {}) {
     event.stopPropagation();
     punteroDescenso = event.pointerId;
     teclas.add("descender");
-    interfaz.botonDescender.setPointerCapture(event.pointerId);
+    capturarPunteroSeguro(interfaz.botonDescender, event.pointerId);
     marcarControlesUsados();
   });
 
@@ -164,11 +164,7 @@ export function crearControles(interfaz, configuracion, estadoInicial = {}) {
     if (key === " " || key === "spacebar") teclas.delete("ascender");
     if (key === "shift") teclas.delete("descender");
   });
-  window.addEventListener("blur", () => {
-    teclas.clear();
-    punteroSalto = null;
-    punteroDescenso = null;
-  });
+  window.addEventListener("blur", reiniciarControles);
 
   function actualizarJoystick(event) {
     const bounds = interfaz.joystick.getBoundingClientRect();
@@ -199,6 +195,20 @@ export function crearControles(interfaz, configuracion, estadoInicial = {}) {
     entradaJoystick.x = 0;
     entradaJoystick.adelante = 0;
     interfaz.perillaJoystick.style.transform = "translate(-50%, -50%)";
+  }
+
+  function reiniciarControles() {
+    liberarPunteroSeguro(interfaz.joystick, punteroJoystick);
+    liberarPunteroSeguro(interfaz.zonaMirada, punteroMirada);
+    liberarPunteroSeguro(interfaz.botonSaltar, punteroSalto);
+    liberarPunteroSeguro(interfaz.botonDescender, punteroDescenso);
+    reiniciarJoystick();
+    punteroMirada = null;
+    punteroSalto = null;
+    punteroDescenso = null;
+    saltoSolicitado = false;
+    cambioVueloSolicitado = false;
+    teclas.clear();
   }
 
   function marcarControlesUsados() {
@@ -237,7 +247,27 @@ export function crearControles(interfaz, configuracion, estadoInicial = {}) {
       cambioVueloSolicitado = false;
       return solicitado;
     },
+    reiniciar: reiniciarControles,
   };
+}
+
+function capturarPunteroSeguro(elemento, pointerId) {
+  try {
+    elemento.setPointerCapture?.(pointerId);
+  } catch {
+    // Safari puede cancelar la captura si aparece una interfaz superpuesta.
+  }
+}
+
+function liberarPunteroSeguro(elemento, pointerId) {
+  if (pointerId === null) return;
+  try {
+    if (elemento.hasPointerCapture?.(pointerId)) {
+      elemento.releasePointerCapture(pointerId);
+    }
+  } catch {
+    // El navegador ya liberó ese puntero; el estado local se limpia igual.
+  }
 }
 
 function esCampoEditable(elemento) {

@@ -71,9 +71,10 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
     limites,
     creativo,
   );
-  const reservas = Object.fromEntries(
-    Object.keys(DEFINICIONES_INVENTARIO).map((tipo) => [tipo, 0]),
-  );
+  // Las reservas se conservan en orden para simular el inventario completo.
+  // Contarlas solo por tipo permitía que dos objetos distintos reclamaran la
+  // misma última casilla vacía y uno de ellos desapareciera al recogerlo.
+  const reservasPendientes = [];
   const espaciosPanelRapido = crearEspaciosPanel(
     interfaz.rejillaAccesoRapido,
     0,
@@ -149,26 +150,26 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
 
     estaLleno(tipo) {
       if (creativo) return false;
-      return capacidadLibre(tipo) <= (reservas[tipo] ?? 0);
+      return !puedeReservar(tipo);
     },
 
     reservarEspacio(tipo) {
       if (creativo) return true;
       if (!DEFINICIONES_INVENTARIO[tipo]) return false;
-      if (capacidadLibre(tipo) <= (reservas[tipo] ?? 0)) return false;
-      reservas[tipo] = (reservas[tipo] ?? 0) + 1;
+      if (!puedeReservar(tipo)) return false;
+      reservasPendientes.push(tipo);
       return true;
     },
 
     liberarReserva(tipo) {
       if (creativo || !DEFINICIONES_INVENTARIO[tipo]) return;
-      reservas[tipo] = Math.max(0, (reservas[tipo] ?? 0) - 1);
+      retirarReserva(tipo);
     },
 
     confirmarRecoleccion(tipo) {
       if (creativo) return true;
       if (!DEFINICIONES_INVENTARIO[tipo]) return false;
-      reservas[tipo] = Math.max(0, (reservas[tipo] ?? 0) - 1);
+      retirarReserva(tipo);
       const agregado = agregarUnidad(tipo);
       if (agregado) actualizarInterfaz();
       return agregado;
@@ -337,7 +338,7 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
       fantasma: null,
       destino: null,
     };
-    vista.elemento.setPointerCapture?.(event.pointerId);
+    capturarPunteroSeguro(vista.elemento, event.pointerId);
   }
 
   function moverArrastre(event) {
@@ -429,9 +430,7 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
 
   function limpiarArrastre() {
     if (!arrastre) return;
-    if (arrastre.elementoOrigen.hasPointerCapture?.(arrastre.pointerId)) {
-      arrastre.elementoOrigen.releasePointerCapture(arrastre.pointerId);
-    }
+    liberarPunteroSeguro(arrastre.elementoOrigen, arrastre.pointerId);
     arrastre.fantasma?.remove();
     for (const vista of vistasEspacios) {
       vista.elemento.classList.remove("is-dragging", "is-drop-target");
@@ -474,25 +473,27 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
     actualizarInterfaz();
   }
 
-  function capacidadLibre(tipo) {
-    const limite = limitePila(limites, tipo);
-    let capacidad = 0;
-    for (const ranura of ranuras) {
-      if (!ranura) capacidad += limite;
-      else if (ranura.tipo === tipo) capacidad += Math.max(0, limite - ranura.cantidad);
+  function puedeReservar(tipo) {
+    if (!DEFINICIONES_INVENTARIO[tipo]) return false;
+    const simuladas = ranuras.map((ranura) =>
+      ranura ? { tipo: ranura.tipo, cantidad: ranura.cantidad } : null,
+    );
+    for (const tipoReservado of reservasPendientes) {
+      if (agregarUnidadEn(simuladas, tipoReservado, limites) === false) {
+        return false;
+      }
     }
-    return capacidad;
+    return agregarUnidadEn(simuladas, tipo, limites) !== false;
+  }
+
+  function retirarReserva(tipo) {
+    const indice = reservasPendientes.indexOf(tipo);
+    if (indice >= 0) reservasPendientes.splice(indice, 1);
   }
 
   function agregarUnidad(tipo) {
-    const limite = limitePila(limites, tipo);
-    let destino = ranuras.findIndex(
-      (ranura) => ranura?.tipo === tipo && ranura.cantidad < limite,
-    );
-    if (destino < 0) destino = ranuras.findIndex((ranura) => ranura === null);
-    if (destino < 0) return false;
-    if (!ranuras[destino]) ranuras[destino] = { tipo, cantidad: 0 };
-    ranuras[destino].cantidad += 1;
+    const destino = agregarUnidadEn(ranuras, tipo, limites);
+    if (destino === false) return false;
     if (!ranuras[indiceSeleccionado]) indiceSeleccionado = Math.min(destino, cantidadRapida - 1);
     return true;
   }
@@ -701,6 +702,36 @@ function cantidadTotalTipo(ranuras, tipo) {
     (total, ranura) => total + (ranura?.tipo === tipo ? ranura.cantidad : 0),
     0,
   );
+}
+
+function agregarUnidadEn(ranuras, tipo, limites) {
+  const limite = limitePila(limites, tipo);
+  let destino = ranuras.findIndex(
+    (ranura) => ranura?.tipo === tipo && ranura.cantidad < limite,
+  );
+  if (destino < 0) destino = ranuras.findIndex((ranura) => ranura === null);
+  if (destino < 0) return false;
+  if (!ranuras[destino]) ranuras[destino] = { tipo, cantidad: 0 };
+  ranuras[destino].cantidad += 1;
+  return destino;
+}
+
+function capturarPunteroSeguro(elemento, pointerId) {
+  try {
+    elemento.setPointerCapture?.(pointerId);
+  } catch {
+    // Algunos Safari antiguos pierden la captura al abrir una capa completa.
+  }
+}
+
+function liberarPunteroSeguro(elemento, pointerId) {
+  try {
+    if (elemento.hasPointerCapture?.(pointerId)) {
+      elemento.releasePointerCapture(pointerId);
+    }
+  } catch {
+    // La captura ya pudo ser liberada por el navegador.
+  }
 }
 
 function limitarIndice(valor, cantidad) {

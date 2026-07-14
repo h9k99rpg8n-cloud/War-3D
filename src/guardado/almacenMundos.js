@@ -10,7 +10,7 @@ export async function crearAlmacenMundos(openDB) {
     ? await abrirConIdb(openDB)
     : await abrirIndexedDBNativo();
 
-  navigator.storage?.persist?.().catch(() => false);
+  Promise.resolve(globalThis.navigator?.storage?.persist?.()).catch(() => false);
 
   return {
     async listarMundos() {
@@ -138,13 +138,14 @@ function normalizarMundoGuardado(datos = {}) {
 }
 
 function crearIdMundo() {
-  if (crypto.randomUUID) return crypto.randomUUID();
+  const cryptoWeb = globalThis.crypto;
+  if (typeof cryptoWeb?.randomUUID === "function") return cryptoWeb.randomUUID();
   return `mundo-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function crearSemilla() {
   const valores = new Uint32Array(1);
-  crypto.getRandomValues?.(valores);
+  globalThis.crypto?.getRandomValues?.(valores);
   return valores[0] || Math.floor(Math.random() * 0xffffffff);
 }
 
