@@ -6,12 +6,37 @@
     <meta name="theme-color" content="#87b9d9">
     <meta
       name="description"
-      content="War 3D v1.7.4: correcciones, guardado seguro y mejor rendimiento móvil."
+      content="War 3D v1.7.5 Snapshot 1: Container Update, minería, crafteo y mundos regionales."
     >
-    <title>War 3D — v1.7.4</title>
-    <link rel="stylesheet" href="./style.css?v=1.7.4">
+    <title>War 3D — Container Update</title>
+    <link rel="stylesheet" href="./style.css?v=1.7.5-s1">
   </head>
   <body>
+    <svg class="ui-icon-sprite" aria-hidden="true">
+      <symbol id="icon-play" viewBox="0 0 24 24"><path d="M7 4.8v14.4L19 12 7 4.8Z"></path></symbol>
+      <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M10.5 4h3v6.5H20v3h-6.5V20h-3v-6.5H4v-3h6.5V4Z"></path></symbol>
+      <symbol id="icon-back" viewBox="0 0 24 24"><path d="m14.8 4.2 2.1 2.1-5.7 5.7 5.7 5.7-2.1 2.1L7 12l7.8-7.8Z"></path></symbol>
+      <symbol id="icon-heart" viewBox="0 0 24 24"><path d="M12 20.5 4.1 13A5.3 5.3 0 0 1 12 5.9 5.3 5.3 0 0 1 19.9 13L12 20.5Z"></path></symbol>
+      <symbol id="icon-infinity" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" d="M8.2 8.3c-3.9 0-4.9 7.4-.3 7.4 3 0 5.1-7.4 8-7.4 4.6 0 3.6 7.4-.3 7.4-2.9 0-5-7.4-7.4-7.4Z"></path></symbol>
+      <symbol id="icon-sun" viewBox="0 0 24 24"><path d="M10.5 1h3v3h-3V1Zm0 19h3v3h-3v-3ZM1 10.5h3v3H1v-3Zm19 0h3v3h-3v-3ZM4.2 6.3l2.1-2.1 2.1 2.1-2.1 2.1-2.1-2.1Zm11.4 11.4 2.1-2.1 2.1 2.1-2.1 2.1-2.1-2.1Zm0-11.4 2.1-2.1 2.1 2.1-2.1 2.1-2.1-2.1ZM4.2 17.7l2.1-2.1 2.1 2.1-2.1 2.1-2.1-2.1ZM7 12a5 5 0 1 1 10 0 5 5 0 0 1-10 0Z"></path></symbol>
+      <symbol id="icon-sword" viewBox="0 0 24 24"><path d="m18.8 2 3.2 3.2-9.5 9.5-1.7-1.7-2.1 2.1 2.2 2.2-2.1 2.1-2.2-2.2-2.8 2.8L2 18.2l2.8-2.8-2.2-2.2 2.1-2.1 2.2 2.2L9 11.2 7.3 9.5 18.8 2Z"></path></symbol>
+      <symbol id="icon-skull" viewBox="0 0 24 24"><path d="M12 2a8 8 0 0 0-8 8v4.4L7 17v4h3v-3h4v3h3v-4l3-2.6V10a8 8 0 0 0-8-8Zm-3 9.8a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm6 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4ZM10.2 15 12 12.7l1.8 2.3h-3.6Z"></path></symbol>
+      <symbol id="icon-cycle" viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 1 8.4 5.8l1.4-1.4V13h-5.6l1.8-1.8A6.2 6.2 0 0 0 6.2 9.4L3.6 8.2A9 9 0 0 1 12 3Zm-8.4 8 2.1 2.1A6.2 6.2 0 0 0 17.8 15l2.6 1.2A9 9 0 0 1 3.7 15.1L2 16.8V11h1.6Z"></path></symbol>
+      <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M19.8 15.4A8.5 8.5 0 0 1 8.6 4.2 9 9 0 1 0 19.8 15.4Z"></path></symbol>
+      <symbol id="icon-world" viewBox="0 0 24 24"><path d="M3 5h8v6H3V5Zm10 0h8v6h-8V5ZM3 13h8v6H3v-6Zm10 0h8v6h-8v-6Z"></path></symbol>
+      <symbol id="icon-flat" viewBox="0 0 24 24"><path d="M2 11h20v4H2v-4Z"></path></symbol>
+      <symbol id="icon-menu" viewBox="0 0 24 24"><path d="M5 10h4v4H5v-4Zm5 0h4v4h-4v-4Zm5 0h4v4h-4v-4Z"></path></symbol>
+      <symbol id="icon-exit" viewBox="0 0 24 24"><path d="M4 3h9v3H7v12h6v3H4V3Zm11.5 4L21 12l-5.5 5v-3.5H10v-3h5.5V7Z"></path></symbol>
+      <symbol id="icon-bag" viewBox="0 0 24 24"><path d="M7 7V5a5 5 0 0 1 10 0v2h3l1 15H3L4 7h3Zm3 0h4V5a2 2 0 0 0-4 0v2Z"></path></symbol>
+      <symbol id="icon-sort" viewBox="0 0 24 24"><path d="m7 3 4 4H8v10h3l-4 4-4-4h3V7H3l4-4Zm10 0 4 4h-3v10h3l-4 4-4-4h3V7h-3l4-4Z"></path></symbol>
+      <symbol id="icon-close" viewBox="0 0 24 24"><path d="m5.6 3.5 6.4 6.4 6.4-6.4 2.1 2.1-6.4 6.4 6.4 6.4-2.1 2.1-6.4-6.4-6.4 6.4-2.1-2.1 6.4-6.4-6.4-6.4 2.1-2.1Z"></path></symbol>
+      <symbol id="icon-craft" viewBox="0 0 24 24"><path d="m3 17 8.5-8.5 4 4L7 21H3v-4Zm9.6-10.6L16 3l5 5-3.4 3.4-5-5Z"></path></symbol>
+      <symbol id="icon-settings" viewBox="0 0 24 24"><path d="m9.7 2 .5 2.4a8 8 0 0 1 3.6 0l.5-2.4 3.2 1.3-1.4 2a8 8 0 0 1 2.5 2.5l2-1.4L22 9.7l-2.4.5a8 8 0 0 1 0 3.6l2.4.5-1.3 3.2-2-1.4a8 8 0 0 1-2.5 2.5l1.4 2-3.3 1.4-.5-2.4a8 8 0 0 1-3.6 0L9.7 22l-3.2-1.3 1.4-2a8 8 0 0 1-2.5-2.5l-2 1.4L2 14.3l2.4-.5a8 8 0 0 1 0-3.6L2 9.7l1.3-3.2 2 1.4a8 8 0 0 1 2.5-2.5l-1.4-2L9.7 2ZM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"></path></symbol>
+      <symbol id="icon-jump" viewBox="0 0 24 24"><path d="m12 3 7 8h-4v10H9V11H5l7-8Z"></path></symbol>
+      <symbol id="icon-flight" viewBox="0 0 24 24"><path d="m12 1 2.2 7.2L21 12l-6.8 3.8L12 23l-2.2-7.2L3 12l6.8-3.8L12 1Z"></path></symbol>
+      <symbol id="icon-interact" viewBox="0 0 24 24"><path d="M10 2h4v8h-4V2Zm-5.7 3 2.8-2.8 5.7 5.7L10 10.7 4.3 5Zm15.4 0L14 10.7l-2.8-2.8 5.7-5.7L19.7 5ZM4 12h6v4H4v-4Zm10 0h6v4h-6v-4Zm-4 5h4v5h-4v-5Z"></path></symbol>
+      <symbol id="icon-look" viewBox="0 0 24 24"><path d="m7.2 5.2 2.1 2.1L6.6 10H11v4H6.6l2.7 2.7-2.1 2.1L1 12l6.2-6.8Zm9.6 0L23 12l-6.2 6.8-2.1-2.1 2.7-2.7H13v-4h4.4l-2.7-2.7 2.1-2.1Z"></path></symbol>
+    </svg>
     <main id="game" aria-label="War 3D">
       <section id="start-screen" class="start-screen launcher" aria-labelledby="start-title">
         <div class="launcher__clouds" aria-hidden="true"></div>
@@ -25,19 +50,19 @@
             </div>
           </div>
           <button id="play-button" class="launcher-primary launcher-primary--play" type="button">
-            <span aria-hidden="true">▶</span><b>JUGAR</b>
+            <svg class="ui-icon" aria-hidden="true"><use href="#icon-play"></use></svg><b>JUGAR</b>
           </button>
-          <p class="launcher-version">VERSIÓN 1.7.4 · CORRECCIONES</p>
+          <p class="launcher-version">v1.7.5 · CONTAINER UPDATE · SNAPSHOT 1</p>
         </div>
 
         <div id="launcher-worlds" class="launcher-view launcher-panel launcher-worlds" hidden>
           <header class="launcher-panel__header">
-            <button id="back-to-cover" class="launcher-back" type="button" aria-label="Volver a la portada">‹</button>
+            <button id="back-to-cover" class="launcher-back" type="button" aria-label="Volver a la portada"><svg class="ui-icon" aria-hidden="true"><use href="#icon-back"></use></svg></button>
             <div class="launcher-logo launcher-logo--small">
               <span class="launcher-logo__mark" aria-hidden="true">W</span>
               <div><h2>WAR <strong>3D</strong></h2><p>SELECCIONAR MUNDO</p></div>
             </div>
-            <button id="create-world-list" class="launcher-add" type="button" hidden><span>＋</span> NUEVO</button>
+            <button id="create-world-list" class="launcher-add" type="button" hidden><svg class="ui-icon" aria-hidden="true"><use href="#icon-plus"></use></svg> NUEVO</button>
           </header>
           <p id="launcher-status" class="launcher-status" aria-live="polite">CARGANDO MUNDOS…</p>
           <div id="world-list" class="world-list"></div>
@@ -53,13 +78,13 @@
             </div>
             <h2 id="empty-worlds-title">LA ARAÑA NO ENCUENTRA TU MUNDO</h2>
             <p>Todavía no hay una aventura guardada. Crea la primera y dale un lugar al cual caminar.</p>
-            <button id="create-first-world" class="launcher-primary" type="button"><span>＋</span><b>CREAR NUEVO MUNDO</b></button>
+            <button id="create-first-world" class="launcher-primary" type="button"><svg class="ui-icon" aria-hidden="true"><use href="#icon-plus"></use></svg><b>CREAR NUEVO MUNDO</b></button>
           </section>
         </div>
 
         <div id="launcher-create" class="launcher-view launcher-panel launcher-create" hidden>
           <header class="launcher-panel__header">
-            <button id="back-to-worlds" class="launcher-back" type="button" aria-label="Volver a mis mundos">‹</button>
+            <button id="back-to-worlds" class="launcher-back" type="button" aria-label="Volver a mis mundos"><svg class="ui-icon" aria-hidden="true"><use href="#icon-back"></use></svg></button>
             <div><small>NUEVA AVENTURA</small><h2>CREAR MUNDO</h2></div>
             <span class="launcher-step">01</span>
           </header>
@@ -74,47 +99,99 @@
               <fieldset class="world-choice">
                 <legend>MODO DE JUEGO</legend>
                 <div class="world-choice__grid">
-                  <label class="choice-card"><input type="radio" name="gameMode" value="supervivencia" checked><span><b>♥</b><strong>SUPERVIVENCIA</strong><small>Recursos, salud y criaturas</small></span></label>
-                  <label class="choice-card"><input type="radio" name="gameMode" value="creativo"><span><b>∞</b><strong>CREATIVO</strong><small>Construcción y vuelo ilimitados</small></span></label>
+                  <label class="choice-card"><input type="radio" name="gameMode" value="supervivencia" checked><span><svg class="ui-icon" aria-hidden="true"><use href="#icon-heart"></use></svg><strong>SUPERVIVENCIA</strong><small>Recursos, salud y criaturas</small></span></label>
+                  <label class="choice-card"><input type="radio" name="gameMode" value="creativo"><span><svg class="ui-icon" aria-hidden="true"><use href="#icon-infinity"></use></svg><strong>CREATIVO</strong><small>Construcción y vuelo ilimitados</small></span></label>
                 </div>
               </fieldset>
 
               <fieldset id="difficulty-field" class="world-choice">
                 <legend>DIFICULTAD</legend>
                 <div class="world-choice__grid world-choice__grid--three">
-                  <label class="choice-card choice-card--compact"><input type="radio" name="difficulty" value="pacifica"><span><b>☀</b><strong>PACÍFICA</strong><small>Sin hostiles</small></span></label>
-                  <label class="choice-card choice-card--compact"><input type="radio" name="difficulty" value="normal" checked><span><b>⚔</b><strong>NORMAL</strong><small>Reto equilibrado</small></span></label>
-                  <label class="choice-card choice-card--compact"><input type="radio" name="difficulty" value="dificil"><span><b>☠</b><strong>DIFÍCIL</strong><small>Más grupos</small></span></label>
+                  <label class="choice-card choice-card--compact"><input type="radio" name="difficulty" value="pacifica"><span><svg class="ui-icon" aria-hidden="true"><use href="#icon-sun"></use></svg><strong>PACÍFICA</strong><small>Sin hostiles</small></span></label>
+                  <label class="choice-card choice-card--compact"><input type="radio" name="difficulty" value="normal" checked><span><svg class="ui-icon" aria-hidden="true"><use href="#icon-sword"></use></svg><strong>NORMAL</strong><small>Reto equilibrado</small></span></label>
+                  <label class="choice-card choice-card--compact"><input type="radio" name="difficulty" value="dificil"><span><svg class="ui-icon" aria-hidden="true"><use href="#icon-skull"></use></svg><strong>DIFÍCIL</strong><small>Más grupos</small></span></label>
                 </div>
               </fieldset>
 
               <fieldset class="world-choice">
                 <legend>TIEMPO DEL MUNDO</legend>
                 <div class="world-choice__grid world-choice__grid--three">
-                  <label class="choice-card choice-card--compact"><input type="radio" name="timeMode" value="normal" checked><span><b>◐</b><strong>NORMAL</strong><small>Día y noche</small></span></label>
-                  <label class="choice-card choice-card--compact"><input type="radio" name="timeMode" value="siempre_dia"><span><b>☀</b><strong>DÍA</strong><small>Sol permanente</small></span></label>
-                  <label class="choice-card choice-card--compact"><input type="radio" name="timeMode" value="siempre_noche"><span><b>☾</b><strong>NOCHE</strong><small>Luna permanente</small></span></label>
+                  <label class="choice-card choice-card--compact"><input type="radio" name="timeMode" value="normal" checked><span><svg class="ui-icon" aria-hidden="true"><use href="#icon-cycle"></use></svg><strong>NORMAL</strong><small>Día y noche</small></span></label>
+                  <label class="choice-card choice-card--compact"><input type="radio" name="timeMode" value="siempre_dia"><span><svg class="ui-icon" aria-hidden="true"><use href="#icon-sun"></use></svg><strong>DÍA</strong><small>Sol permanente</small></span></label>
+                  <label class="choice-card choice-card--compact"><input type="radio" name="timeMode" value="siempre_noche"><span><svg class="ui-icon" aria-hidden="true"><use href="#icon-moon"></use></svg><strong>NOCHE</strong><small>Luna permanente</small></span></label>
                 </div>
               </fieldset>
 
               <fieldset class="world-choice">
-                <legend>TIPO DE MUNDO</legend>
+                <legend>PLANTILLA DE MUNDO</legend>
                 <div class="world-choice__grid">
-                  <label class="choice-card"><input type="radio" name="worldType" value="normal" checked><span><b>▦</b><strong>NORMAL</strong><small>Relieve, lagos y árboles</small></span></label>
-                  <label id="flat-world-option" class="choice-card is-disabled"><input id="flat-world" type="radio" name="worldType" value="plano" disabled><span><b>━</b><strong>PLANO</strong><small id="flat-world-note">Solo disponible en creativo</small></span></label>
+                  <label class="choice-card"><input type="radio" name="worldType" value="normal" checked><span><svg class="ui-icon" aria-hidden="true"><use href="#icon-world"></use></svg><strong id="normal-template-title">ALEATORIA</strong><small id="normal-template-note">Una de cinco plantillas oficiales</small></span></label>
+                  <label id="flat-world-option" class="choice-card is-disabled"><input id="flat-world" type="radio" name="worldType" value="plano" disabled><span><svg class="ui-icon" aria-hidden="true"><use href="#icon-flat"></use></svg><strong>PLANO</strong><small id="flat-world-note">Solo disponible en creativo</small></span></label>
                 </div>
+                <label id="template-selector-field" class="world-select-field is-disabled">
+                  <span>PLANTILLA CREATIVA</span>
+                  <select id="world-template" name="worldTemplate" disabled>
+                    <option value="war:pond_grove">Arboleda del estanque</option>
+                    <option value="war:dry_plains">Llanura seca</option>
+                    <option value="war:sandy_reaches">Extensión arenosa</option>
+                    <option value="war:open_fields">Campos abiertos</option>
+                    <option value="war:stone_ridges">Sierras de piedra</option>
+                  </select>
+                </label>
               </fieldset>
 
               <fieldset class="world-choice world-choice--size">
                 <legend>TAMAÑO DEL MUNDO</legend>
-                <div class="world-choice__grid world-choice__grid--three">
+                <div class="world-choice__grid world-choice__grid--five">
                   <label class="choice-card choice-card--compact"><input type="radio" name="worldSize" value="64"><span><b>64</b><strong>PEQUEÑO</strong></span></label>
                   <label class="choice-card choice-card--compact"><input type="radio" name="worldSize" value="96"><span><b>96</b><strong>MEDIANO</strong></span></label>
                   <label class="choice-card choice-card--compact"><input type="radio" name="worldSize" value="128" checked><span><b>128</b><strong>GRANDE</strong></span></label>
+                  <label class="choice-card choice-card--compact"><input type="radio" name="worldSize" value="192"><span><b>192</b><strong>AMPLIO</strong><small>Gama media</small></span></label>
+                  <label class="choice-card choice-card--compact"><input type="radio" name="worldSize" value="256"><span><b>256</b><strong>MÁXIMO</strong><small>Usa carga regional</small></span></label>
                 </div>
+                <p id="world-size-advice" class="world-size-advice">128×128 · recomendado para la mayoría de teléfonos.</p>
               </fieldset>
             </div>
-            <button class="launcher-primary launcher-primary--create" type="submit"><span>＋</span><b>CREAR MUNDO</b></button>
+
+            <button id="creation-settings-button" class="world-settings-button" type="button" aria-expanded="false" aria-controls="creation-settings">
+              <svg class="ui-icon" aria-hidden="true"><use href="#icon-settings"></use></svg>
+              <span><b>AJUSTES</b><small>Pantalla, controles, rendimiento y experimentos</small></span>
+            </button>
+
+            <section id="creation-settings" class="creation-settings" hidden>
+              <div class="settings-grid">
+                <fieldset>
+                  <legend>PANTALLA</legend>
+                  <label><span>Estilo visual</span><select name="visualStyle"><option value="traditional">Tradicional</option><option value="pixelar">Pixelar experimental</option></select></label>
+                  <small>Pixelar carga texturas pixel art independientes y permanece desactivado por defecto.</small>
+                </fieldset>
+                <fieldset>
+                  <legend>CONTROLES</legend>
+                  <label><span>Diseño del joystick</span><select name="joystickSkin"><option value="traditional">Tradicional</option><option value="dark">Oscuro</option><option value="pixel">Pixelado</option></select></label>
+                </fieldset>
+                <fieldset>
+                  <legend>RENDIMIENTO</legend>
+                  <label><span>Perfil</span><select id="performance-profile" name="performanceProfile"><option value="basico">Básico</option><option value="equilibrado" selected>Equilibrado</option><option value="alto">Alto</option><option value="personalizado">Personalizado</option></select></label>
+                  <label><span>Carga de pantalla: <b id="load-distance-value">6</b></span><input id="load-distance" name="loadDistance" type="range" min="2" max="32" value="6"></label>
+                  <small id="load-distance-warning">6 es la distancia recomendada para teléfonos.</small>
+                </fieldset>
+                <fieldset>
+                  <legend>EXPERIMENTOS</legend>
+                  <label class="settings-check"><input name="experimentalWater" type="checkbox"><span><b>Nueva colisión e interacción del agua</b><small>Desactivada de forma predeterminada; el agua clásica sigue disponible.</small></span></label>
+                </fieldset>
+                <details>
+                  <summary>Física avanzada del jugador</summary>
+                  <div class="settings-physics-grid">
+                    <label><span>Altura</span><input name="playerHeight" type="number" min="3.2" max="3.92" step="0.02" value="3.72"></label>
+                    <label><span>Ancho</span><input name="playerWidth" type="number" min="0.78" max="1.5" step="0.02" value="1.24"></label>
+                    <label><span>Altura de ojos</span><input name="playerEyeHeight" type="number" min="2.8" max="3.65" step="0.02" value="3.34"></label>
+                    <label><span>Altura de paso</span><input name="playerStepHeight" type="number" min="0.2" max="0.9" step="0.02" value="0.72"></label>
+                  </div>
+                </details>
+              </div>
+            </section>
+
+            <button class="launcher-primary launcher-primary--create" type="submit"><svg class="ui-icon" aria-hidden="true"><use href="#icon-plus"></use></svg><b>CREAR MUNDO</b></button>
           </form>
         </div>
       </section>
@@ -129,18 +206,19 @@
             <p>PROTOTIPO DE MOVIMIENTO</p>
           </div>
         </div>
-        <span id="version-badge" class="version-badge">v1.7.4 • THREE.JS</span>
+        <span id="version-badge" class="version-badge">v1.7.5 S1 • CONTAINER UPDATE</span>
       </header>
 
       <div class="game-menu">
-        <button id="game-menu-button" class="game-menu__toggle" type="button" aria-label="Abrir opciones" aria-expanded="false" aria-controls="game-options-menu">⋮</button>
+        <button id="game-menu-button" class="game-menu__toggle" type="button" aria-label="Abrir opciones" aria-expanded="false" aria-controls="game-options-menu"><svg class="ui-icon" aria-hidden="true"><use href="#icon-menu"></use></svg></button>
         <section id="game-options-menu" class="game-options" aria-label="Opciones del mundo" hidden>
           <div class="game-options__world">
             <span class="launcher-logo__mark" aria-hidden="true">W</span>
             <div><small>MUNDO ACTUAL</small><strong id="current-world-name">Mi mundo</strong></div>
           </div>
           <div id="save-status" class="save-status" aria-live="polite"><i></i> GUARDADO AUTOMÁTICO</div>
-          <button id="exit-world-button" type="button"><span aria-hidden="true">↩</span><b>GUARDAR Y SALIR</b></button>
+          <button id="world-settings-button" type="button"><svg class="ui-icon" aria-hidden="true"><use href="#icon-settings"></use></svg><b>AJUSTES</b></button>
+          <button id="exit-world-button" type="button"><svg class="ui-icon" aria-hidden="true"><use href="#icon-exit"></use></svg><b>GUARDAR Y SALIR</b></button>
         </section>
       </div>
 
@@ -163,13 +241,13 @@
       <div id="look-zone" class="look-zone"></div>
 
       <section id="joystick" class="joystick" aria-label="Joystick de movimiento">
-        <div class="joystick__arrows" aria-hidden="true">▲</div>
+        <div class="joystick__arrows" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
         <div id="joystick-knob" class="joystick__knob"></div>
       </section>
 
       <div class="mobile-hint mobile-hint--move" aria-hidden="true">MOVER</div>
       <div class="mobile-hint mobile-hint--look" aria-hidden="true">
-        <span>↔</span>
+        <svg class="ui-icon"><use href="#icon-look"></use></svg>
         ARRASTRA PARA MIRAR
       </div>
 
@@ -203,7 +281,7 @@
         aria-expanded="false"
         aria-controls="inventory-panel"
       >
-        <span aria-hidden="true">▦</span>
+        <svg class="ui-icon" aria-hidden="true"><use href="#icon-bag"></use></svg>
         <small>MOCHILA</small>
         <b id="inventory-badge" aria-hidden="true">0</b>
       </button>
@@ -226,8 +304,9 @@
               </div>
             </div>
             <div class="inventory-panel__actions">
-              <button id="inventory-sort" type="button"><span aria-hidden="true">⇅</span> ORDENAR</button>
-              <button id="inventory-close" type="button" aria-label="Cerrar inventario">×</button>
+              <button id="inventory-crafting" type="button"><svg class="ui-icon" aria-hidden="true"><use href="#icon-craft"></use></svg> FABRICAR</button>
+              <button id="inventory-sort" type="button"><svg class="ui-icon" aria-hidden="true"><use href="#icon-sort"></use></svg> ORDENAR</button>
+              <button id="inventory-close" type="button" aria-label="Cerrar inventario"><svg class="ui-icon" aria-hidden="true"><use href="#icon-close"></use></svg></button>
             </div>
           </header>
 
@@ -256,19 +335,19 @@
           </div>
 
           <footer class="inventory-panel__hint">
-            <span aria-hidden="true">☝</span>
+            <svg class="ui-icon" aria-hidden="true"><use href="#icon-interact"></use></svg>
             ARRASTRA PARA MOVER · SUELTA SOBRE LA MISMA CLASE PARA COMBINAR PILAS
           </footer>
         </div>
       </section>
 
       <button id="place-block" class="place-block" type="button" aria-label="Colocar bloque de pasto">
-        <span aria-hidden="true">＋</span>
+        <svg class="ui-icon" aria-hidden="true"><use href="#icon-plus"></use></svg>
         <small id="place-label">COLOCAR</small>
       </button>
 
       <button id="jump-button" class="movement-action movement-action--jump" type="button" aria-label="Saltar">
-        <span aria-hidden="true">↑</span>
+        <svg class="ui-icon" aria-hidden="true"><use href="#icon-jump"></use></svg>
         <small id="jump-label">SALTAR</small>
       </button>
 
@@ -279,7 +358,7 @@
         aria-pressed="false"
         hidden
       >
-        <span aria-hidden="true">✦</span>
+        <svg class="ui-icon" aria-hidden="true"><use href="#icon-flight"></use></svg>
         <small>VOLAR</small>
       </button>
 
@@ -290,8 +369,18 @@
         aria-label="Descender mientras vuelas"
         hidden
       >
-        <span aria-hidden="true">↓</span>
+        <svg class="ui-icon ui-icon--down" aria-hidden="true"><use href="#icon-jump"></use></svg>
         <small>BAJAR</small>
+      </button>
+
+      <button id="interact-button" class="movement-action movement-action--interact" type="button" aria-label="Interactuar" disabled>
+        <svg class="ui-icon" aria-hidden="true"><use href="#icon-interact"></use></svg>
+        <small>USAR</small>
+      </button>
+
+      <button id="attack-button" class="movement-action movement-action--attack" type="button" aria-label="Atacar">
+        <svg class="ui-icon" aria-hidden="true"><use href="#icon-sword"></use></svg>
+        <small>ATACAR</small>
       </button>
 
       <div id="action-message" class="action-message" role="status" aria-live="polite" hidden></div>
@@ -300,11 +389,86 @@
 
       <section id="death-panel" class="death-panel" role="dialog" aria-labelledby="death-title" hidden>
         <div class="death-panel__card">
-          <span aria-hidden="true">☠</span>
+          <svg class="ui-icon" aria-hidden="true"><use href="#icon-skull"></use></svg>
           <h2 id="death-title">HAS CAÍDO</h2>
           <p>Las criaturas nocturnas dominaron la noche.</p>
           <button id="respawn-button" type="button">REAPARECER</button>
         </div>
+      </section>
+
+      <section id="station-panel" class="station-panel" role="dialog" aria-modal="true" aria-labelledby="station-title" hidden>
+        <div class="station-panel__shell">
+          <header>
+            <div>
+              <small id="station-kicker">FABRICACIÓN</small>
+              <h2 id="station-title">CRAFTEO BÁSICO</h2>
+            </div>
+            <button id="station-close" type="button" aria-label="Cerrar estación"><svg class="ui-icon" aria-hidden="true"><use href="#icon-close"></use></svg></button>
+          </header>
+          <div id="recipe-list" class="recipe-list"></div>
+          <section id="furnace-interface" class="furnace-interface" hidden>
+            <div class="furnace-slot">
+              <small>MATERIAL</small><b id="furnace-input">VACÍO</b>
+              <button id="furnace-add-sand" type="button">AÑADIR ARENA</button>
+            </div>
+            <div class="furnace-process" aria-label="Progreso del horno">
+              <span class="furnace-process__flame" aria-hidden="true"></span>
+              <div><i id="furnace-progress"></i></div>
+              <small id="furnace-status">HORNO APAGADO</small>
+            </div>
+            <div class="furnace-slot">
+              <small>COMBUSTIBLE</small><b id="furnace-fuel">VACÍO</b>
+              <button id="furnace-add-coal" type="button">AÑADIR CARBÓN</button>
+            </div>
+            <div class="furnace-slot furnace-slot--output">
+              <small>RESULTADO</small><b id="furnace-output">VACÍO</b>
+              <button id="furnace-collect" type="button">RECOGER</button>
+            </div>
+          </section>
+          <p id="station-message" class="station-message" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section id="settings-panel" class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
+        <div class="settings-panel__shell">
+          <header>
+            <div><small>CONTAINER UPDATE</small><h2 id="settings-title">AJUSTES</h2></div>
+            <button id="settings-close" type="button" aria-label="Cerrar ajustes"><svg class="ui-icon" aria-hidden="true"><use href="#icon-close"></use></svg></button>
+          </header>
+          <nav class="settings-tabs" aria-label="Categorías de ajustes">
+            <button type="button" data-settings-tab="juego" class="is-active">JUEGO</button>
+            <button type="button" data-settings-tab="mundo">MUNDO</button>
+            <button type="button" data-settings-tab="pantalla">PANTALLA</button>
+            <button type="button" data-settings-tab="controles">CONTROLES</button>
+            <button type="button" data-settings-tab="rendimiento">RENDIMIENTO</button>
+            <button type="button" data-settings-tab="experimentos">EXPERIMENTOS</button>
+            <button type="button" data-settings-tab="accesibilidad">ACCESIBILIDAD</button>
+          </nav>
+          <div class="settings-pages">
+            <section data-settings-page="juego" class="is-active"><h3>JUEGO</h3><p>Los cambios de jugabilidad se conservan dentro del mundo.</p><div class="setting-readonly"><span>Modo actual</span><b id="settings-game-mode">SUPERVIVENCIA</b></div><div class="setting-readonly"><span>Dificultad</span><b id="settings-difficulty">NORMAL</b></div></section>
+            <section data-settings-page="mundo"><h3>MUNDO</h3><div class="setting-readonly"><span>Plantilla</span><b id="settings-template">CLÁSICA</b></div><div class="setting-readonly"><span>Tamaño</span><b id="settings-world-size">128×128</b></div></section>
+            <section data-settings-page="pantalla"><h3>PANTALLA</h3><p>El diseño personalizado utiliza coordenadas normalizadas y áreas seguras.</p><button id="hud-editor-open" class="settings-action" type="button">REORGANIZAR INTERFAZ <small>EXPERIMENTAL</small></button></section>
+            <section data-settings-page="controles"><h3>CONTROLES</h3><label>DISEÑO DEL JOYSTICK<select id="settings-joystick"><option value="traditional">Tradicional</option><option value="dark">Oscuro</option><option value="pixel">Pixelado</option></select></label><p>La apariencia no altera sensibilidad, velocidad ni zona muerta.</p></section>
+            <section data-settings-page="rendimiento"><h3>RENDIMIENTO</h3><div class="setting-readonly"><span>Perfil del mundo</span><b id="settings-performance">EQUILIBRADO</b></div><div class="setting-readonly"><span>Carga de pantalla</span><b id="settings-load-distance">6 REGIONES</b></div><p>Los cambios de distancia se aplican al volver a abrir el mundo.</p></section>
+            <section data-settings-page="experimentos"><h3>EXPERIMENTOS</h3><div class="setting-readonly"><span>Agua nueva</span><b id="settings-water">DESACTIVADA</b></div><div class="setting-readonly"><span>Pixelar</span><b id="settings-pixelar">DESACTIVADO</b></div></section>
+            <section data-settings-page="accesibilidad"><h3>ACCESIBILIDAD</h3><label class="settings-check"><input id="settings-large-controls" type="checkbox"><span><b>Controles grandes</b><small>Aumenta las zonas táctiles un 12 %.</small></span></label><label class="settings-check"><input id="settings-reduced-motion" type="checkbox"><span><b>Reducir movimiento</b><small>Reduce sacudidas y animaciones de interfaz.</small></span></label></section>
+          </div>
+        </div>
+      </section>
+
+      <section id="hud-editor" class="hud-editor" aria-label="Editor de interfaz" hidden>
+        <header>
+          <div><small>EXPERIMENTAL</small><b>REORGANIZAR INTERFAZ</b></div>
+          <div>
+            <button id="hud-editor-smaller" type="button" aria-label="Reducir control seleccionado">−</button>
+            <button id="hud-editor-larger" type="button" aria-label="Aumentar control seleccionado">+</button>
+            <button id="hud-editor-reset" type="button">RESTAURAR</button>
+            <button id="hud-editor-cancel" type="button">CANCELAR</button>
+            <button id="hud-editor-save" type="button">GUARDAR</button>
+          </div>
+        </header>
+        <p id="hud-editor-help">Toca un control y arrástralo. Las líneas muestran el área segura.</p>
+        <div class="hud-editor__safe-area" aria-hidden="true"></div>
       </section>
 
       <section id="error-panel" class="error-panel" role="alert" hidden>
@@ -313,6 +477,6 @@
       </section>
     </main>
 
-    <script type="module" src="./main.js?v=1.7.4"></script>
+    <script type="module" src="./main.js?v=1.7.5-s1"></script>
   </body>
 </html>

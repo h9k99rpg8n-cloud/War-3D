@@ -1,3 +1,5 @@
+import { obtenerPlantillaMundo } from "../generacion/plantillasMundo.js";
+
 const LIMITE_NOMBRE = 24;
 
 export function esperarSeleccionMundo(interfaz, almacenMundos) {
@@ -35,16 +37,39 @@ export function esperarSeleccionMundo(interfaz, almacenMundos) {
       try {
         const datos = new FormData(interfaz.formularioMundo);
         const modo = datos.get("gameMode") === "creativo" ? "creativo" : "supervivencia";
+        const tipoMundo =
+          modo === "creativo" && datos.get("worldType") === "plano"
+            ? "plano"
+            : "normal";
         const mundo = await almacenMundos.crearMundo({
           nombreMundo: interfaz.nombreMundo.value,
           modo,
-          tipoMundo:
-            modo === "creativo" && datos.get("worldType") === "plano"
-              ? "plano"
-              : "normal",
+          tipoMundo,
+          plantillaId:
+            modo === "creativo"
+              ? tipoMundo === "plano"
+                ? "war:flat"
+                : String(datos.get("worldTemplate") || "war:pond_grove")
+              : null,
           tamanoMundo: Number(datos.get("worldSize")),
           dificultad: String(datos.get("difficulty") || "normal"),
           tiempo: String(datos.get("timeMode") || "normal"),
+          estiloVisual:
+            datos.get("visualStyle") === "pixelar" ? "pixelar" : "traditional",
+          aguaExperimental: datos.get("experimentalWater") === "on",
+          perfilRendimiento: String(datos.get("performanceProfile") || "equilibrado"),
+          distanciaCarga: Number(datos.get("loadDistance") || 6),
+          joystickSkin: ["traditional", "dark", "pixel"].includes(
+            datos.get("joystickSkin"),
+          )
+            ? String(datos.get("joystickSkin"))
+            : "traditional",
+          colisionJugador: {
+            height: Number(datos.get("playerHeight")),
+            width: Number(datos.get("playerWidth")),
+            eyeHeight: Number(datos.get("playerEyeHeight")),
+            stepHeight: Number(datos.get("playerStepHeight")),
+          },
         });
         seleccionarMundo(mundo);
       } catch (error) {
@@ -90,6 +115,17 @@ function configurarFormulario(interfaz) {
     interfaz.notaMundoPlano.textContent = creativo
       ? "Terreno uniforme para construir"
       : "Solo disponible en creativo";
+    interfaz.selectorPlantilla.disabled = !creativo || interfaz.mundoPlano.checked;
+    interfaz.selectorPlantillaCampo.classList.toggle(
+      "is-disabled",
+      !creativo || interfaz.mundoPlano.checked,
+    );
+    interfaz.tituloPlantillaNormal.textContent = creativo
+      ? "ELEGIR PLANTILLA"
+      : "ALEATORIA";
+    interfaz.notaPlantillaNormal.textContent = creativo
+      ? "Selecciona la generación debajo"
+      : "Una de cinco plantillas oficiales";
     interfaz.campoDificultad.classList.toggle("is-disabled", creativo);
     for (const entrada of interfaz.campoDificultad.querySelectorAll("input")) {
       entrada.disabled = creativo;
@@ -103,8 +139,55 @@ function configurarFormulario(interfaz) {
     interfaz.contadorNombre.textContent = `${interfaz.nombreMundo.value.length} / ${LIMITE_NOMBRE}`;
   });
   for (const opcion of opcionesModo) opcion.addEventListener("change", actualizar);
+  for (const opcion of interfaz.formularioMundo.querySelectorAll('input[name="worldType"]')) {
+    opcion.addEventListener("change", actualizar);
+  }
+  interfaz.botonAjustesCreacion.addEventListener("click", () => {
+    const abrir = interfaz.ajustesCreacion.hidden;
+    interfaz.ajustesCreacion.hidden = !abrir;
+    interfaz.botonAjustesCreacion.setAttribute("aria-expanded", String(abrir));
+  });
+  interfaz.distanciaCargaCreacion.addEventListener("input", actualizarDistancia);
+  interfaz.perfilRendimientoCreacion.addEventListener("change", () => {
+    const valores = { basico: 6, equilibrado: 8, alto: 12 };
+    const valor = valores[interfaz.perfilRendimientoCreacion.value];
+    if (valor) interfaz.distanciaCargaCreacion.value = String(valor);
+    actualizarDistancia();
+  });
+  for (const opcion of interfaz.formularioMundo.querySelectorAll('input[name="worldSize"]')) {
+    opcion.addEventListener("change", actualizarConsejoTamano);
+  }
   interfaz.contadorNombre.textContent = `0 / ${LIMITE_NOMBRE}`;
   actualizar();
+  actualizarDistancia();
+  actualizarConsejoTamano();
+
+  function actualizarDistancia() {
+    const valor = Number(interfaz.distanciaCargaCreacion.value) || 6;
+    interfaz.valorDistanciaCarga.textContent = String(valor);
+    interfaz.avisoDistanciaCarga.textContent =
+      valor <= 6
+        ? "6 es la distancia recomendada para teléfonos."
+        : valor <= 12
+          ? "Carga intermedia: recomendada para gama media o alta."
+          : "Advertencia: una distancia elevada utiliza más memoria y GPU.";
+    interfaz.avisoDistanciaCarga.classList.toggle("is-warning", valor > 12);
+  }
+
+  function actualizarConsejoTamano() {
+    const seleccionada = interfaz.formularioMundo.querySelector(
+      'input[name="worldSize"]:checked',
+    );
+    const tamano = Number(seleccionada?.value) || 128;
+    const textos = {
+      64: "64×64 · ligero para dispositivos antiguos.",
+      96: "96×96 · equilibrio para teléfonos de gama baja.",
+      128: "128×128 · recomendado para la mayoría de teléfonos.",
+      192: "192×192 · usa carga regional; recomendado para gama media.",
+      256: "256×256 · máximo de la snapshot; no se carga completo en memoria.",
+    };
+    interfaz.consejoTamanoMundo.textContent = textos[tamano] ?? textos[128];
+  }
 }
 
 function pintarMundos(interfaz, mundos, alSeleccionar) {
@@ -131,14 +214,17 @@ function pintarMundos(interfaz, mundos, alSeleccionar) {
     const titulo = document.createElement("h3");
     titulo.textContent = mundo.nombreMundo;
     const etiqueta = document.createElement("span");
-    etiqueta.textContent = mundo.modo === "creativo" ? "∞ CREATIVO" : "♥ SUPERVIVENCIA";
+    etiqueta.textContent =
+      mundo.modo === "creativo" ? "CREATIVO · ILIMITADO" : "SUPERVIVENCIA";
     encabezado.append(titulo, etiqueta);
 
     const detalles = document.createElement("p");
     const dificultad = mundo.modo === "creativo"
       ? "Sin criaturas hostiles"
       : nombreDificultad(mundo.dificultad);
-    detalles.textContent = `${mundo.tamanoMundo}×${mundo.tamanoMundo} · ${dificultad} · ${nombreTiempo(mundo.tiempo)}`;
+    const plantilla = obtenerPlantillaMundo(mundo.plantillaId);
+    detalles.textContent =
+      `${mundo.tamanoMundo}×${mundo.tamanoMundo} · ${plantilla.nombre} · ${dificultad} · ${nombreTiempo(mundo.tiempo)}`;
 
     const fechas = document.createElement("dl");
     fechas.className = "world-card__dates";
@@ -150,7 +236,7 @@ function pintarMundos(interfaz, mundos, alSeleccionar) {
     jugar.type = "button";
     jugar.className = "world-card__play";
     jugar.setAttribute("aria-label", `Jugar en ${mundo.nombreMundo}`);
-    jugar.innerHTML = '<span aria-hidden="true">▶</span><b>ENTRAR</b>';
+    jugar.innerHTML = '<svg class="ui-icon" aria-hidden="true"><use href="#icon-play"></use></svg><b>ENTRAR</b>';
     jugar.addEventListener("click", () => alSeleccionar(mundo));
 
     tarjeta.append(vista, informacion, jugar);

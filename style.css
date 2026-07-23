@@ -1406,16 +1406,38 @@ section {
   position: absolute;
   inset: 7px;
   color: rgb(255 255 255 / 0.38);
-  font-size: 9px;
-  text-align: center;
 }
 
-.joystick__arrows::after {
+.joystick__arrows i {
   position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  content: "▼";
+  width: 7px;
+  height: 7px;
+  border-top: 2px solid currentColor;
+  border-left: 2px solid currentColor;
+}
+
+.joystick__arrows i:nth-child(1) {
+  top: 1px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.joystick__arrows i:nth-child(2) {
+  right: 1px;
+  top: 50%;
+  transform: translateY(-50%) rotate(135deg);
+}
+
+.joystick__arrows i:nth-child(3) {
+  bottom: 1px;
+  left: 50%;
+  transform: translateX(-50%) rotate(225deg);
+}
+
+.joystick__arrows i:nth-child(4) {
+  top: 50%;
+  left: 1px;
+  transform: translateY(-50%) rotate(315deg);
 }
 
 .joystick__knob {
@@ -1459,8 +1481,9 @@ section {
   gap: 6px;
 }
 
-.mobile-hint--look span {
-  font-size: 15px;
+.mobile-hint--look .ui-icon {
+  width: 17px;
+  height: 17px;
 }
 
 .desktop-hint {
@@ -3199,9 +3222,11 @@ section {
   }
 
   #inventory-sort::after {
+    content: none;
+  }
+
+  #inventory-sort .ui-icon {
     color: #fff;
-    content: "⇅";
-    font-size: 18px;
   }
 
   .inventory-panel__body,
@@ -3258,5 +3283,970 @@ section {
   .inventory-drag-ghost {
     animation: none;
     transition: none;
+  }
+}
+
+/* Container Update · sistema de iconos vectoriales */
+.ui-icon-sprite {
+  position: fixed;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ui-icon {
+  width: 1.35em;
+  height: 1.35em;
+  flex: 0 0 auto;
+  overflow: visible;
+  fill: currentColor;
+}
+
+.ui-icon--down {
+  transform: rotate(180deg);
+}
+
+.choice-card .ui-icon {
+  width: 20px;
+  height: 20px;
+  margin: 0 auto;
+  color: #91d97a;
+}
+
+.launcher-primary .ui-icon,
+.launcher-add .ui-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.launcher-back .ui-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.game-menu__toggle .ui-icon {
+  width: 26px;
+  height: 26px;
+}
+
+.world-choice__grid--five {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.world-select-field {
+  display: grid;
+  grid-template-columns: auto minmax(160px, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin-top: 7px;
+  padding: 8px 10px;
+  border: 1px solid rgb(255 255 255 / 0.16);
+  border-radius: 9px;
+  color: rgb(255 255 255 / 0.68);
+  background: rgb(2 13 15 / 0.34);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+}
+
+.world-select-field select,
+.creation-settings select,
+.creation-settings input[type="number"],
+.settings-panel select {
+  min-height: 38px;
+  border: 1px solid rgb(255 255 255 / 0.22);
+  border-radius: 8px;
+  color: #fff;
+  background: #102a2c;
+  font: 800 10px/1.2 system-ui, sans-serif;
+}
+
+.world-select-field.is-disabled {
+  opacity: 0.42;
+}
+
+.world-size-advice {
+  margin: 7px 0 0;
+  color: rgb(255 255 255 / 0.52);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+}
+
+.world-settings-button {
+  display: flex;
+  width: 100%;
+  min-height: 58px;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 14px;
+  border: 1px solid rgb(137 220 167 / 0.28);
+  border-radius: 11px;
+  color: #eaffea;
+  background: linear-gradient(135deg, rgb(49 108 83 / 0.42), rgb(11 37 35 / 0.5));
+  cursor: pointer;
+  text-align: left;
+}
+
+.world-settings-button .ui-icon {
+  width: 24px;
+  height: 24px;
+  color: #8dea9a;
+}
+
+.world-settings-button span {
+  display: grid;
+  gap: 2px;
+}
+
+.world-settings-button b {
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+.world-settings-button small {
+  color: rgb(255 255 255 / 0.48);
+  font-size: 7px;
+}
+
+.creation-settings {
+  padding: 12px;
+  border: 1px solid rgb(255 255 255 / 0.15);
+  border-radius: 13px;
+  background: rgb(3 16 18 / 0.56);
+}
+
+.creation-settings[hidden] {
+  display: none;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.settings-grid fieldset,
+.settings-grid details {
+  min-width: 0;
+  margin: 0;
+  padding: 11px;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: 10px;
+}
+
+.settings-grid legend,
+.settings-grid summary {
+  color: #8dde95;
+  font-size: 8px;
+  font-weight: 1000;
+  letter-spacing: 1px;
+}
+
+.settings-grid label {
+  display: grid;
+  gap: 6px;
+  color: rgb(255 255 255 / 0.7);
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.settings-grid fieldset > small,
+.settings-grid details > small {
+  display: block;
+  margin-top: 7px;
+  color: rgb(255 255 255 / 0.42);
+  font-size: 7px;
+  line-height: 1.4;
+}
+
+.settings-check {
+  grid-template-columns: auto 1fr;
+  align-items: flex-start;
+}
+
+.settings-check input {
+  width: 19px;
+  height: 19px;
+  accent-color: #62c65d;
+}
+
+.settings-check span {
+  display: grid;
+  gap: 3px;
+}
+
+.settings-check small {
+  color: rgb(255 255 255 / 0.46);
+  line-height: 1.35;
+}
+
+.settings-physics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.settings-physics-grid input {
+  width: 100%;
+  padding: 0 8px;
+}
+
+#load-distance {
+  width: 100%;
+  accent-color: #6fd56b;
+}
+
+#load-distance-warning.is-warning {
+  color: #ffd068;
+}
+
+.inventory-panel__actions {
+  flex-wrap: wrap;
+}
+
+.inventory-panel__actions .ui-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.place-block .ui-icon,
+.movement-action .ui-icon {
+  width: 28px;
+  height: 28px;
+}
+
+.movement-action--interact,
+.movement-action--attack {
+  bottom: calc(130px + var(--safe-bottom));
+  width: 64px;
+  height: 48px;
+  border-radius: 15px;
+}
+
+.movement-action--interact {
+  right: calc(200px + var(--safe-right));
+  background: linear-gradient(145deg, rgb(91 157 101 / 0.9), rgb(35 91 65 / 0.92));
+}
+
+.movement-action--attack {
+  right: calc(272px + var(--safe-right));
+  background: linear-gradient(145deg, rgb(177 83 75 / 0.92), rgb(102 38 45 / 0.94));
+}
+
+.movement-action:disabled {
+  filter: grayscale(0.65);
+  opacity: 0.38;
+}
+
+/* Texturas de inventario de la Container Update */
+.inventory-tile--stone,
+.inventory-tile--smooth-stone,
+.inventory-tile--coal-ore,
+.inventory-tile--iron-ore,
+.inventory-tile--planks,
+.inventory-tile--crafting-table,
+.inventory-tile--furnace,
+.inventory-tile--glass,
+.inventory-tile--stick,
+.inventory-tile--coal,
+.inventory-tile--raw-iron,
+.inventory-tile--wood-pickaxe,
+.inventory-tile--threshold-bow,
+.inventory-tile--threshold-egg {
+  image-rendering: pixelated;
+}
+
+.inventory-tile--stone {
+  background:
+    linear-gradient(135deg, transparent 65%, rgb(0 0 0 / 0.17) 66%),
+    repeating-linear-gradient(45deg, #858b90 0 4px, #687077 4px 8px);
+}
+
+.inventory-tile--smooth-stone {
+  background:
+    linear-gradient(#9aa0a4 0 46%, #747b81 47% 53%, #8a9196 54%),
+    linear-gradient(90deg, transparent 47%, #687078 48% 52%, transparent 53%);
+}
+
+.inventory-tile--coal-ore {
+  background:
+    radial-gradient(circle at 28% 35%, #1d2025 0 11%, transparent 12%),
+    radial-gradient(circle at 70% 67%, #272a30 0 13%, transparent 14%),
+    repeating-linear-gradient(45deg, #858b90 0 5px, #687077 5px 9px);
+}
+
+.inventory-tile--iron-ore {
+  background:
+    radial-gradient(circle at 30% 35%, #c17c53 0 12%, transparent 13%),
+    radial-gradient(circle at 70% 68%, #8e503b 0 14%, transparent 15%),
+    repeating-linear-gradient(45deg, #8a8f92 0 5px, #6c7277 5px 9px);
+}
+
+.inventory-tile--planks {
+  background:
+    repeating-linear-gradient(0deg, #8d572f 0 3px, #bd7b3d 3px 11px, #633b25 11px 13px);
+}
+
+.inventory-tile--crafting-table {
+  background:
+    linear-gradient(90deg, transparent 47%, #56311d 48% 52%, transparent 53%),
+    linear-gradient(transparent 47%, #56311d 48% 52%, transparent 53%),
+    #aa6835;
+}
+
+.inventory-tile--furnace {
+  background:
+    linear-gradient(#777d82 0 32%, #25282c 33% 70%, #914624 71% 82%, #555b60 83%),
+    #686e73;
+}
+
+.inventory-tile--glass {
+  border-color: #c7faff;
+  background:
+    linear-gradient(135deg, transparent 34%, rgb(255 255 255 / 0.72) 35% 43%, transparent 44%),
+    rgb(109 211 226 / 0.42);
+  box-shadow: inset 0 0 0 3px rgb(168 241 249 / 0.55);
+}
+
+.inventory-tile--stick {
+  background:
+    linear-gradient(45deg, transparent 38%, #9a5b2f 39% 58%, transparent 59%),
+    #253326;
+}
+
+.inventory-tile--coal {
+  background:
+    radial-gradient(circle at 38% 35%, #5e626a, #24262b 45%, #0f1013 75%);
+}
+
+.inventory-tile--raw-iron {
+  background:
+    radial-gradient(circle at 35% 30%, #d18f62, #9c5d45 42%, #5d4036 78%);
+}
+
+.inventory-tile--wood-pickaxe {
+  background:
+    linear-gradient(90deg, transparent 44%, #a76634 45% 55%, transparent 56%),
+    linear-gradient(20deg, transparent 38%, #c07a3d 39% 54%, transparent 55%),
+    #243329;
+}
+
+.inventory-tile--threshold-bow {
+  background:
+    radial-gradient(circle at 20% 50%, transparent 42%, #945b39 43% 54%, transparent 55%),
+    linear-gradient(90deg, transparent 47%, #d6d0b7 48% 52%, transparent 53%),
+    #29313a;
+}
+
+.inventory-tile--threshold-egg {
+  border-radius: 50% 50% 45% 45%;
+  background:
+    radial-gradient(circle at 35% 30%, #e1edf4 0 7%, transparent 8%),
+    radial-gradient(circle at 64% 65%, #263448 0 12%, transparent 13%),
+    repeating-linear-gradient(45deg, #7f96aa 0 5px, #4d6278 5px 9px);
+}
+
+/* Estaciones de crafteo y horno */
+.station-panel,
+.settings-panel {
+  position: fixed;
+  z-index: 150;
+  inset: 0;
+  display: grid;
+  padding:
+    calc(18px + var(--safe-top))
+    calc(18px + var(--safe-right))
+    calc(18px + var(--safe-bottom))
+    calc(18px + var(--safe-left));
+  place-items: center;
+  background: rgb(3 10 12 / 0.82);
+  backdrop-filter: blur(13px);
+  -webkit-backdrop-filter: blur(13px);
+}
+
+.station-panel[hidden],
+.settings-panel[hidden],
+.hud-editor[hidden] {
+  display: none;
+}
+
+.station-panel__shell,
+.settings-panel__shell {
+  width: min(860px, 100%);
+  max-height: min(720px, 100%);
+  overflow: hidden auto;
+  border: 1px solid rgb(255 255 255 / 0.25);
+  border-radius: 20px 7px 20px 7px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 90% 0, rgb(94 187 112 / 0.13), transparent 32%),
+    linear-gradient(145deg, #18363a, #071a1d 78%);
+  box-shadow: 0 24px 70px rgb(0 0 0 / 0.5);
+}
+
+.station-panel__shell > header,
+.settings-panel__shell > header {
+  display: flex;
+  min-height: 72px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgb(255 255 255 / 0.12);
+}
+
+.station-panel__shell header small,
+.settings-panel__shell header small {
+  color: #83dd8a;
+  font-size: 7px;
+  font-weight: 1000;
+  letter-spacing: 1.8px;
+}
+
+.station-panel__shell h2,
+.settings-panel__shell h2 {
+  margin: 3px 0 0;
+  font-size: 22px;
+  letter-spacing: 0.8px;
+}
+
+#station-close,
+#settings-close {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 0.22);
+  border-radius: 12px;
+  color: #fff;
+  background: rgb(0 0 0 / 0.2);
+}
+
+.recipe-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 16px;
+}
+
+.recipe-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 11px;
+  padding: 11px;
+  border: 1px solid rgb(255 255 255 / 0.15);
+  border-radius: 12px;
+  background: rgb(5 25 23 / 0.58);
+}
+
+.recipe-card .inventory-tile {
+  width: 46px;
+  height: 46px;
+}
+
+.recipe-card h3 {
+  margin: 0;
+  font-size: 11px;
+}
+
+.recipe-card p {
+  margin: 4px 0 0;
+  color: rgb(255 255 255 / 0.5);
+  font-size: 7px;
+}
+
+.recipe-card button,
+.furnace-slot button,
+.settings-action {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgb(184 255 177 / 0.55);
+  border-radius: 9px;
+  color: #fff;
+  background: linear-gradient(#58bc55, #348b43);
+  font-size: 8px;
+  font-weight: 1000;
+  letter-spacing: 0.7px;
+}
+
+.recipe-card button:disabled {
+  filter: grayscale(0.8);
+  opacity: 0.4;
+}
+
+.furnace-interface {
+  display: grid;
+  grid-template-columns: 1fr 0.8fr 1fr 1fr;
+  gap: 10px;
+  padding: 16px;
+}
+
+.furnace-interface[hidden] {
+  display: none;
+}
+
+.furnace-slot,
+.furnace-process {
+  display: grid;
+  min-height: 135px;
+  align-content: center;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid rgb(255 255 255 / 0.15);
+  border-radius: 12px;
+  background: rgb(2 15 16 / 0.55);
+  text-align: center;
+}
+
+.furnace-slot small,
+.furnace-process small {
+  color: rgb(255 255 255 / 0.48);
+  font-size: 7px;
+  font-weight: 900;
+}
+
+.furnace-slot b {
+  font-size: 11px;
+}
+
+.furnace-process__flame {
+  width: 25px;
+  height: 34px;
+  margin: auto;
+  border-radius: 55% 45% 50% 50%;
+  background: linear-gradient(#fff29b, #ff8b32 56%, #b62e20);
+  clip-path: polygon(50% 0, 82% 38%, 100% 69%, 77% 100%, 22% 100%, 0 69%, 23% 39%);
+  opacity: 0.3;
+}
+
+.furnace-process.is-burning .furnace-process__flame {
+  opacity: 1;
+  animation: furnace-flame 0.55s steps(3) infinite;
+}
+
+.furnace-process > div {
+  height: 9px;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-radius: 99px;
+  background: rgb(0 0 0 / 0.35);
+}
+
+#furnace-progress {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #62ce5d, #ffd25e);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+.station-message {
+  min-height: 34px;
+  margin: 0;
+  padding: 9px 16px 14px;
+  color: #dfffdc;
+  font-size: 9px;
+  font-weight: 800;
+  text-align: center;
+}
+
+@keyframes furnace-flame {
+  50% { transform: scaleX(0.86) translateY(2px); }
+}
+
+/* Ajustes y editor HUD */
+.settings-panel__shell {
+  width: min(940px, 100%);
+}
+
+.settings-tabs {
+  display: flex;
+  gap: 5px;
+  padding: 10px;
+  overflow-x: auto;
+  border-bottom: 1px solid rgb(255 255 255 / 0.1);
+}
+
+.settings-tabs button {
+  min-height: 35px;
+  flex: 0 0 auto;
+  padding: 0 12px;
+  border: 1px solid rgb(255 255 255 / 0.13);
+  border-radius: 8px;
+  color: rgb(255 255 255 / 0.55);
+  background: rgb(0 0 0 / 0.15);
+  font-size: 7px;
+  font-weight: 1000;
+}
+
+.settings-tabs button.is-active {
+  border-color: #7fdc84;
+  color: #fff;
+  background: rgb(66 151 74 / 0.26);
+}
+
+.settings-pages {
+  min-height: 300px;
+  padding: 18px;
+}
+
+.settings-pages > section {
+  display: none;
+}
+
+.settings-pages > section.is-active {
+  display: grid;
+  gap: 12px;
+}
+
+.settings-pages h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.settings-pages p {
+  margin: 0;
+  color: rgb(255 255 255 / 0.52);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.settings-pages label {
+  display: grid;
+  gap: 7px;
+  color: rgb(255 255 255 / 0.7);
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.setting-readonly {
+  display: flex;
+  min-height: 49px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 13px;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: 10px;
+  background: rgb(0 0 0 / 0.14);
+  font-size: 9px;
+}
+
+.setting-readonly b {
+  color: #9be8a1;
+  font-size: 8px;
+  letter-spacing: 0.7px;
+}
+
+.settings-action {
+  width: min(350px, 100%);
+}
+
+.settings-action small {
+  margin-left: 8px;
+  color: #fff1a3;
+  font-size: 6px;
+}
+
+.hud-editor {
+  position: fixed;
+  z-index: 170;
+  inset: 0;
+  border: 4px solid rgb(116 227 133 / 0.72);
+  background:
+    linear-gradient(rgb(105 218 124 / 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(105 218 124 / 0.08) 1px, transparent 1px),
+    rgb(5 16 20 / 0.3);
+  background-size: 5vw 5vh;
+  pointer-events: none;
+}
+
+.hud-editor > header {
+  position: absolute;
+  z-index: 210;
+  top: calc(8px + var(--safe-top));
+  left: 50%;
+  display: flex;
+  width: min(900px, calc(100% - 24px));
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid rgb(255 255 255 / 0.3);
+  border-radius: 13px;
+  color: #fff;
+  background: rgb(8 30 32 / 0.94);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 0.35);
+  pointer-events: auto;
+  transform: translateX(-50%);
+}
+
+.hud-editor header > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hud-editor header > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.hud-editor header small {
+  color: #ffd66e;
+  font-size: 6px;
+  font-weight: 1000;
+}
+
+.hud-editor header b {
+  font-size: 10px;
+}
+
+.hud-editor header button {
+  min-height: 36px;
+  padding: 0 9px;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-radius: 8px;
+  color: #fff;
+  background: rgb(255 255 255 / 0.08);
+  font-size: 7px;
+  font-weight: 900;
+}
+
+#hud-editor-save {
+  background: #398f48;
+}
+
+#hud-editor-help {
+  position: absolute;
+  z-index: 205;
+  bottom: calc(7px + var(--safe-bottom));
+  left: 50%;
+  margin: 0;
+  padding: 7px 11px;
+  border-radius: 99px;
+  color: #fff;
+  background: rgb(0 0 0 / 0.72);
+  font-size: 7px;
+  font-weight: 800;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.hud-editor__safe-area {
+  position: absolute;
+  inset:
+    calc(76px + var(--safe-top))
+    calc(10px + var(--safe-right))
+    calc(28px + var(--safe-bottom))
+    calc(10px + var(--safe-left));
+  border: 2px dashed rgb(255 240 132 / 0.66);
+  pointer-events: none;
+}
+
+.hud-editing .hud-movable {
+  outline: 2px dashed #8cff9a;
+  outline-offset: 4px;
+  pointer-events: auto !important;
+  touch-action: none;
+}
+
+.hud-editing .hud-movable.is-hud-selected {
+  outline: 4px solid #ffd25b;
+}
+
+/* El aspecto del joystick cambia, su geometría táctil y lógica permanecen intactas. */
+#game[data-joystick-skin="dark"] .joystick {
+  border-color: rgb(210 222 231 / 0.45);
+  background: radial-gradient(circle, rgb(20 26 31 / 0.72), rgb(3 7 10 / 0.58));
+  box-shadow: inset 0 0 0 5px rgb(255 255 255 / 0.05), 0 8px 26px rgb(0 0 0 / 0.3);
+}
+
+#game[data-joystick-skin="dark"] .joystick__knob {
+  border-color: #aeb7bf;
+  background: linear-gradient(#59636b, #262d32);
+}
+
+#game[data-joystick-skin="pixel"] .joystick {
+  border-radius: 12px;
+  border-width: 4px;
+  border-color: #d8f4d1;
+  background:
+    linear-gradient(90deg, transparent 48%, rgb(255 255 255 / 0.16) 49% 51%, transparent 52%),
+    linear-gradient(transparent 48%, rgb(255 255 255 / 0.16) 49% 51%, transparent 52%),
+    rgb(29 66 45 / 0.66);
+  image-rendering: pixelated;
+}
+
+#game[data-joystick-skin="pixel"] .joystick__knob {
+  border-radius: 8px;
+  border-width: 4px;
+  background: #7da184;
+  box-shadow: inset -8px -8px 0 rgb(0 0 0 / 0.17);
+}
+
+#game[data-visual-style="pixelar"] {
+  image-rendering: pixelated;
+}
+
+#game[data-visual-style="pixelar"] :is(
+  .inventory-panel__shell,
+  .station-panel__shell,
+  .settings-panel__shell,
+  .choice-card > span,
+  button
+) {
+  border-radius: 3px;
+}
+
+#game.controls-large :is(.joystick, .place-block, .movement-action) {
+  scale: 1.12;
+}
+
+#game.reduced-motion *,
+#game.reduced-motion *::before,
+#game.reduced-motion *::after {
+  scroll-behavior: auto !important;
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+
+@media (max-width: 780px) {
+  .world-choice__grid--five {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .furnace-interface {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .movement-action--attack {
+    right: calc(200px + var(--safe-right));
+    bottom: calc(190px + var(--safe-bottom));
+  }
+
+  .movement-action--interact {
+    right: calc(128px + var(--safe-right));
+    bottom: calc(190px + var(--safe-bottom));
+  }
+}
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .station-panel,
+  .settings-panel {
+    padding: 0;
+  }
+
+  .station-panel__shell,
+  .settings-panel__shell {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .station-panel__shell > header,
+  .settings-panel__shell > header {
+    min-height: 54px;
+    padding:
+      calc(6px + var(--safe-top))
+      calc(10px + var(--safe-right))
+      6px
+      calc(10px + var(--safe-left));
+  }
+
+  .recipe-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding: 8px;
+  }
+
+  .recipe-card {
+    padding: 7px;
+  }
+
+  .furnace-interface {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: 8px;
+  }
+
+  .furnace-slot,
+  .furnace-process {
+    min-height: 105px;
+  }
+
+  .settings-pages {
+    min-height: 0;
+    padding: 10px calc(12px + var(--safe-right)) calc(10px + var(--safe-bottom)) calc(12px + var(--safe-left));
+  }
+
+  .hud-editor > header {
+    top: calc(4px + var(--safe-top));
+    min-height: 48px;
+    padding: 5px 8px;
+  }
+
+  .hud-editor header button {
+    min-height: 32px;
+    padding: 0 7px;
+  }
+}
+
+@media (max-width: 560px) and (orientation: portrait) {
+  #inventory-sort::after {
+    content: none;
+  }
+
+  #inventory-sort,
+  #inventory-crafting {
+    width: 44px;
+    color: transparent;
+  }
+
+  #inventory-sort .ui-icon,
+  #inventory-crafting .ui-icon {
+    color: #fff;
+  }
+
+  .recipe-list {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-panel,
+  .station-panel {
+    padding: 0;
+  }
+
+  .settings-panel__shell,
+  .station-panel__shell {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .hud-editor > header {
+    align-items: flex-start;
+  }
+
+  .hud-editor header > div:first-child {
+    display: none;
+  }
+
+  .hud-editor header > div:last-child {
+    flex-wrap: wrap;
+    justify-content: center;
   }
 }

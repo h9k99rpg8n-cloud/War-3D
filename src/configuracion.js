@@ -1,4 +1,4 @@
-export const VERSION_JUEGO = "1.7.4";
+export const VERSION_JUEGO = "1.7.5-snapshot.1";
 export const VERSION_THREE = "0.185.1";
 export const VERSION_RAPIER = "0.19.3";
 export const VERSION_IDB = "8.0.3";
@@ -9,15 +9,22 @@ export const URL_IDB = `https://cdn.jsdelivr.net/npm/idb@${VERSION_IDB}/+esm`;
 export const CONFIGURACION = Object.freeze({
   mundo: Object.freeze({
     tamanoCuadricula: 128,
-    tamanosDisponibles: Object.freeze([64, 96, 128]),
+    tamanosDisponibles: Object.freeze([64, 96, 128, 192, 256]),
     tamanoBloque: 2,
-    nivelFondo: -15,
-    nivelMaximoColocacion: 10,
+    nivelFondo: -31,
+    nivelMaximoColocacion: 40,
     margenLimite: 2.2,
+    tamanoRegion: 8,
+    distanciaCargaPredeterminada: 6,
+    distanciaCargaMaxima: 32,
+    presupuestoCargaMs: 2.5,
   }),
   jugador: Object.freeze({
-    alturaOjos: 1.68,
-    radio: 0.4,
+    altura: 3.72,
+    alturaOjos: 3.34,
+    radio: 0.62,
+    alturaPaso: 0.72,
+    toleranciaSuelo: 0.16,
     velocidad: 6.4,
     velocidadSalto: 6.8,
     gravedad: 18,
@@ -33,7 +40,9 @@ export const CONFIGURACION = Object.freeze({
     inclinacionMinima: -1.12,
     inclinacionMaxima: 1.12,
     giroInicial: Math.PI * 0.18,
-    inclinacionInicial: -0.06,
+    // Una ligera inclinación hacia el suelo muestra el terreno desde el primer
+    // fotograma incluso en pantallas móviles muy anchas.
+    inclinacionInicial: -0.22,
   }),
   renderizado: Object.freeze({
     proporcionPixelesMaxima: 1.75,
@@ -56,6 +65,22 @@ export const CONFIGURACION = Object.freeze({
       madera: 37,
       arena: 47,
       tierra: 40,
+      piedra: 48,
+      piedra_lisa: 48,
+      carbon_mineral: 48,
+      hierro_mineral: 48,
+      tablones: 48,
+      mesa_crafteo: 16,
+      horno: 16,
+      cristal: 32,
+      palo: 64,
+      carbon: 64,
+      hierro_bruto: 48,
+      pico_madera: 1,
+      arco: 1,
+      huevo_arana: 16,
+      huevo_zombie: 16,
+      huevo_esqueleto_umbral: 16,
     }),
   }),
   lagos: Object.freeze({
@@ -68,6 +93,8 @@ export const CONFIGURACION = Object.freeze({
     velocidadAscenso: 4.2,
     velocidadHundimiento: 1.15,
     margenSuperficie: 0.14,
+    operacionesExperimentalesPorFrame: 18,
+    expansionMaxima: 7,
   }),
   fisica: Object.freeze({
     gravedad: -18,
@@ -79,6 +106,7 @@ export const CONFIGURACION = Object.freeze({
     toleranciaArrastre: 10,
     radioRecoleccion: 2.4,
     duracionVueloRecoleccion: 240,
+    duracionRecolectableMs: 300_000,
   }),
   arboles: Object.freeze({
     separacion: 8,
@@ -95,7 +123,48 @@ export const CONFIGURACION = Object.freeze({
   }),
   guardado: Object.freeze({
     intervaloMs: 10_000,
-    versionProgreso: 2,
+    versionProgreso: 3,
+    versionMundo: 3,
+  }),
+  rendimiento: Object.freeze({
+    perfilPredeterminado: "equilibrado",
+    perfiles: Object.freeze({
+      basico: Object.freeze({
+        distanciaCarga: 6,
+        proporcionPixeles: 1,
+        entidadesActivas: 8,
+        calidadAgua: "baja",
+        densidadParticulas: 0.45,
+      }),
+      equilibrado: Object.freeze({
+        distanciaCarga: 8,
+        proporcionPixeles: 1.35,
+        entidadesActivas: 14,
+        calidadAgua: "media",
+        densidadParticulas: 0.75,
+      }),
+      alto: Object.freeze({
+        distanciaCarga: 12,
+        proporcionPixeles: 1.75,
+        entidadesActivas: 24,
+        calidadAgua: "alta",
+        densidadParticulas: 1,
+      }),
+    }),
+  }),
+  horno: Object.freeze({
+    duracionCoccionMs: 4_500,
+    duracionCombustibleMs: 18_000,
+  }),
+  esqueletoUmbral: Object.freeze({
+    maximo: 5,
+    rangoVision: 18,
+    distanciaMinima: 7,
+    distanciaAtaque: 17,
+    intervaloAtaqueMs: 2_400,
+    velocidadFlecha: 11,
+    vidaFlechaMs: 4_000,
+    dano: 2,
   }),
   aranas: Object.freeze({
     maximo: 12,

@@ -1,10 +1,29 @@
 # War 3D
 
-**War 3D v1.7.4** es un juego 3D de bloques para navegador pensado primero para móvil.
+**War 3D v1.7.5-snapshot.1** es un juego 3D de bloques para navegador pensado
+primero para móvil. Esta versión inicia oficialmente la **Container Update**.
 
 ## Jugar
 
 **GitHub Pages:** <https://h9k99rpg8n-cloud.github.io/War-3D/>
+
+## Container Update — Snapshot 1
+
+- Arquitectura modular para contenido, comportamientos, plantillas, regiones,
+  crafteo, estaciones, jugador, interfaz y guardado.
+- Mundos de hasta 256×256 con Carga de pantalla en regiones 8×8.
+- Cinco plantillas de supervivencia y mundo plano exclusivo de Creativo.
+- Montañas, cuevas, piedra, carbón, hierro y palos naturales deterministas.
+- Tablones, mesa de crafteo, pico de madera, horno y cristal.
+- Esqueleto de umbral con arco, proyectiles y huevo generador.
+- Brazo en primera persona, objeto en la mano, inventario creativo ampliado,
+  iconos SVG, skins de joystick y editor HUD experimental.
+- Estilo **Pixelar experimental**, guardado v3 y migración de mundos anteriores.
+- Vite, contratos TypeScript estrictos y 17 pruebas automatizadas.
+
+El alcance exacto, las mediciones y las funciones que siguen experimentales
+están documentados en
+[Container Update — Snapshot 1](docs/CONTAINER_UPDATE_SNAPSHOT_1.md).
 
 ## Contenido actual
 
@@ -149,17 +168,23 @@
 ## Tecnología
 
 - Three.js `0.185.1` mediante módulo ES.
-- Rapier 3D `0.19.3` para la gravedad de la arena y los sensores físicos del agua.
+- Rapier 3D `0.19.3` para la gravedad de la arena, con física de respaldo.
 - idb `8.0.3` sobre IndexedDB para mundos múltiples y guardado automático.
-- HTML, CSS y JavaScript modular sin proceso de compilación.
+- HTML, CSS, JavaScript modular, contratos TypeScript estrictos y Vite.
+- Pruebas con Node Test Runner y smoke test móvil con Playwright.
 - Despliegue automático con GitHub Pages.
 
 ## Ejecutar localmente
 
-Por usar módulos ES, abre el proyecto desde un servidor HTTP local. Por ejemplo:
+Instala las dependencias y ejecuta Vite:
 
 ```bash
-python3 -m http.server 8080
+npm install
+npm run dev
 ```
 
-Después visita `http://localhost:8080`.
+Validación completa:
+
+```bash
+npm run check
+```

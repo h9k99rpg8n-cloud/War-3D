@@ -3,6 +3,7 @@ export function crearMapaLagos(
   tipoMundo,
   profundidadMaxima = 2,
   semillaMundo = 0,
+  pesos = {},
 ) {
   const total = tamanoCuadricula * tamanoCuadricula;
   const profundidades = new Uint8Array(total);
@@ -10,7 +11,12 @@ export function crearMapaLagos(
   if (tipoMundo !== "normal") return crearResultado(profundidades, playas);
 
   const centro = (tamanoCuadricula - 1) / 2;
-  const cantidad = Math.max(2, Math.round(tamanoCuadricula / 32));
+  const pesoLagos = limitar(Number(pesos.lagos) || 1, 0.2, 1.6);
+  const pesoArena = limitar(Number(pesos.arena) || 1, 0.35, 1.8);
+  const cantidad = Math.max(
+    1,
+    Math.round((tamanoCuadricula / 32) * pesoLagos),
+  );
   const lagos = [];
 
   for (let indice = 0; indice < cantidad; indice += 1) {
@@ -21,8 +27,10 @@ export function crearMapaLagos(
     lagos.push({
       x: centro + Math.cos(angulo) * distancia,
       z: centro + Math.sin(angulo) * distancia,
-      radioX: 5.8 + hash(indice, 41, semillaMundo) * 4.4,
-      radioZ: 5.4 + hash(indice, 53, semillaMundo) * 4.8,
+      radioX: (5.8 + hash(indice, 41, semillaMundo) * 4.4) *
+        (0.84 + pesoLagos * 0.16),
+      radioZ: (5.4 + hash(indice, 53, semillaMundo) * 4.8) *
+        (0.84 + pesoLagos * 0.16),
       semilla: 71 + indice * 19 + (semillaMundo % 431),
     });
   }
@@ -46,7 +54,7 @@ export function crearMapaLagos(
       if (distanciaMinima < 1) {
         profundidades[indiceCelda] =
           distanciaMinima < 0.56 ? profundidadMaxima : 1;
-      } else if (distanciaMinima < 1.28) {
+      } else if (distanciaMinima < 1.16 + pesoArena * 0.12) {
         playas[indiceCelda] = 1;
       }
     }
@@ -79,6 +87,10 @@ export function crearMapaLagos(
       },
     };
   }
+}
+
+function limitar(valor, minimo, maximo) {
+  return Math.max(minimo, Math.min(maximo, valor));
 }
 
 function hash(a, b, semilla = 0) {

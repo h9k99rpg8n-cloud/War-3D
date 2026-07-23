@@ -1,4 +1,8 @@
 import { NOMBRES_BLOQUE } from "../inventario/inventario.js";
+import {
+  calcularRotura,
+  obtenerDefinicionContenido,
+} from "../contenido/registroContenido.js";
 
 export function crearInteraccionBloques(
   THREE,
@@ -22,12 +26,22 @@ export function crearInteraccionBloques(
     mundo.tamanoBloque * 0.34,
   );
   const recolectables = [];
+  const naturalesRecogidos = new Set(
+    Array.isArray(opcionesMundo.progreso?.recolectables?.naturalesRecogidos)
+      ? opcionesMundo.progreso.recolectables.naturalesRecogidos
+          .slice(0, 4_000)
+          .map(String)
+      : [],
+  );
+  const naturalesGenerados = new Set();
 
   let punteroActivo = null;
   let inicioPunteroX = 0;
   let inicioPunteroY = 0;
   let rotura = null;
   let temporizadorMensaje = null;
+  let ultimaRevisionInteraccion = 0;
+  let ultimaRevisionNaturales = 0;
 
   scene.add(contorno);
 
@@ -72,6 +86,35 @@ export function crearInteraccionBloques(
     event.stopPropagation();
     colocarBloque();
   });
+  interfaz.botonInteractuar.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const impacto = buscarImpacto(0, 0);
+    if (!impacto || !accionesEntidades.interactuar?.(impacto.bloque)) {
+      mostrarMensaje("No hay nada con qué interactuar");
+      return;
+    }
+    accionesEntidades.alAccion?.("interactuar", impacto.bloque.tipo);
+  });
+  interfaz.botonAtacar.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const direccion = new THREE.Vector3();
+    camera.getWorldDirection(direccion);
+    const herramienta = inventario.definicionSeleccionada();
+    const dano = herramienta?.herramienta?.dano ?? 1;
+    const golpe = accionesEntidades.atacar?.(
+      camera.position.clone(),
+      direccion,
+      interaccion.alcance,
+      dano,
+    );
+    accionesEntidades.alAccion?.("atacar", inventario.tipoSeleccionado());
+    if (golpe) mostrarMensaje(`Golpe: ${dano} de daño`);
+  });
+
+  restaurarRecolectables();
+  cargarPalosNaturales(performance.now());
 
   return {
     actualizar(now, jugadorActivo = true, simular = true) {
@@ -83,6 +126,32 @@ export function crearInteraccionBloques(
       if (jugadorActivo) actualizarRotura(now);
       else if (rotura) cancelarRotura();
       actualizarRecolectables(now);
+      if (now - ultimaRevisionInteraccion >= 120) {
+        ultimaRevisionInteraccion = now;
+        const objetivo = buscarImpacto(0, 0);
+        interfaz.botonInteractuar.disabled = !(
+          objetivo && accionesEntidades.esInteractuable?.(objetivo.bloque.tipo)
+        );
+      }
+      if (now - ultimaRevisionNaturales >= 1_500) {
+        ultimaRevisionNaturales = now;
+        cargarPalosNaturales(now);
+      }
+    },
+
+    exportarEstado() {
+      return {
+        version: 1,
+        naturalesRecogidos: [...naturalesRecogidos],
+        objetos: recolectables.map((item) => ({
+          tipo: item.tipo,
+          x: redondear(item.malla.position.x),
+          y: redondear(item.malla.position.y),
+          z: redondear(item.malla.position.z),
+          naturalId: item.naturalId,
+          edadMs: Math.max(0, performance.now() - item.inicio),
+        })),
+      };
     },
   };
 
@@ -90,7 +159,13 @@ export function crearInteraccionBloques(
     const impacto = buscarImpactoDesdePantalla(clientX, clientY);
     if (!impacto) return;
 
-    rotura = { bloque: impacto.bloque, inicio: now };
+    const definicionHerramienta = inventario.definicionSeleccionada();
+    const regla = calcularRotura(
+      impacto.bloque.tipo,
+      definicionHerramienta,
+      opcionesMundo.modo === "creativo",
+    );
+    rotura = { bloque: impacto.bloque, inicio: now, regla };
     interfaz.etiquetaRotura.textContent =
       `ROMPIENDO ${NOMBRES_BLOQUE[impacto.bloque.tipo].toUpperCase()}`;
     contorno.position.copy(terreno.obtenerCentroBloque(impacto.bloque));
@@ -106,7 +181,7 @@ export function crearInteraccionBloques(
       return;
     }
 
-    const progreso = Math.min(1, (now - rotura.inicio) / interaccion.duracionRotura);
+    const progreso = Math.min(1, (now - rotura.inicio) / rotura.regla.duracionMs);
     interfaz.rellenoRotura.style.transform = `scaleX(${progreso})`;
     contorno.material.color.setHSL(0.31 - progreso * 0.18, 0.9, 0.65);
     if (progreso < 1) return;
@@ -117,12 +192,22 @@ export function crearInteraccionBloques(
       return;
     }
 
+    const regla = rotura.regla;
     limpiarVisualRotura();
     rotura = null;
+    accionesEntidades.alAccion?.("romper", resultado.bloque.tipo);
     if (opcionesMundo.modo === "creativo") {
       mostrarMensaje(`${NOMBRES_BLOQUE[resultado.bloque.tipo]} eliminado`);
+    } else if (!regla.obtieneRecurso) {
+      inventario.desgastarHerramienta(regla.desgaste);
+      mostrarMensaje("El bloque se rompió, pero la herramienta no pudo extraerlo");
     } else {
-      crearRecolectable(resultado.posicion, resultado.bloque.tipo, now);
+      inventario.desgastarHerramienta(regla.desgaste);
+      crearRecolectable(
+        resultado.posicion,
+        regla.suelta ?? resultado.bloque.tipo,
+        now,
+      );
     }
   }
 
@@ -137,7 +222,7 @@ export function crearInteraccionBloques(
     interfaz.rellenoRotura.style.transform = "scaleX(0)";
   }
 
-  function crearRecolectable(posicion, tipo, now) {
+  function crearRecolectable(posicion, tipo, now, opciones = {}) {
     const material = terreno.obtenerMaterialRecolectable(tipo);
     if (!material) return;
     const malla = new THREE.Mesh(geometriaRecolectable, material);
@@ -157,6 +242,7 @@ export function crearInteraccionBloques(
       origenCaida: posicion.clone(),
       desfase: hashRecolectable(posicion) * Math.PI * 2,
       inicio: now,
+      naturalId: opciones.naturalId ?? null,
       recogiendo: false,
       inicioVuelo: 0,
       origenVuelo: null,
@@ -166,6 +252,14 @@ export function crearInteraccionBloques(
   function actualizarRecolectables(now) {
     for (let i = recolectables.length - 1; i >= 0; i -= 1) {
       const item = recolectables[i];
+      if (
+        !item.recogiendo &&
+        now - item.inicio >= interaccion.duracionRecolectableMs
+      ) {
+        scene.remove(item.malla);
+        recolectables.splice(i, 1);
+        continue;
+      }
       item.malla.rotation.x += 0.018;
       item.malla.rotation.y += 0.035;
 
@@ -213,6 +307,7 @@ export function crearInteraccionBloques(
       }
       scene.remove(item.malla);
       recolectables.splice(i, 1);
+      if (item.naturalId) naturalesRecogidos.add(item.naturalId);
       mostrarMensaje(`+1 ${NOMBRES_BLOQUE[item.tipo]}`);
     }
   }
@@ -245,7 +340,13 @@ export function crearInteraccionBloques(
         return;
       }
       inventario.usarBloque(tipo);
+      accionesEntidades.alAccion?.("generar", tipo);
       mostrarMensaje(`${NOMBRES_BLOQUE[tipo]} utilizado`);
+      return;
+    }
+
+    if (!inventario.esBloque(tipo)) {
+      mostrarMensaje(`${NOMBRES_BLOQUE[tipo]} no se puede colocar`);
       return;
     }
 
@@ -267,6 +368,7 @@ export function crearInteraccionBloques(
     }
 
     inventario.usarBloque(tipo);
+    accionesEntidades.alAccion?.("colocar", tipo);
     const cayendo = fisicaArena?.procesarBloqueColocado(
       resultado.bloque,
       resultado.posicion,
@@ -308,7 +410,8 @@ export function crearInteraccionBloques(
   function intersectaJugador(posicionBloque) {
     const mitad = mundo.tamanoBloque / 2;
     const piesJugador = camera.position.y - jugador.alturaOjos;
-    const cabezaJugador = camera.position.y + 0.18;
+    const cabezaJugador =
+      camera.position.y + (jugador.altura - jugador.alturaOjos);
     const coincideHorizontalmente =
       Math.abs(camera.position.x - posicionBloque.x) < mitad + jugador.radio &&
       Math.abs(camera.position.z - posicionBloque.z) < mitad + jugador.radio;
@@ -325,6 +428,52 @@ export function crearInteraccionBloques(
     temporizadorMensaje = window.setTimeout(() => {
       interfaz.mensajeAccion.hidden = true;
     }, 1350);
+  }
+
+  function cargarPalosNaturales(now) {
+    const disponibles = terreno.obtenerPalosNaturalesCercanos?.(
+      camera.position.x,
+      camera.position.z,
+      configuracion.mundo.tamanoBloque *
+        configuracion.mundo.tamanoRegion *
+        configuracion.mundo.distanciaCargaPredeterminada,
+    ) ?? [];
+    for (const palo of disponibles) {
+      if (
+        naturalesRecogidos.has(palo.id) ||
+        naturalesGenerados.has(palo.id)
+      ) {
+        continue;
+      }
+      naturalesGenerados.add(palo.id);
+      crearRecolectable(
+        new THREE.Vector3(palo.x, palo.y, palo.z),
+        "palo",
+        now,
+        { naturalId: palo.id },
+      );
+    }
+  }
+
+  function restaurarRecolectables() {
+    const guardados = opcionesMundo.progreso?.recolectables?.objetos;
+    if (!Array.isArray(guardados)) return;
+    const now = performance.now();
+    for (const guardado of guardados.slice(0, 512)) {
+      const tipo = String(guardado?.tipo || "");
+      if (!obtenerDefinicionContenido(tipo)) continue;
+      const x = Number(guardado.x);
+      const y = Number(guardado.y);
+      const z = Number(guardado.z);
+      if (![x, y, z].every(Number.isFinite)) continue;
+      const edad = Math.max(0, Number(guardado.edadMs) || 0);
+      if (edad >= interaccion.duracionRecolectableMs) continue;
+      const naturalId = guardado.naturalId ? String(guardado.naturalId) : null;
+      if (naturalId) naturalesGenerados.add(naturalId);
+      crearRecolectable(new THREE.Vector3(x, y, z), tipo, now - edad, {
+        naturalId,
+      });
+    }
   }
 }
 
@@ -352,4 +501,8 @@ function crearContornoBloque(THREE, tamanoBloque) {
 function hashRecolectable(posicion) {
   const valor = Math.sin(posicion.x * 12.7 + posicion.y * 31.1 + posicion.z * 7.3) * 43758.5;
   return valor - Math.floor(valor);
+}
+
+function redondear(valor) {
+  return Math.round(Number(valor) * 10_000) / 10_000;
 }

@@ -1,31 +1,38 @@
-export const TIPOS_BLOQUE = Object.freeze([
-  "pasto",
-  "hojas",
-  "madera",
-  "arena",
-  "tierra",
-  "agua",
-]);
+import { IDS_BLOQUES } from "../contenido/registroContenido.js";
 
-export const TIPOS_RECOLECTABLES = Object.freeze([
-  "pasto",
-  "hojas",
-  "madera",
-  "arena",
-  "tierra",
-]);
+export const TIPOS_BLOQUE = Object.freeze([...IDS_BLOQUES, "agua"]);
+export const TIPOS_RECOLECTABLES = IDS_BLOQUES;
 
-export function crearBibliotecaBloques(THREE) {
+export function crearBibliotecaBloques(THREE, estiloVisual = "traditional") {
+  const pixelar = estiloVisual === "pixelar";
+  const textura = (nombre, obtenerPixel) =>
+    crearTextura(THREE, nombre, obtenerPixel, pixelar);
   const texturas = {
-    pastoSuperior: crearTextura(THREE, "pasto-superior", pixelPastoSuperior),
-    pastoLateral: crearTextura(THREE, "pasto-lateral", pixelPastoLateral),
-    tierra: crearTextura(THREE, "tierra", pixelTierra),
-    hojas: crearTextura(THREE, "hojas", pixelHojas),
-    corteMadera: crearTextura(THREE, "corte-madera", pixelCorteMadera),
-    maderaLateral: crearTextura(THREE, "madera-lateral", pixelMaderaLateral),
-    arena: crearTextura(THREE, "arena", pixelArena),
-    tierraBloque: crearTextura(THREE, "tierra-bloque", pixelTierraBloque),
-    agua: crearTextura(THREE, "agua", pixelAgua),
+    pastoSuperior: textura("pasto-superior", pixelPastoSuperior),
+    pastoLateral: textura("pasto-lateral", pixelPastoLateral),
+    tierra: textura("tierra", pixelTierra),
+    hojas: textura("hojas", pixelHojas),
+    corteMadera: textura("corte-madera", pixelCorteMadera),
+    maderaLateral: textura("madera-lateral", pixelMaderaLateral),
+    arena: textura("arena", pixelArena),
+    tierraBloque: textura("tierra-bloque", pixelTierraBloque),
+    piedra: textura("piedra", pixelPiedra),
+    piedraLisa: textura("piedra-lisa", pixelPiedraLisa),
+    carbonMineral: textura("carbon-mineral", pixelCarbonMineral),
+    hierroMineral: textura("hierro-mineral", pixelHierroMineral),
+    tablones: textura("tablones", pixelTablones),
+    mesaCrafteo: textura("mesa-crafteo", pixelMesaCrafteo),
+    horno: textura("horno", pixelHorno),
+    cristal: textura("cristal", pixelCristal),
+    palo: textura("palo", pixelPalo),
+    carbon: textura("carbon", pixelCarbon),
+    hierroBruto: textura("hierro-bruto", pixelHierroBruto),
+    picoMadera: textura("pico-madera", pixelPicoMadera),
+    arco: textura("arco-umbral", pixelArco),
+    huevoArana: textura("huevo-arana", pixelHuevoArana),
+    huevoZombie: textura("huevo-zombie", pixelHuevoZombie),
+    huevoEsqueleto: textura("huevo-esqueleto", pixelHuevoEsqueleto),
+    agua: textura("agua", pixelAgua),
   };
 
   const materialesCompartidos = {
@@ -42,13 +49,48 @@ export function crearBibliotecaBloques(THREE) {
     ),
     arena: material(THREE, texturas.arena, 0x6b5527, 0.34),
     tierra: material(THREE, texturas.tierraBloque, 0x3b2415, 0.38),
+    piedra: material(THREE, texturas.piedra, 0x30343a, 0.2),
+    piedra_lisa: material(THREE, texturas.piedraLisa, 0x383c42, 0.22),
+    carbon_mineral: material(THREE, texturas.carbonMineral, 0x202126, 0.17),
+    hierro_mineral: material(THREE, texturas.hierroMineral, 0x493a31, 0.2),
+    tablones: material(THREE, texturas.tablones, 0x493018, 0.33),
+    mesa_crafteo: material(THREE, texturas.mesaCrafteo, 0x50321a, 0.34),
+    horno: material(THREE, texturas.horno, 0x26282c, 0.2),
+    cristal: materialCristal(THREE, texturas.cristal),
     agua: materialAgua(THREE, texturas.agua),
+  };
+  const materialesObjetos = {
+    palo: material(THREE, texturas.palo, 0x4b2e18, 0.4),
+    carbon: material(THREE, texturas.carbon, 0x111218, 0.22),
+    hierro_bruto: material(THREE, texturas.hierroBruto, 0x5e4032, 0.3),
+    pico_madera: material(THREE, texturas.picoMadera, 0x5b3b1f, 0.34),
+    arco: material(THREE, texturas.arco, 0x3f2b20, 0.3),
+    huevo_arana: material(THREE, texturas.huevoArana, 0x351923, 0.3),
+    huevo_zombie: material(THREE, texturas.huevoZombie, 0x284d2a, 0.32),
+    huevo_esqueleto_umbral: material(
+      THREE,
+      texturas.huevoEsqueleto,
+      0x303746,
+      0.34,
+    ),
   };
 
   return {
     materialesInstanciados: materialesCompartidos,
-    materialesRecolectables: materialesCompartidos,
+    materialesRecolectables: {
+      ...materialesCompartidos,
+      ...materialesObjetos,
+    },
     texturas,
+    estiloVisual: pixelar ? "pixelar" : "traditional",
+    dispose() {
+      for (const texturaActual of Object.values(texturas)) texturaActual.dispose();
+      const materiales = new Set([
+        ...Object.values(materialesCompartidos).flat(),
+        ...Object.values(materialesObjetos),
+      ]);
+      for (const materialActual of materiales) materialActual?.dispose?.();
+    },
   };
 }
 
@@ -87,18 +129,37 @@ function materialAgua(THREE, textura) {
   });
 }
 
-function crearTextura(THREE, nombre, obtenerPixel) {
-  const tamano = 16;
+function materialCristal(THREE, textura) {
+  return new THREE.MeshPhongMaterial({
+    color: 0xdffaff,
+    emissive: 0x153c48,
+    emissiveIntensity: 0.22,
+    map: textura,
+    opacity: 0.48,
+    transparent: true,
+    depthWrite: false,
+    shininess: 96,
+    specular: 0xd9fbff,
+    side: THREE.DoubleSide,
+  });
+}
+
+function crearTextura(THREE, nombre, obtenerPixel, pixelar = false) {
+  const tamano = pixelar ? 8 : 16;
   const datos = new Uint8Array(tamano * tamano * 4);
 
   for (let y = 0; y < tamano; y += 1) {
     for (let x = 0; x < tamano; x += 1) {
-      const color = obtenerPixel(x, y);
+      const colorBase = obtenerPixel(
+        pixelar ? x * 2 : x,
+        pixelar ? y * 2 : y,
+      );
+      const color = pixelar ? cuantizarPixel(colorBase) : colorBase;
       const indice = (y * tamano + x) * 4;
       datos[indice] = color[0];
       datos[indice + 1] = color[1];
       datos[indice + 2] = color[2];
-      datos[indice + 3] = 255;
+      datos[indice + 3] = color[3] ?? 255;
     }
   }
 
@@ -110,6 +171,15 @@ function crearTextura(THREE, nombre, obtenerPixel) {
   textura.generateMipmaps = true;
   textura.needsUpdate = true;
   return textura;
+}
+
+function cuantizarPixel(color) {
+  return [
+    Math.max(0, Math.min(255, Math.round(color[0] / 28) * 28)),
+    Math.max(0, Math.min(255, Math.round(color[1] / 28) * 28)),
+    Math.max(0, Math.min(255, Math.round(color[2] / 28) * 28)),
+    color[3] ?? 255,
+  ];
 }
 
 function pixelPastoSuperior(x, y) {
@@ -182,6 +252,107 @@ function pixelTierraBloque(x, y) {
   if (piedra === 9 || ruido < 0.12) return [74, 48, 34];
   if (ruido > 0.72) return [139, 91, 52];
   return ruido > 0.38 ? [112, 70, 43] : [94, 59, 39];
+}
+
+function pixelPiedra(x, y) {
+  const ruido = hashPixel(x, y, 127);
+  const grieta = (x * 7 + y * 11 + Math.floor(ruido * 7)) % 23;
+  if (grieta === 0 || grieta === 1) return [66, 70, 76];
+  if (ruido > 0.82) return [151, 156, 160];
+  if (ruido < 0.18) return [86, 91, 96];
+  return ruido > 0.5 ? [124, 129, 134] : [105, 110, 116];
+}
+
+function pixelPiedraLisa(x, y) {
+  const borde = x % 8 === 0 || y % 8 === 0;
+  const ruido = hashPixel(x, y, 139);
+  if (borde) return [78, 84, 90];
+  return ruido > 0.55 ? [139, 145, 149] : [119, 125, 131];
+}
+
+function pixelCarbonMineral(x, y) {
+  const base = pixelPiedra(x, y);
+  const veta = hashPixel(Math.floor(x / 2), Math.floor(y / 2), 149);
+  return veta > 0.7 ? [28, 29, 33] : base;
+}
+
+function pixelHierroMineral(x, y) {
+  const base = pixelPiedra(x, y);
+  const veta = hashPixel(Math.floor(x / 2), Math.floor(y / 2), 157);
+  if (veta > 0.76) return [190, 121, 82];
+  if (veta < 0.1) return [125, 76, 58];
+  return base;
+}
+
+function pixelTablones(x, y) {
+  const junta = y % 5 === 0 || (x % 8 === 0 && Math.floor(y / 5) % 2 === 0);
+  const ruido = hashPixel(x, y, 163);
+  if (junta) return [83, 49, 27];
+  return ruido > 0.62 ? [196, 130, 67] : [157, 94, 47];
+}
+
+function pixelMesaCrafteo(x, y) {
+  if (x % 8 === 0 || y % 8 === 0) return [69, 40, 24];
+  const cuadrante = (Math.floor(x / 4) + Math.floor(y / 4)) % 2;
+  return cuadrante ? [177, 111, 55] : [125, 75, 39];
+}
+
+function pixelHorno(x, y) {
+  const base = pixelPiedra(x, y);
+  const abertura = x >= 4 && x <= 11 && y >= 3 && y <= 9;
+  if (abertura) return y > 7 ? [126, 54, 27] : [35, 35, 39];
+  return base;
+}
+
+function pixelCristal(x, y) {
+  const borde = x === 0 || y === 0 || x === 15 || y === 15;
+  const brillo = x === y || x + y === 15;
+  if (borde) return [118, 219, 231, 220];
+  if (brillo) return [223, 253, 255, 145];
+  return [164, 235, 241, 66];
+}
+
+function pixelPalo(x, y) {
+  return Math.abs(x - y) < 3
+    ? [154, 91, 45]
+    : [63, 42, 28];
+}
+
+function pixelCarbon(x, y) {
+  const ruido = hashPixel(x, y, 173);
+  return ruido > 0.75 ? [66, 68, 74] : ruido < 0.2 ? [12, 13, 16] : [35, 36, 41];
+}
+
+function pixelHierroBruto(x, y) {
+  const ruido = hashPixel(x, y, 179);
+  return ruido > 0.67 ? [203, 132, 87] : ruido < 0.2 ? [91, 59, 48] : [151, 91, 65];
+}
+
+function pixelPicoMadera(x, y) {
+  const mango = Math.abs(x - 8) <= 1 && y < 12;
+  const cabeza = y >= 10 && y <= 12 && x >= 2 && x <= 14;
+  return mango || cabeza ? [177, 111, 57] : [55, 38, 27];
+}
+
+function pixelArco(x, y) {
+  const curva = Math.abs(Math.hypot(x - 8, y - 8) - 6) < 1.4 && x >= 7;
+  const cuerda = Math.abs(x - 8) < 1;
+  return curva ? [133, 82, 48] : cuerda ? [212, 209, 181] : [49, 38, 33];
+}
+
+function pixelHuevoArana(x, y) {
+  const ruido = hashPixel(x, y, 181);
+  return ruido > 0.68 ? [137, 74, 91] : ruido < 0.22 ? [32, 22, 28] : [78, 40, 55];
+}
+
+function pixelHuevoZombie(x, y) {
+  const ruido = hashPixel(x, y, 191);
+  return ruido > 0.7 ? [132, 197, 103] : ruido < 0.2 ? [44, 78, 53] : [76, 137, 73];
+}
+
+function pixelHuevoEsqueleto(x, y) {
+  const ruido = hashPixel(x, y, 193);
+  return ruido > 0.72 ? [185, 200, 212] : ruido < 0.2 ? [40, 50, 66] : [93, 112, 134];
 }
 
 function pixelAgua(x, y) {

@@ -8,7 +8,9 @@ export function crearSistemaZombies(
   opcionesMundo = {},
 ) {
   const ajustes = configuracion.zombies;
-  const hostiles = opcionesMundo.modo === "supervivencia";
+  const hostiles =
+    opcionesMundo.modo === "supervivencia" &&
+    opcionesMundo.dificultad !== "pacifica";
   const partesPorZombie = 16;
   const ojosPorZombie = 2;
   const geometria = new THREE.BoxGeometry(1, 1, 1);
@@ -154,6 +156,31 @@ export function crearSistemaZombies(
       return true;
     },
 
+    atacar(origen, direccionAtaque, alcance, dano) {
+      let objetivo = null;
+      let distanciaObjetivo = Number.POSITIVE_INFINITY;
+      for (const zombie of zombies) {
+        const haciaEntidad = new THREE.Vector3(
+          zombie.x,
+          zombie.y + 1.45,
+          zombie.z,
+        ).sub(origen);
+        const distancia = haciaEntidad.length();
+        if (distancia > alcance || distancia >= distanciaObjetivo) continue;
+        if (haciaEntidad.normalize().dot(direccionAtaque) < 0.962) continue;
+        objetivo = zombie;
+        distanciaObjetivo = distancia;
+      }
+      if (!objetivo) return false;
+      objetivo.vida -= Math.max(1, Number(dano) || 1);
+      objetivo.golpeJugadorHasta = performance.now() + 170;
+      if (objetivo.vida <= 0) {
+        const indice = zombies.indexOf(objetivo);
+        if (indice >= 0) zombies.splice(indice, 1);
+      }
+      return true;
+    },
+
     despejarAlrededor(posicionJugador, radio = 14) {
       for (let indice = zombies.length - 1; indice >= 0; indice -= 1) {
         if (
@@ -229,6 +256,9 @@ export function crearSistemaZombies(
       quemando: false,
       inicioQuemadura: Number.NEGATIVE_INFINITY,
       ultimaParticula: Number.NEGATIVE_INFINITY,
+      vida: 6,
+      golpeJugadorHasta: 0,
+      activa: true,
     };
   }
 
@@ -269,6 +299,16 @@ export function crearSistemaZombies(
   }
 
   function actualizarZombie(zombie, now, delta, estadoCiclo) {
+    const haciaX = camera.position.x - zombie.x;
+    const haciaZ = camera.position.z - zombie.z;
+    const distancia = Math.hypot(haciaX, haciaZ);
+    const distanciaActiva =
+      configuracion.mundo.distanciaCargaPredeterminada *
+      configuracion.mundo.tamanoRegion *
+      configuracion.mundo.tamanoBloque *
+      1.2;
+    zombie.activa = distancia <= distanciaActiva;
+    if (!zombie.activa) return true;
     const haySol =
       estadoCiclo.fase === "dia" || estadoCiclo.fase === "amanecer";
     const expuestoAlCielo =
@@ -288,9 +328,6 @@ export function crearSistemaZombies(
       zombie.inicioQuemadura = Number.NEGATIVE_INFINITY;
     }
 
-    const haciaX = camera.position.x - zombie.x;
-    const haciaZ = camera.position.z - zombie.z;
-    const distancia = Math.hypot(haciaX, haciaZ);
     const piesJugador = camera.position.y - configuracion.jugador.alturaOjos;
     const distanciaVertical = Math.abs(piesJugador - zombie.y);
     const detectado =
@@ -450,7 +487,9 @@ export function crearSistemaZombies(
   function actualizarMallas(now) {
     indiceParte = 0;
     indiceOjo = 0;
-    for (const zombie of zombies) dibujarZombie(zombie, now);
+    for (const zombie of zombies) {
+      if (zombie.activa !== false) dibujarZombie(zombie, now);
+    }
     mallaPartes.count = indiceParte;
     mallaOjos.count = indiceOjo;
     mallaPartes.instanceMatrix.needsUpdate = true;
@@ -480,7 +519,15 @@ export function crearSistemaZombies(
     cuaternionRaiz.setFromEuler(eulerRaiz);
     matrizRaiz.compose(posicion, cuaternionRaiz, escalaRaiz);
 
-    agregarCaja(0, 1.36, 0, 0.78, 1.02, 0.46, 0x517d9c);
+    agregarCaja(
+      0,
+      1.36,
+      0,
+      0.78,
+      1.02,
+      0.46,
+      now < zombie.golpeJugadorHasta ? 0xb76565 : 0x517d9c,
+    );
     agregarCaja(0, 2.23 - ataque * 0.04, 0.05, 0.72, 0.68, 0.68, 0x83ca72);
     agregarCaja(0, 2.02 - ataque * 0.12, 0.43 + ataque * 0.08, 0.48, 0.17, 0.16, 0x4e7f45);
     agregarCaja(0.25, 1.42, -0.25, 0.18, 0.84, 0.13, 0x79513a);

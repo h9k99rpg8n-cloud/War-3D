@@ -8,7 +8,9 @@ export function crearSistemaAranas(
   opcionesMundo = {},
 ) {
   const ajustes = configuracion.aranas;
-  const hostiles = opcionesMundo.modo === "supervivencia";
+  const hostiles =
+    opcionesMundo.modo === "supervivencia" &&
+    opcionesMundo.dificultad !== "pacifica";
   const partesPorArana = 22;
   const ojosPorArana = 4;
   const geometria = new THREE.BoxGeometry(1, 1, 1);
@@ -123,6 +125,31 @@ export function crearSistemaAranas(
       return true;
     },
 
+    atacar(origen, direccionAtaque, alcance, dano) {
+      let objetivo = null;
+      let distanciaObjetivo = Number.POSITIVE_INFINITY;
+      for (const arana of aranas) {
+        const haciaEntidad = new THREE.Vector3(
+          arana.x,
+          arana.y + 0.45,
+          arana.z,
+        ).sub(origen);
+        const distancia = haciaEntidad.length();
+        if (distancia > alcance || distancia >= distanciaObjetivo) continue;
+        if (haciaEntidad.normalize().dot(direccionAtaque) < 0.955) continue;
+        objetivo = arana;
+        distanciaObjetivo = distancia;
+      }
+      if (!objetivo) return false;
+      objetivo.vida -= Math.max(1, Number(dano) || 1);
+      objetivo.golpeJugadorHasta = performance.now() + 160;
+      if (objetivo.vida <= 0) {
+        const indice = aranas.indexOf(objetivo);
+        if (indice >= 0) aranas.splice(indice, 1);
+      }
+      return true;
+    },
+
     despejarAlrededor(posicionJugador, radio = 12) {
       for (let i = aranas.length - 1; i >= 0; i -= 1) {
         if (
@@ -202,6 +229,9 @@ export function crearSistemaAranas(
       alerta: 0,
       subiendo: false,
       inclinacion: 0,
+      vida: 4,
+      golpeJugadorHasta: 0,
+      activa: true,
     };
   }
 
@@ -209,6 +239,13 @@ export function crearSistemaAranas(
     const haciaX = camera.position.x - arana.x;
     const haciaZ = camera.position.z - arana.z;
     const distancia = Math.hypot(haciaX, haciaZ);
+    const distanciaActiva =
+      configuracion.mundo.distanciaCargaPredeterminada *
+      configuracion.mundo.tamanoRegion *
+      configuracion.mundo.tamanoBloque *
+      1.2;
+    arana.activa = distancia <= distanciaActiva;
+    if (!arana.activa) return;
     const distanciaVertical = Math.abs(
       camera.position.y - configuracion.jugador.alturaOjos - arana.y,
     );
@@ -338,7 +375,9 @@ export function crearSistemaAranas(
     indiceParte = 0;
     indiceOjo = 0;
 
-    for (const arana of aranas) dibujarArana(arana, now);
+    for (const arana of aranas) {
+      if (arana.activa !== false) dibujarArana(arana, now);
+    }
 
     mallaPartes.count = indiceParte;
     mallaOjos.count = indiceOjo;
@@ -364,7 +403,15 @@ export function crearSistemaAranas(
     cuaternionRaiz.setFromEuler(eulerRaiz);
     matrizRaiz.compose(posicion, cuaternionRaiz, escalaRaiz);
 
-    agregarCaja(0, 0.4 + ataque * 0.04, -0.28, 0.92, 0.48, 1.08, 0x55283a);
+    agregarCaja(
+      0,
+      0.4 + ataque * 0.04,
+      -0.28,
+      0.92,
+      0.48,
+      1.08,
+      now < arana.golpeJugadorHasta ? 0xb45d68 : 0x55283a,
+    );
     agregarCaja(0, 0.4 + ataque * 0.08, 0.56 + ataque * 0.18, 0.72, 0.43, 0.66, 0x24171c);
     agregarCaja(-0.17, 0.35 - ataque * 0.05, 0.96 + ataque * 0.38, 0.12, 0.18, 0.24, 0x8e5034);
     agregarCaja(0.17, 0.35 - ataque * 0.05, 0.96 + ataque * 0.38, 0.12, 0.18, 0.24, 0x8e5034);

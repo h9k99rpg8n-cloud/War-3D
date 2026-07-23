@@ -56,6 +56,9 @@ export function crearSistemaRenderizado(THREE, canvas, configuracion) {
     camara.planoLejano,
   );
   camera.rotation.order = "YXZ";
+  // La cámara forma parte del grafo para que el brazo y los objetos en primera
+  // persona, que son hijos suyos, también se recorran durante el render.
+  scene.add(camera);
 
   // La luz ambiental garantiza que ningún bloque vuelva a quedar negro.
   const luzAmbiente = new THREE.AmbientLight(0xffffff, iluminacion.ambiente);
