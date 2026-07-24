@@ -2546,6 +2546,40 @@ section {
   }
 }
 
+/* La hoja histórica de ajustes del mundo se declara más abajo. Reafirmamos
+   aquí la variante global para que sus diez categorías no se conviertan en
+   una sola fila horizontal recortada en teléfonos apaisados. */
+.global-settings-layout > .settings-tabs--vertical {
+  display: grid;
+  align-content: start;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-right: 1px solid rgb(255 255 255 / 0.1);
+  border-bottom: 0;
+}
+
+.global-settings-layout > .settings-tabs--vertical > button {
+  width: 100%;
+  flex: none;
+  justify-content: start;
+  text-align: left;
+}
+
+@media (max-width: 620px) and (orientation: portrait) {
+  .global-settings-layout > .settings-tabs--vertical {
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-right: 0;
+    border-bottom: 1px solid rgb(255 255 255 / 0.1);
+  }
+
+  .global-settings-layout > .settings-tabs--vertical > button {
+    width: auto;
+    flex: 0 0 auto;
+  }
+}
+
 /* Separa las opciones del catálogo creativo y de la insignia de versión. */
 .version-badge {
   margin-right: 52px;
@@ -3275,6 +3309,629 @@ section {
 
   .inventory-panel__hint {
     padding-bottom: calc(8px + var(--safe-bottom));
+  }
+}
+
+/* Container Update · Snapshot 2 — pantallas completas y pulido táctil */
+.launcher-global-settings {
+  display: grid;
+  width: min(1080px, 100%);
+  height: min(760px, calc(100dvh - var(--safe-top) - var(--safe-bottom) - 20px));
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.global-settings-layout {
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  grid-template-columns: 170px 1fr;
+  overflow: hidden;
+}
+
+.settings-tabs--vertical {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 12px;
+  overflow: auto;
+  border-right: 1px solid rgb(255 255 255 / 0.1);
+  border-bottom: 0;
+}
+
+.settings-tabs--vertical button {
+  width: 100%;
+  justify-content: start;
+  text-align: left;
+}
+
+.global-settings-pages {
+  min-width: 0;
+  overflow: auto;
+  padding: 18px;
+}
+
+.global-settings-pages > section {
+  display: none;
+  align-content: start;
+  gap: 15px;
+}
+
+.global-settings-pages > section.is-active {
+  display: grid;
+}
+
+.global-settings-pages h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 20px;
+}
+
+.global-settings-pages p,
+.global-settings-pages small {
+  color: rgb(255 255 255 / 0.58);
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.global-settings-pages label {
+  display: grid;
+  gap: 8px;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.7px;
+}
+
+.global-settings-pages input[type="range"],
+.settings-pages input[type="range"] {
+  width: 100%;
+  accent-color: #68ca60;
+}
+
+.visual-preview-grid,
+.joystick-preview-grid,
+.performance-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.visual-preview,
+.joystick-preview-grid button,
+.performance-preview-grid button {
+  display: grid;
+  min-height: 118px;
+  place-items: center;
+  gap: 7px;
+  padding: 12px;
+  border: 2px solid rgb(255 255 255 / 0.16);
+  border-radius: 14px;
+  color: #fff;
+  background: rgb(1 18 20 / 0.5);
+}
+
+.visual-preview.is-selected,
+.joystick-preview-grid button.is-selected,
+.performance-preview-grid button.is-selected {
+  border-color: #f5d65e;
+  box-shadow: inset 0 0 0 2px rgb(245 214 94 / 0.16);
+}
+
+.visual-preview__scene {
+  position: relative;
+  width: 100%;
+  height: 72px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: linear-gradient(#85c5e9 0 55%, #5eb953 55%);
+}
+
+.visual-preview__scene i,
+.visual-preview__scene b {
+  position: absolute;
+  bottom: 12px;
+  width: 24px;
+  height: 36px;
+  background: #805230;
+}
+
+.visual-preview__scene i {
+  left: 24%;
+  box-shadow: -15px -16px 0 8px #459541;
+}
+
+.visual-preview__scene b {
+  right: 22%;
+  box-shadow: -12px -12px 0 7px #357e3a;
+}
+
+.visual-preview__scene--pixel {
+  border-radius: 0;
+  image-rendering: pixelated;
+  background: linear-gradient(#75bde4 0 56%, #56b34b 56%);
+}
+
+.joystick-preview {
+  display: grid;
+  width: 70px;
+  height: 70px;
+  place-items: center;
+  border: 3px solid rgb(255 255 255 / 0.52);
+  border-radius: 50%;
+  background: rgb(68 101 84 / 0.48);
+}
+
+.joystick-preview b {
+  width: 30px;
+  height: 30px;
+  border: 2px solid #eef6f2;
+  border-radius: 50%;
+  background: #81968a;
+}
+
+.joystick-preview--dark {
+  border-color: #89949d;
+  background: #10171c;
+}
+
+.joystick-preview--dark b {
+  background: #38434a;
+}
+
+.joystick-preview--pixel,
+.joystick-preview--pixel b {
+  border-radius: 4px;
+}
+
+.joystick-preview--pixel {
+  background: #254d37;
+}
+
+.joystick-preview-inline {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: rgb(255 255 255 / 0.58);
+  font-size: 9px;
+}
+
+.loading__tip {
+  width: min(560px, 82vw);
+  margin: 10px 0 0;
+  color: rgb(255 255 255 / 0.72);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.inventory-split-button {
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid rgb(255 221 100 / 0.5);
+  border-radius: 9px;
+  color: #fff4bc;
+  background: rgb(132 102 29 / 0.34);
+  font-size: 8px;
+  font-weight: 1000;
+}
+
+.inventory-split-button:disabled {
+  opacity: 0.3;
+}
+
+.stack-split-dialog {
+  position: fixed;
+  z-index: 210;
+  inset: 0;
+  display: grid;
+  padding:
+    calc(16px + var(--safe-top))
+    calc(16px + var(--safe-right))
+    calc(16px + var(--safe-bottom))
+    calc(16px + var(--safe-left));
+  place-items: center;
+  background: rgb(0 6 8 / 0.78);
+  backdrop-filter: blur(10px);
+}
+
+.stack-split-dialog[hidden] {
+  display: none;
+}
+
+.stack-split-dialog__card {
+  display: grid;
+  width: min(480px, 100%);
+  gap: 14px;
+  padding: 22px;
+  border: 1px solid rgb(255 255 255 / 0.25);
+  border-radius: 18px 6px;
+  color: #fff;
+  background: linear-gradient(145deg, #1d4141, #071a1d);
+  box-shadow: 0 24px 70px rgb(0 0 0 / 0.55);
+}
+
+.stack-split-dialog__card :is(h2, p) {
+  margin: 0;
+}
+
+.stack-split-control,
+.stack-split-dialog__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stack-split-control input {
+  flex: 1;
+}
+
+.stack-split-control button,
+.stack-split-dialog__actions button {
+  min-width: 46px;
+  min-height: 44px;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-radius: 10px;
+  color: #fff;
+  background: rgb(255 255 255 / 0.08);
+  font-weight: 1000;
+}
+
+.stack-split-dialog__actions button:last-child {
+  flex: 1;
+  background: #3b9849;
+}
+
+.station-panel,
+.settings-panel,
+.inventory-panel {
+  padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
+}
+
+.station-panel__shell,
+.settings-panel__shell,
+.inventory-panel__shell {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  border-radius: 0;
+}
+
+.crafting-workbench {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: minmax(300px, 0.95fr) minmax(280px, 1.05fr);
+  gap: 16px;
+  padding: 14px 18px;
+  overflow: auto;
+}
+
+.crafting-workbench[hidden],
+.recipe-book[hidden] {
+  display: none;
+}
+
+.crafting-workbench__manual,
+.crafting-workbench__inventory {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.crafting-workbench__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.crafting-workbench__heading h3 {
+  margin: 2px 0 0;
+}
+
+#recipe-book-open {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid #e6cc66;
+  border-radius: 9px;
+  color: #fff4ba;
+  background: #765426;
+  font-size: 8px;
+  font-weight: 1000;
+}
+
+.crafting-grid {
+  display: grid;
+  width: min(54vh, 100%);
+  aspect-ratio: 1;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+}
+
+.crafting-grid__cell {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 0.18);
+  border-radius: 6px;
+  background: rgb(0 0 0 / 0.24);
+}
+
+.crafting-grid__cell.is-filled {
+  border-color: rgb(170 230 154 / 0.55);
+  background: rgb(39 91 56 / 0.35);
+}
+
+.crafting-grid__cell .inventory-tile {
+  width: min(34px, 70%);
+  height: min(34px, 70%);
+}
+
+.crafting-grid__amount {
+  position: absolute;
+  right: 3px;
+  bottom: 2px;
+  color: #fff;
+  font-size: 8px;
+  text-shadow: 0 1px 2px #000;
+}
+
+.crafting-result {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  border: 2px solid #f0cf5d;
+  border-radius: 11px;
+  color: #fff;
+  background: rgb(104 80 22 / 0.4);
+  text-align: left;
+}
+
+.crafting-result:disabled {
+  border-color: rgb(255 255 255 / 0.18);
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+
+.crafting-result .inventory-tile {
+  width: 42px;
+  height: 42px;
+}
+
+.crafting-player-inventory {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.crafting-inventory-item {
+  display: grid;
+  min-height: 68px;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 7px;
+  padding: 7px;
+  border: 1px solid rgb(255 255 255 / 0.15);
+  border-radius: 8px;
+  color: #fff;
+  background: rgb(0 0 0 / 0.2);
+  font-size: 7px;
+  text-align: left;
+}
+
+.crafting-inventory-item.is-selected {
+  border-color: #f2d45e;
+  box-shadow: inset 0 0 0 2px rgb(242 212 94 / 0.16);
+}
+
+.crafting-inventory-item .inventory-tile {
+  width: 34px;
+  height: 34px;
+}
+
+.recipe-book {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  height: calc(100% - 72px);
+  padding: 15px 18px;
+  overflow: auto;
+}
+
+.recipe-book > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.recipe-book h3,
+.recipe-book p {
+  margin: 0;
+}
+
+.recipe-book-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.recipe-book-card {
+  display: grid;
+  min-height: 150px;
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgb(255 255 255 / 0.16);
+  border-radius: 10px;
+  background: rgb(0 0 0 / 0.22);
+  text-align: center;
+}
+
+.recipe-book-card .inventory-tile {
+  width: 50px;
+  height: 50px;
+}
+
+.recipe-book-card button {
+  min-height: 36px;
+  border: 1px solid #a9d99e;
+  border-radius: 7px;
+  color: #fff;
+  background: #397f44;
+  font-size: 7px;
+  font-weight: 1000;
+}
+
+.developer-panel {
+  position: fixed;
+  z-index: 180;
+  top: calc(10px + var(--safe-top));
+  right: calc(10px + var(--safe-right));
+  width: min(280px, 42vw);
+  overflow: hidden;
+  border: 1px solid rgb(115 231 145 / 0.55);
+  border-radius: 10px;
+  color: #caffe0;
+  background: rgb(2 14 11 / 0.9);
+  pointer-events: auto;
+}
+
+.developer-panel[hidden] {
+  display: none;
+}
+
+.developer-panel header {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 9px;
+  border-bottom: 1px solid rgb(255 255 255 / 0.12);
+  font-size: 7px;
+}
+
+.developer-panel header button {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  color: inherit;
+  background: transparent;
+}
+
+.developer-panel pre {
+  margin: 0;
+  padding: 9px;
+  font: 700 8px/1.5 ui-monospace, monospace;
+}
+
+#game[data-visual-style="pixelar"] :is(
+  .inventory-panel,
+  .station-panel,
+  .settings-panel,
+  .stack-split-dialog
+) {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+#game[data-visual-style="pixelar"] :is(
+  .inventory-tile,
+  .ui-icon,
+  .crafting-grid__cell,
+  .recipe-book-card,
+  .loading__spinner
+) {
+  image-rendering: pixelated;
+}
+
+#game[data-visual-style="pixelar"] :is(
+  .inventory-panel__shell,
+  .station-panel__shell,
+  .settings-panel__shell,
+  .stack-split-dialog__card
+) {
+  border-width: 3px;
+  border-radius: 0;
+  background: #102b27;
+  box-shadow: 8px 8px 0 rgb(0 0 0 / 0.42);
+}
+
+@media (max-width: 760px), (max-height: 520px) {
+  .launcher-global-settings {
+    height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 8px);
+  }
+
+  .global-settings-layout {
+    grid-template-columns: 118px 1fr;
+  }
+
+  .settings-tabs--vertical {
+    padding: 7px;
+  }
+
+  .visual-preview-grid,
+  .joystick-preview-grid,
+  .performance-preview-grid {
+    grid-template-columns: repeat(3, minmax(86px, 1fr));
+  }
+
+  .crafting-workbench {
+    grid-template-columns: minmax(270px, 0.9fr) minmax(260px, 1.1fr);
+    gap: 9px;
+    padding: 8px 10px;
+  }
+
+  .crafting-grid {
+    width: min(64vh, 310px);
+  }
+
+  .crafting-player-inventory {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .crafting-inventory-item {
+    min-height: 54px;
+  }
+
+  .recipe-book-list {
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
+  }
+}
+
+@media (max-width: 620px) and (orientation: portrait) {
+  .global-settings-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .settings-tabs--vertical {
+    display: flex;
+    border-right: 0;
+    border-bottom: 1px solid rgb(255 255 255 / 0.1);
+  }
+
+  .settings-tabs--vertical button {
+    width: auto;
+  }
+
+  .crafting-workbench {
+    grid-template-columns: 1fr;
+  }
+
+  .crafting-grid {
+    width: 100%;
+  }
+
+  .recipe-book-list {
+    grid-template-columns: 1fr;
   }
 }
 

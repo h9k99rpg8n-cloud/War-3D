@@ -1,4 +1,5 @@
 import { obtenerPlantillaMundo } from "../generacion/plantillasMundo.js";
+import { resolverPerfilRendimiento } from "../rendimiento/perfiles.js";
 import { crearEditorHud } from "./editorHud.js";
 
 const CLAVE_PREFERENCIAS = "war-3d:preferencias:container-v1";
@@ -8,6 +9,7 @@ export function crearSistemaAjustes(
   opcionesMundo,
   inventario,
   controles,
+  servicios = {},
 ) {
   const preferencias = cargarPreferencias();
   if (!preferencias.joystickSkin && opcionesMundo.joystickSkin) {
@@ -37,6 +39,7 @@ export function crearSistemaAjustes(
     preferencias.joystickSkin = interfaz.selectorJoystick.value;
     guardarPreferencias(preferencias);
     aplicarPreferencias(interfaz, preferencias);
+    actualizarVistaJoystick();
   });
   interfaz.controlesGrandes.checked = preferencias.controlesGrandes;
   interfaz.controlesGrandes.addEventListener("change", () => {
@@ -56,8 +59,16 @@ export function crearSistemaAjustes(
     controles.reiniciar();
     editorHud.abrir();
   });
+  interfaz.botonEditorHudSecundario?.addEventListener("click", () => {
+    cerrarPanel();
+    inventario.cerrar();
+    controles.reiniciar();
+    editorHud.abrir();
+  });
 
   llenarResumen();
+  configurarRendimiento();
+  actualizarVistaJoystick();
 
   return {
     estaAbierto() {
@@ -119,6 +130,89 @@ export function crearSistemaAjustes(
         ? "ACTIVADO · EXPERIMENTAL"
         : "DESACTIVADO";
   }
+
+  function configurarRendimiento() {
+    interfaz.perfilRendimiento.value = preferencias.perfilRendimiento;
+    interfaz.limiteFps.value = String(preferencias.limiteFps);
+    interfaz.resolucion.value = String(preferencias.escalaResolucion);
+    interfaz.resolucionDinamica.checked = preferencias.resolucionDinamica;
+    interfaz.controlDistanciaCarga.value = String(opcionesMundo.distanciaCarga);
+    interfaz.volumen.value = String(preferencias.volumen);
+    actualizarEtiquetasRendimiento();
+
+    interfaz.perfilRendimiento.addEventListener("change", () => {
+      const id = interfaz.perfilRendimiento.value;
+      preferencias.perfilRendimiento = id;
+      if (id !== "personalizado") {
+        const perfil = resolverPerfilRendimiento(id);
+        preferencias.escalaResolucion = perfil.pixelRatio;
+        preferencias.limiteFps = perfil.fps;
+        preferencias.resolucionDinamica = perfil.resolucionDinamica;
+        interfaz.controlDistanciaCarga.value = String(perfil.distanciaCarga);
+      }
+      aplicarRendimiento();
+    });
+    interfaz.limiteFps.addEventListener("change", () => {
+      preferencias.perfilRendimiento = "personalizado";
+      preferencias.limiteFps = Number(interfaz.limiteFps.value);
+      aplicarRendimiento();
+    });
+    interfaz.resolucion.addEventListener("input", () => {
+      preferencias.perfilRendimiento = "personalizado";
+      preferencias.escalaResolucion = Number(interfaz.resolucion.value);
+      aplicarRendimiento();
+    });
+    interfaz.resolucionDinamica.addEventListener("change", () => {
+      preferencias.resolucionDinamica = interfaz.resolucionDinamica.checked;
+      aplicarRendimiento();
+    });
+    interfaz.controlDistanciaCarga.addEventListener("input", () => {
+      preferencias.perfilRendimiento = "personalizado";
+      aplicarRendimiento();
+    });
+    interfaz.volumen.addEventListener("input", () => {
+      preferencias.volumen = Number(interfaz.volumen.value);
+      guardarPreferencias(preferencias);
+      actualizarEtiquetasRendimiento();
+    });
+  }
+
+  function aplicarRendimiento() {
+    guardarPreferencias(preferencias);
+    interfaz.perfilRendimiento.value = preferencias.perfilRendimiento;
+    interfaz.limiteFps.value = String(preferencias.limiteFps);
+    interfaz.resolucion.value = String(preferencias.escalaResolucion);
+    interfaz.resolucionDinamica.checked = preferencias.resolucionDinamica;
+    servicios.alCambiarRendimiento?.({
+      perfil: preferencias.perfilRendimiento,
+      limiteFps: preferencias.limiteFps,
+      pixelRatio: preferencias.escalaResolucion,
+      resolucionDinamica: preferencias.resolucionDinamica,
+      distanciaCarga: Number(interfaz.controlDistanciaCarga.value),
+    });
+    actualizarEtiquetasRendimiento();
+  }
+
+  function actualizarEtiquetasRendimiento() {
+    interfaz.valorResolucion.textContent =
+      `${Number(preferencias.escalaResolucion).toFixed(2).replace(/0$/, "")}×`;
+    interfaz.valorVolumen.textContent = `${preferencias.volumen} %`;
+    interfaz.ajusteDistanciaCarga.textContent =
+      `${interfaz.controlDistanciaCarga.value} REGIONES`;
+    interfaz.ajusteRendimiento.textContent =
+      preferencias.perfilRendimiento.toUpperCase();
+    interfaz.advertenciaRendimiento.textContent =
+      Number(interfaz.controlDistanciaCarga.value) > 12
+        ? "Una distancia alta aumenta memoria, GPU y consumo sostenido."
+        : `${nombrePerfil(preferencias.perfilRendimiento)} está activo en este dispositivo.`;
+  }
+
+  function actualizarVistaJoystick() {
+    const vista = document.querySelector("#settings-joystick-preview");
+    if (!vista) return;
+    vista.className =
+      `joystick-preview joystick-preview--${preferencias.joystickSkin}`;
+  }
 }
 
 export function cargarPreferencias() {
@@ -140,22 +234,48 @@ export function guardarPreferencias(preferencias) {
   Object.assign(preferencias, seguras);
 }
 
-function aplicarPreferencias(interfaz, preferencias) {
+export function aplicarPreferencias(interfaz, preferencias) {
   interfaz.juego.dataset.joystickSkin = preferencias.joystickSkin;
   interfaz.juego.classList.toggle("controls-large", preferencias.controlesGrandes);
   interfaz.juego.classList.toggle("reduced-motion", preferencias.movimientoReducido);
 }
 
-function normalizarPreferencias(datos) {
+function nombrePerfil(id) {
+  if (id === "basico") return "Bajo";
+  if (id === "alto") return "Alto";
+  if (id === "personalizado") return "Personalizado";
+  return "Equilibrado";
+}
+
+export function normalizarPreferencias(datos) {
   return {
     joystickSkin: ["traditional", "dark", "pixel"].includes(datos?.joystickSkin)
       ? datos.joystickSkin
       : "traditional",
     controlesGrandes: datos?.controlesGrandes === true,
     movimientoReducido: datos?.movimientoReducido === true,
+    perfilRendimiento: ["basico", "equilibrado", "alto", "personalizado"].includes(
+      datos?.perfilRendimiento,
+    )
+      ? datos.perfilRendimiento
+      : "equilibrado",
+    escalaResolucion: limitarNumero(datos?.escalaResolucion, 0.65, 1.8, 1.25),
+    resolucionDinamica: datos?.resolucionDinamica !== false,
+    limiteFps: [0, 30, 45, 60].includes(Number(datos?.limiteFps))
+      ? Number(datos.limiteFps)
+      : 45,
+    volumen: limitarNumero(datos?.volumen, 0, 100, 80),
+    modoDesarrollador: datos?.modoDesarrollador === true,
     hudLayout:
       datos?.hudLayout && typeof datos.hudLayout === "object"
         ? datos.hudLayout
         : {},
   };
+}
+
+function limitarNumero(valor, minimo, maximo, respaldo) {
+  const numero = Number(valor);
+  return Number.isFinite(numero)
+    ? Math.max(minimo, Math.min(maximo, numero))
+    : respaldo;
 }

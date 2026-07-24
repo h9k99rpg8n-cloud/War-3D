@@ -39,6 +39,7 @@ let navegador = null;
     isMobile: true,
   });
   const page = await context.newPage();
+  const cdp = await context.newCDPSession(page);
   page.setDefaultTimeout(10_000);
   const errores = [];
   page.on("pageerror", (error) => errores.push(error.message));
@@ -89,6 +90,22 @@ let navegador = null;
     timeout: 10_000,
   });
   process.stdout.write("E2E: portada cargada…\n");
+  await page.click("#launcher-settings-button");
+  await page.waitForSelector("#launcher-settings:not([hidden])");
+  assert.equal(
+    await page.locator("[data-global-settings-tab]").count(),
+    10,
+  );
+  await page.click('[data-global-settings-tab="rendimiento"]');
+  await page.waitForTimeout(420);
+  await page.screenshot({
+    path: "/tmp/war-3d-snapshot2-settings.png",
+    fullPage: true,
+  });
+  await page.click('[data-performance-profile="basico"]');
+  await page.click('[data-global-settings-tab="controles"]');
+  await page.click('[data-joystick-preview="dark"]');
+  await page.click("#launcher-settings-back");
   await page.click("#play-button");
   await page.waitForSelector("#empty-worlds:not([hidden])");
   await page.click("#create-first-world");
@@ -110,6 +127,10 @@ let navegador = null;
     entrada.value = "2";
     entrada.dispatchEvent(new Event("input", { bubbles: true }));
   });
+  await page.locator('select[name="visualStyle"]').evaluate((entrada) => {
+    entrada.value = "pixelar";
+    entrada.dispatchEvent(new Event("change", { bubbles: true }));
+  });
   await page.click('#world-form button[type="submit"]');
   process.stdout.write("E2E: solicitud de mundo enviada…\n");
   await page.waitForFunction(
@@ -126,8 +147,22 @@ let navegador = null;
   process.stdout.write(`E2E diagnóstico: ${JSON.stringify(diagnostico)}\n`);
   assert.ok(diagnostico.visible.pasto > 0);
   assert.ok(diagnostico.render.triangles > 0);
+  assert.deepEqual(diagnostico.sun, {
+    style: "pixelar",
+    texture: "sun-pixelar",
+    unlit: true,
+  });
+  assert.equal(await page.locator("#game").getAttribute("data-visual-style"), "pixelar");
+  assert.equal(
+    await page.locator("#inventory-button use").getAttribute("href"),
+    "#icon-bag-pixel",
+  );
   assert.equal(await page.locator("#error-panel").getAttribute("hidden"), "");
   assert.equal(await page.locator("#inventory-bar .inventory-slot").count(), 6);
+  assert.equal(await page.locator("#crafting-grid .crafting-grid__cell").count(), 36);
+
+  const mineriaAntes = diagnostico.performance.interaction.completadas;
+  await romperBloqueTactil(page, cdp, mineriaAntes);
 
   await page.click("#inventory-button");
   await page.waitForSelector("#inventory-panel:not([hidden])");
@@ -137,6 +172,15 @@ let navegador = null;
   );
   assert.ok(await page.locator("#inventory-catalog-list button").count() >= 20);
   await page.click("#inventory-close");
+  await romperBloqueTactil(
+    page,
+    cdp,
+    await page.evaluate(
+      () =>
+        globalThis.__WAR3D_DEBUG__.snapshot().performance.interaction
+          .completadas,
+    ),
+  );
 
   await page.click("#game-menu-button");
   await page.click("#world-settings-button");
@@ -145,6 +189,16 @@ let navegador = null;
   await page.selectOption("#settings-joystick", "dark");
   assert.equal(await page.locator("#game").getAttribute("data-joystick-skin"), "dark");
   await page.click("#settings-close");
+
+  await page.waitForTimeout(1_200);
+  const diagnosticoEstable = await page.evaluate(() =>
+    globalThis.__WAR3D_DEBUG__?.snapshot(),
+  );
+  process.stdout.write(
+    `E2E rendimiento estable: ${JSON.stringify(diagnosticoEstable.performance)}\n`,
+  );
+  assert.ok(diagnosticoEstable.performance.interaction.completadas >= 1);
+  assert.ok(diagnosticoEstable.render.calls <= 30);
 
   await page.waitForTimeout(120);
   const pixeles = await page.evaluate(() =>
@@ -157,6 +211,25 @@ let navegador = null;
     path: "/tmp/war-3d-container-mobile.png",
     fullPage: true,
   });
+
+  await page.click("#game-menu-button");
+  await Promise.all([
+    page.waitForNavigation({ waitUntil: "domcontentloaded" }),
+    page.click("#exit-world-button"),
+  ]);
+  await page.click("#play-button");
+  await page.waitForSelector(".world-card__play");
+  await page.click(".world-card__play");
+  await page.waitForFunction(
+    () =>
+      document.querySelector("#loading")?.hidden === true &&
+      document.querySelector("#start-screen")?.hidden === true,
+    null,
+    { timeout: 30_000 },
+  );
+  await romperBloqueTactil(page, cdp, 0);
+  process.stdout.write("E2E minería aprobada también después de guardar y recargar.\n");
+
   assert.deepEqual(errores, []);
   await navegador.close();
   navegador = null;
@@ -171,3 +244,52 @@ let navegador = null;
   await servidor?.close().catch(() => {});
   process.exit(1);
 });
+
+async function romperBloqueTactil(page, cdp, completadasAntes) {
+  const candidatos = await page.evaluate(() => {
+    const puntos = [];
+    for (const y of [205, 225, 245, 265, 285, 305, 325]) {
+      for (const x of [345, 390, 440, 500, 570, 640, 710, 775]) {
+        if (
+          document.elementFromPoint(x, y)?.id === "look-zone" &&
+          globalThis.__WAR3D_DEBUG__.interactionTarget(x, y)
+        ) {
+          puntos.push({ x, y });
+        }
+      }
+    }
+    return puntos;
+  });
+  process.stdout.write(
+    `E2E objetivos táctiles libres: ${candidatos.map(({ x, y }) => `${x}:${y}`).join(" · ")}\n`,
+  );
+  for (const { x, y } of candidatos) {
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [{ x, y, radiusX: 4, radiusY: 4 }],
+    });
+    await page.waitForTimeout(500);
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchEnd",
+      touchPoints: [],
+    });
+    const completadas = await page.evaluate(
+      () =>
+        globalThis.__WAR3D_DEBUG__?.snapshot()?.performance?.interaction
+          ?.completadas ?? 0,
+    );
+    if (completadas > completadasAntes) break;
+  }
+  const diagnosticoFinal = await page.evaluate(
+    () => globalThis.__WAR3D_DEBUG__?.snapshot()?.performance?.interaction,
+  );
+  process.stdout.write(
+    `E2E estado de minería tras gesto: ${JSON.stringify(diagnosticoFinal)}\n`,
+  );
+  await page.waitForFunction(
+    (antes) =>
+      globalThis.__WAR3D_DEBUG__?.snapshot()?.performance?.interaction
+        ?.completadas > antes,
+    completadasAntes,
+  );
+}

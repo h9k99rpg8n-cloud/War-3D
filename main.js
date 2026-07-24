@@ -6,9 +6,11 @@ import {
   mostrarError,
   obtenerInterfaz,
 } from "./src/interfaz/interfaz.js";
+import { crearAjustesGlobales } from "./src/interfaz/ajustesGlobales.js";
 import { esperarSeleccionMundo } from "./src/interfaz/lanzador.js";
 
 const interfaz = obtenerInterfaz();
+const ajustesGlobales = crearAjustesGlobales(interfaz);
 let errorMostrado = false;
 
 window.addEventListener("error", (event) => {
@@ -27,7 +29,11 @@ try {
     console.warn("La librería idb no cargó; se usará IndexedDB nativo.", errorIdb);
   }
   const almacenMundos = await crearAlmacenMundos(openDB);
-  const opcionesMundo = await esperarSeleccionMundo(interfaz, almacenMundos);
+  const mundoSeleccionado = await esperarSeleccionMundo(interfaz, almacenMundos);
+  const opcionesMundo = {
+    ...mundoSeleccionado,
+    preferenciasGlobales: ajustesGlobales.obtenerPreferencias(),
+  };
   await mostrarCargaMundo(interfaz, opcionesMundo);
   const THREE = await import(URL_THREE);
   let RAPIER = null;

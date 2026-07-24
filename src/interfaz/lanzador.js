@@ -149,7 +149,7 @@ function configurarFormulario(interfaz) {
   });
   interfaz.distanciaCargaCreacion.addEventListener("input", actualizarDistancia);
   interfaz.perfilRendimientoCreacion.addEventListener("change", () => {
-    const valores = { basico: 6, equilibrado: 8, alto: 12 };
+    const valores = { basico: 5, equilibrado: 6, alto: 10 };
     const valor = valores[interfaz.perfilRendimientoCreacion.value];
     if (valor) interfaz.distanciaCargaCreacion.value = String(valor);
     actualizarDistancia();

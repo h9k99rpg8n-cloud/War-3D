@@ -16,6 +16,10 @@ import {
   crearBibliotecaBloques,
 } from "../renderizado/texturasBloques.js";
 import { crearMapaLagos } from "./generadorLagos.js";
+import {
+  puedeAguaOcuparCelda,
+  resolverVecindadAgua,
+} from "../fisica/interaccionAgua.js";
 
 const AGUA_NULA = -32_768;
 const DIRECCIONES = Object.freeze([
@@ -86,6 +90,8 @@ export function crearTerrenoContainer(
   const capacidades = {};
   const mallasPorTipo = {};
   const mallas = [];
+  const tiposSucios = new Set();
+  const actualizacionesAgua = new Set();
   const geometriaCubo = new THREE.BoxGeometry(
     tamanoBloque,
     tamanoBloque,
@@ -99,6 +105,11 @@ export function crearTerrenoContainer(
   const posicionTemporal = new THREE.Vector3();
   let ultimoMovimientoAgua = 0;
   let cargaSucia = false;
+  let reconstruccionesMalla = 0;
+  let reconstruccionesCompletas = 0;
+  let celdasAguaProcesadas = 0;
+  let celdasAguaDescartadas = 0;
+  let ultimoTiempoMallasMs = 0;
 
   const mapaLagos = crearMapaLagos(
     tamanoCuadricula,
@@ -147,6 +158,10 @@ export function crearTerrenoContainer(
       return Boolean(bloque && bloques.get(bloque.clave) === bloque);
     },
 
+    obtenerBloquePorClave(clave) {
+      return bloques.get(clave) ?? null;
+    },
+
     obtenerBloquePorInstancia(malla, instanceId) {
       const tipo = malla?.userData?.tipoBloque;
       return tipo ? (bloquesPorInstancia[tipo]?.[instanceId] ?? null) : null;
@@ -164,7 +179,7 @@ export function crearTerrenoContainer(
       };
     },
 
-    actualizar(now, posicionJugador = null) {
+    actualizar(now, posicionJugador = null, direccionCamara = null) {
       if (now - ultimoMovimientoAgua >= 30) {
         ultimoMovimientoAgua = now;
         const texturaAgua = biblioteca.texturas.agua;
@@ -178,16 +193,37 @@ export function crearTerrenoContainer(
           tamanoBloque,
           tamanoCuadricula,
         );
-        colaCarga.moverCentro(celda.x, celda.z);
+        colaCarga.moverCentro(celda.x, celda.z, direccionCamara);
       }
       const procesadas = colaCarga.procesar(
         configuracion.mundo.presupuestoCargaMs,
       );
       if (procesadas > 0 || cargaSucia) sincronizarGeometria();
+      procesarActualizacionesAgua(
+        configuracion.agua.operacionesExperimentalesPorFrame,
+      );
     },
 
     obtenerEstadoCarga() {
       return colaCarga.obtenerEstado();
+    },
+
+    establecerDistanciaCarga(valor) {
+      return colaCarga.establecerDistancia(valor);
+    },
+
+    obtenerMetricas() {
+      return Object.freeze({
+        bloquesActivos: bloques.size,
+        reconstruccionesMalla,
+        reconstruccionesCompletas,
+        ultimoTiempoMallasMs,
+        agua: Object.freeze({
+          pendientes: actualizacionesAgua.size,
+          procesadas: celdasAguaProcesadas,
+          descartadas: celdasAguaDescartadas,
+        }),
+      });
     },
 
     obtenerCentroBloque(bloque) {
@@ -706,6 +742,7 @@ export function crearTerrenoContainer(
       (cantidadesPorTipo[bloque.tipo] ?? 0) - 1,
     );
     bloquesVisiblesPorTipo[bloque.tipo]?.delete(bloque.clave);
+    tiposSucios.add(bloque.tipo);
     const region = obtenerRegionCelda(bloque.x, bloque.z, TAMANO_REGION);
     clavesPorRegion.get(claveRegion(region.x, region.z))?.delete(bloque.clave);
   }
@@ -757,13 +794,21 @@ export function crearTerrenoContainer(
     else lista.push(cambio);
   }
 
-  function sincronizarAlrededor() {
-    cargaSucia = true;
-    sincronizarGeometria();
+  function sincronizarAlrededor(x, y, z) {
+    const inicio = relojActual();
+    for (const [dx, dy, dz] of [[0, 0, 0], ...DIRECCIONES]) {
+      actualizarVisibilidadCelda(x + dx, y + dy, z + dz);
+    }
+    encolarAguaAlrededor(x, z);
+    for (const tipo of tiposSucios) reconstruirMalla(tipo);
+    tiposSucios.clear();
+    ultimoTiempoMallasMs = relojActual() - inicio;
   }
 
   function sincronizarGeometria() {
+    const inicio = relojActual();
     cargaSucia = false;
+    reconstruccionesCompletas += 1;
     for (const tipo of TIPOS_BLOQUE) bloquesVisiblesPorTipo[tipo].clear();
     for (const bloque of bloques.values()) {
       if (esBloqueVisible(bloque)) {
@@ -771,6 +816,19 @@ export function crearTerrenoContainer(
       }
     }
     for (const tipo of TIPOS_BLOQUE) reconstruirMalla(tipo);
+    tiposSucios.clear();
+    ultimoTiempoMallasMs = relojActual() - inicio;
+  }
+
+  function actualizarVisibilidadCelda(x, y, z) {
+    if (!posicionValida(x, y, z)) return;
+    const bloque = bloques.get(claveBloque(x, y, z));
+    if (!bloque) return;
+    const visibles = bloquesVisiblesPorTipo[bloque.tipo];
+    if (!visibles) return;
+    if (esBloqueVisible(bloque)) visibles.set(bloque.clave, bloque);
+    else visibles.delete(bloque.clave);
+    tiposSucios.add(bloque.tipo);
   }
 
   function esBloqueVisible(bloque) {
@@ -811,6 +869,7 @@ export function crearTerrenoContainer(
   }
 
   function reconstruirMalla(tipo) {
+    reconstruccionesMalla += 1;
     if (tipo === "agua") {
       const malla = mallasPorTipo.agua;
       const anterior = malla.geometry;
@@ -861,6 +920,7 @@ export function crearTerrenoContainer(
     if (indice >= 0) mallas[indice] = nueva;
     scene.remove(anterior);
     scene.add(nueva);
+    anterior.dispose?.();
   }
 
   function crearGeometriaAgua() {
@@ -870,8 +930,14 @@ export function crearTerrenoContainer(
     const indices = [];
     const mitad = tamanoBloque / 2;
     const margen = configuracion.agua.margenSuperficie;
-    for (let z = 0; z < tamanoCuadricula; z += 1) {
-      for (let x = 0; x < tamanoCuadricula; x += 1) {
+    for (const regionId of regionesActivas) {
+      const [regionX, regionZ] = regionId.split(":").map(Number);
+      const inicioX = regionX * TAMANO_REGION;
+      const inicioZ = regionZ * TAMANO_REGION;
+      const finX = Math.min(tamanoCuadricula, inicioX + TAMANO_REGION);
+      const finZ = Math.min(tamanoCuadricula, inicioZ + TAMANO_REGION);
+      for (let z = inicioZ; z < finZ; z += 1) {
+        for (let x = inicioX; x < finX; x += 1) {
         const columna = obtenerColumnaAgua(x, z);
         if (!columna) continue;
         const centroX = indiceAMundo(x, tamanoCuadricula, tamanoBloque);
@@ -931,6 +997,7 @@ export function crearTerrenoContainer(
             z,
           );
         }
+        }
       }
     }
     const geometria = new THREE.BufferGeometry();
@@ -966,7 +1033,8 @@ export function crearTerrenoContainer(
     let minimo = null;
     let maximo = null;
     for (let y = nivelEn(x, z) + 1; y <= nivel; y += 1) {
-      if (bloques.has(claveBloque(x, y, z))) continue;
+      const bloque = bloques.get(claveBloque(x, y, z));
+      if (bloque && !puedeAguaOcuparCelda(bloque.tipo)) continue;
       if (minimo === null) minimo = y;
       maximo = y;
     }
@@ -1021,12 +1089,55 @@ export function crearTerrenoContainer(
 
   function contarColumnasAgua() {
     let total = 0;
-    for (let z = 0; z < tamanoCuadricula; z += 1) {
-      for (let x = 0; x < tamanoCuadricula; x += 1) {
+    for (const regionId of regionesActivas) {
+      const [regionX, regionZ] = regionId.split(":").map(Number);
+      const inicioX = regionX * TAMANO_REGION;
+      const inicioZ = regionZ * TAMANO_REGION;
+      const finX = Math.min(tamanoCuadricula, inicioX + TAMANO_REGION);
+      const finZ = Math.min(tamanoCuadricula, inicioZ + TAMANO_REGION);
+      for (let z = inicioZ; z < finZ; z += 1) {
+        for (let x = inicioX; x < finX; x += 1) {
         if (obtenerColumnaAgua(x, z)) total += 1;
+        }
       }
     }
     return total;
+  }
+
+  function encolarAguaAlrededor(x, z) {
+    for (const [dx, dz] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const actualX = x + dx;
+      const actualZ = z + dz;
+      if (!posicionHorizontalValida(actualX, actualZ)) continue;
+      if (nivelesAgua[indiceColumna(actualX, actualZ)] === AGUA_NULA) continue;
+      actualizacionesAgua.add(`${actualX}:${actualZ}`);
+    }
+  }
+
+  function procesarActualizacionesAgua(maximo) {
+    const limite = Math.max(1, Math.floor(Number(maximo) || 1));
+    let procesadas = 0;
+    let necesitaMalla = false;
+    for (const clave of actualizacionesAgua) {
+      if (procesadas >= limite) break;
+      actualizacionesAgua.delete(clave);
+      procesadas += 1;
+      const [x, z] = clave.split(":").map(Number);
+      if (!regionCeldaActiva(x, z)) {
+        celdasAguaDescartadas += 1;
+        continue;
+      }
+      const superficie = nivelesAgua[indiceColumna(x, z)];
+      if (superficie === AGUA_NULA) {
+        celdasAguaDescartadas += 1;
+        continue;
+      }
+      const bloqueSuperficie = bloques.get(claveBloque(x, superficie, z));
+      if (bloqueSuperficie) resolverVecindadAgua(bloqueSuperficie.tipo);
+      celdasAguaProcesadas += 1;
+      necesitaMalla = true;
+    }
+    if (necesitaMalla) reconstruirMalla("agua");
   }
 
   function medirPenetracionCuerpo(worldX, worldZ, pies, cabeza, radio) {
@@ -1290,4 +1401,8 @@ function hash3D(x, y, z, semilla = 0) {
 function numeroFinito(valor, respaldo) {
   const numero = Number(valor);
   return Number.isFinite(numero) ? numero : respaldo;
+}
+
+function relojActual() {
+  return globalThis.performance?.now?.() ?? Date.now();
 }

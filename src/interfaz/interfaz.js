@@ -3,6 +3,7 @@ import {
   VERSION_RAPIER,
   VERSION_THREE,
 } from "../configuracion.js";
+import { elegirConsejoCarga } from "./consejosCarga.js";
 
 export function obtenerInterfaz() {
   return {
@@ -11,8 +12,32 @@ export function obtenerInterfaz() {
     vistaPortada: document.querySelector("#launcher-cover"),
     vistaMundos: document.querySelector("#launcher-worlds"),
     vistaCrearMundo: document.querySelector("#launcher-create"),
+    vistaAjustesGlobales: document.querySelector("#launcher-settings"),
     tituloAnimado: document.querySelector("#animated-title"),
     botonJugar: document.querySelector("#play-button"),
+    botonAjustesGlobales: document.querySelector("#launcher-settings-button"),
+    botonVolverAjustesGlobales: document.querySelector("#launcher-settings-back"),
+    pestanasAjustesGlobales: [
+      ...document.querySelectorAll("[data-global-settings-tab]"),
+    ],
+    paginasAjustesGlobales: [
+      ...document.querySelectorAll("[data-global-settings-page]"),
+    ],
+    vistasJoystickGlobales: [
+      ...document.querySelectorAll("[data-joystick-preview]"),
+    ],
+    vistasRendimientoGlobales: [
+      ...document.querySelectorAll("[data-performance-profile]"),
+    ],
+    resolucionGlobal: document.querySelector("#global-resolution"),
+    valorResolucionGlobal: document.querySelector("#global-resolution-value"),
+    resolucionDinamicaGlobal: document.querySelector("#global-dynamic-resolution"),
+    limiteFpsGlobal: document.querySelector("#global-fps-limit"),
+    controlesGrandesGlobal: document.querySelector("#global-large-controls"),
+    volumenGlobal: document.querySelector("#global-volume"),
+    valorVolumenGlobal: document.querySelector("#global-volume-value"),
+    movimientoReducidoGlobal: document.querySelector("#global-reduced-motion"),
+    modoDesarrolladorGlobal: document.querySelector("#global-developer-mode"),
     botonVolverPortada: document.querySelector("#back-to-cover"),
     botonVolverMundos: document.querySelector("#back-to-worlds"),
     botonesCrearMundo: [
@@ -44,6 +69,7 @@ export function obtenerInterfaz() {
     canvas: document.querySelector("#game-canvas"),
     carga: document.querySelector("#loading"),
     textoCarga: document.querySelector("#loading-text"),
+    consejoCarga: document.querySelector("#loading-tip"),
     panelError: document.querySelector("#error-panel"),
     mensajeError: document.querySelector("#error-message"),
     insigniaVersion: document.querySelector("#version-badge"),
@@ -71,6 +97,17 @@ export function obtenerInterfaz() {
     nombreInventarioSeleccionado: document.querySelector("#inventory-selected-name"),
     metaInventarioSeleccionado: document.querySelector("#inventory-selected-meta"),
     resumenInventario: document.querySelector("#inventory-summary"),
+    botonDividirInventario: document.querySelector("#inventory-split"),
+    dialogoDividirStack: document.querySelector("#stack-split-dialog"),
+    cantidadOriginalDivision: document.querySelector("#stack-split-original"),
+    cantidadSeleccionadaDivision: document.querySelector("#stack-split-selected"),
+    cantidadRestanteDivision: document.querySelector("#stack-split-remaining"),
+    rangoDivision: document.querySelector("#stack-split-range"),
+    reducirDivision: document.querySelector("#stack-split-less"),
+    aumentarDivision: document.querySelector("#stack-split-more"),
+    cancelarDivision: document.querySelector("#stack-split-cancel"),
+    confirmarDivision: document.querySelector("#stack-split-confirm"),
+    mensajeDivision: document.querySelector("#stack-split-message"),
     botonColocar: document.querySelector("#place-block"),
     etiquetaColocar: document.querySelector("#place-label"),
     botonSaltar: document.querySelector("#jump-button"),
@@ -97,6 +134,16 @@ export function obtenerInterfaz() {
     tituloEstacion: document.querySelector("#station-title"),
     subtituloEstacion: document.querySelector("#station-kicker"),
     listaRecetas: document.querySelector("#recipe-list"),
+    interfazMesaCrafteo: document.querySelector("#crafting-workbench"),
+    rejillaCrafteo: document.querySelector("#crafting-grid"),
+    inventarioMesaCrafteo: document.querySelector("#crafting-player-inventory"),
+    resultadoCrafteo: document.querySelector("#crafting-result"),
+    iconoResultadoCrafteo: document.querySelector("#crafting-result-icon"),
+    etiquetaResultadoCrafteo: document.querySelector("#crafting-result-label"),
+    botonLibroRecetas: document.querySelector("#recipe-book-open"),
+    libroRecetas: document.querySelector("#recipe-book"),
+    cerrarLibroRecetas: document.querySelector("#recipe-book-close"),
+    listaLibroRecetas: document.querySelector("#recipe-book-list"),
     interfazHorno: document.querySelector("#furnace-interface"),
     entradaHorno: document.querySelector("#furnace-input"),
     combustibleHorno: document.querySelector("#furnace-fuel"),
@@ -117,12 +164,22 @@ export function obtenerInterfaz() {
     ajusteTamanoMundo: document.querySelector("#settings-world-size"),
     ajusteRendimiento: document.querySelector("#settings-performance"),
     ajusteDistanciaCarga: document.querySelector("#settings-load-distance"),
+    controlDistanciaCarga: document.querySelector("#settings-load-distance-control"),
+    perfilRendimiento: document.querySelector("#settings-performance-profile"),
+    limiteFps: document.querySelector("#settings-fps-limit"),
+    resolucion: document.querySelector("#settings-resolution"),
+    valorResolucion: document.querySelector("#settings-resolution-value"),
+    resolucionDinamica: document.querySelector("#settings-dynamic-resolution"),
+    advertenciaRendimiento: document.querySelector("#settings-performance-warning"),
+    volumen: document.querySelector("#settings-volume"),
+    valorVolumen: document.querySelector("#settings-volume-value"),
     ajusteAgua: document.querySelector("#settings-water"),
     ajustePixelar: document.querySelector("#settings-pixelar"),
     selectorJoystick: document.querySelector("#settings-joystick"),
     controlesGrandes: document.querySelector("#settings-large-controls"),
     movimientoReducido: document.querySelector("#settings-reduced-motion"),
     botonEditorHud: document.querySelector("#hud-editor-open"),
+    botonEditorHudSecundario: document.querySelector("#hud-editor-open-secondary"),
     editorHud: document.querySelector("#hud-editor"),
     guardarEditorHud: document.querySelector("#hud-editor-save"),
     cancelarEditorHud: document.querySelector("#hud-editor-cancel"),
@@ -130,6 +187,9 @@ export function obtenerInterfaz() {
     aumentarEditorHud: document.querySelector("#hud-editor-larger"),
     reducirEditorHud: document.querySelector("#hud-editor-smaller"),
     ayudaEditorHud: document.querySelector("#hud-editor-help"),
+    panelDesarrollador: document.querySelector("#developer-panel"),
+    cerrarPanelDesarrollador: document.querySelector("#developer-panel-close"),
+    metricasDesarrollador: document.querySelector("#developer-metrics"),
   };
 }
 
@@ -146,6 +206,27 @@ export async function mostrarCargaMundo(interfaz, opcionesMundo) {
     : 128;
   interfaz.textoCarga.textContent =
     `${opcionesMundo.progreso ? "Abriendo" : "Generando"} ${opcionesMundo.nombreMundo} · ${tamanoMundo}×${tamanoMundo}…`;
+  if (interfaz.consejoCarga) {
+    const funciones = new Set([
+        "war:furnace_station",
+        "furnace",
+        "glass",
+        "wooden_pickaxe",
+        "coal",
+        "hud_editor",
+        "inventory",
+        "caves",
+        "iron",
+        "threshold_skeleton",
+        "screen_loading",
+      ]);
+    const semilla =
+      String(opcionesMundo.id || opcionesMundo.nombreMundo)
+        .split("")
+        .reduce((total, letra) => total + letra.charCodeAt(0), 0) + Date.now();
+    const consejo = elegirConsejoCarga({ funciones, semilla });
+    interfaz.consejoCarga.textContent = consejo?.texto ?? "";
+  }
   interfaz.carga.hidden = false;
   interfaz.carga.classList.remove("is-leaving");
   interfaz.carga.dataset.origen = opcionesMundo.progreso ? "guardado" : "nuevo";

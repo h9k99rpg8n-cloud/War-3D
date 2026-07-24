@@ -2,6 +2,14 @@ import {
   DEFINICIONES_INVENTARIO,
   NOMBRES_BLOQUE,
 } from "../inventario/inventario.js";
+import { SURVIVAL_MAX_STACK } from "../inventario/constantes.js";
+import {
+  colocarIngrediente,
+  consumirRecetaCuadricula,
+  crearCuadriculaCrafteo,
+  validarRecetaCuadricula,
+} from "./crafteoManual.js";
+import { recetasParaEstacion } from "./recetas.js";
 import { crearSistemaCrafteo } from "./sistemaCrafteo.js";
 
 export function crearSistemaEstaciones(
@@ -15,6 +23,8 @@ export function crearSistemaEstaciones(
   let estacionAbierta = null;
   let hornoActualId = null;
   let ultimoTiempo = null;
+  const cuadricula = crearCuadriculaCrafteo();
+  let ingredienteSeleccionado = null;
 
   interfaz.panelEstacion.hidden = true;
   interfaz.interfazHorno.hidden = true;
@@ -33,6 +43,7 @@ export function crearSistemaEstaciones(
     transferirAlHorno("carbon"),
   );
   interfaz.botonRecogerHorno.addEventListener("click", recogerCristal);
+  prepararMesaManual();
 
   return {
     abrirCrafteo,
@@ -91,13 +102,20 @@ export function crearSistemaEstaciones(
     estacionAbierta = estacion;
     hornoActualId = null;
     interfaz.interfazHorno.hidden = true;
-    interfaz.listaRecetas.hidden = false;
+    interfaz.interfazMesaCrafteo.hidden = estacion !== "crafting_table";
+    interfaz.libroRecetas.hidden = true;
+    interfaz.listaRecetas.hidden = estacion === "crafting_table";
     interfaz.subtituloEstacion.textContent =
       estacion === "inventory" ? "FABRICACIÓN PERSONAL" : "ESTACIÓN DE TRABAJO";
     interfaz.tituloEstacion.textContent =
       estacion === "inventory" ? "CRAFTEO BÁSICO" : "MESA DE CRAFTEO";
     interfaz.mensajeEstacion.textContent = "";
-    pintarRecetas(estacion);
+    if (estacion === "crafting_table") {
+      pintarMesaManual();
+      pintarLibroRecetas();
+    } else {
+      pintarRecetas(estacion);
+    }
     abrirPanel();
   }
 
@@ -108,6 +126,8 @@ export function crearSistemaEstaciones(
       estadosHorno.set(hornoActualId, crearEstadoHorno(hornoActualId));
     }
     interfaz.listaRecetas.hidden = true;
+    interfaz.interfazMesaCrafteo.hidden = true;
+    interfaz.libroRecetas.hidden = true;
     interfaz.interfazHorno.hidden = false;
     interfaz.subtituloEstacion.textContent = "ESTACIÓN TÉRMICA";
     interfaz.tituloEstacion.textContent = "HORNO";
@@ -124,10 +144,242 @@ export function crearSistemaEstaciones(
   }
 
   function cerrar() {
+    if (estacionAbierta === "crafting_table" && !devolverCuadricula()) {
+      interfaz.mensajeEstacion.textContent =
+        "Libera espacio para recuperar los ingredientes de la cuadrícula.";
+      return;
+    }
     estacionAbierta = null;
     hornoActualId = null;
     interfaz.panelEstacion.hidden = true;
     interfaz.juego.classList.remove("station-open");
+  }
+
+  function prepararMesaManual() {
+    interfaz.rejillaCrafteo.replaceChildren();
+    for (let indice = 0; indice < cuadricula.length; indice += 1) {
+      const boton = document.createElement("button");
+      boton.type = "button";
+      boton.className = "crafting-grid__cell";
+      boton.dataset.craftingIndex = String(indice);
+      boton.setAttribute("role", "gridcell");
+      boton.addEventListener("click", () => interactuarCelda(indice));
+      interfaz.rejillaCrafteo.append(boton);
+    }
+    interfaz.resultadoCrafteo.addEventListener("click", fabricarDesdeCuadricula);
+    interfaz.botonLibroRecetas.addEventListener("click", () => {
+      interfaz.libroRecetas.hidden = false;
+      interfaz.interfazMesaCrafteo.hidden = true;
+      pintarLibroRecetas();
+    });
+    interfaz.cerrarLibroRecetas.addEventListener("click", () => {
+      interfaz.libroRecetas.hidden = true;
+      interfaz.interfazMesaCrafteo.hidden = false;
+      pintarMesaManual();
+    });
+  }
+
+  function interactuarCelda(indice) {
+    const celda = cuadricula[indice];
+    if (ingredienteSeleccionado) {
+      if (celda && celda.itemId !== ingredienteSeleccionado) {
+        interfaz.mensajeEstacion.textContent =
+          "Esa celda contiene otro ingrediente.";
+        return;
+      }
+      if (inventario.retirar(ingredienteSeleccionado, 1) !== 1) {
+        ingredienteSeleccionado = null;
+        interfaz.mensajeEstacion.textContent = "Ya no tienes ese ingrediente.";
+        pintarMesaManual();
+        return;
+      }
+      colocarIngrediente(cuadricula, indice, ingredienteSeleccionado, 1);
+      interfaz.mensajeEstacion.textContent =
+        `${NOMBRES_BLOQUE[ingredienteSeleccionado]} colocado.`;
+    } else if (celda) {
+      if (inventario.agregarParcial(celda.itemId, 1) !== 1) {
+        interfaz.mensajeEstacion.textContent = "No hay espacio para retirarlo.";
+        return;
+      }
+      celda.amount -= 1;
+      if (celda.amount <= 0) cuadricula[indice] = null;
+    }
+    pintarMesaManual();
+  }
+
+  function pintarMesaManual() {
+    for (const boton of interfaz.rejillaCrafteo.children) {
+      const indice = Number(boton.dataset.craftingIndex);
+      const celda = cuadricula[indice];
+      boton.replaceChildren();
+      boton.classList.toggle("is-filled", Boolean(celda));
+      if (celda) {
+        const definicion = DEFINICIONES_INVENTARIO[celda.itemId];
+        boton.append(
+          crearIconoContenido(definicion),
+          crearTexto("b", String(celda.amount), "crafting-grid__amount"),
+        );
+        boton.setAttribute(
+          "aria-label",
+          `${definicion?.nombre ?? celda.itemId}, ${celda.amount}`,
+        );
+      } else {
+        boton.setAttribute("aria-label", `Celda ${indice + 1} vacía`);
+      }
+    }
+    pintarInventarioMesa();
+    const receta = validarRecetaCuadricula(
+      cuadricula,
+      recetasParaEstacion("crafting_table"),
+    );
+    const definicion = DEFINICIONES_INVENTARIO[receta?.result.itemId];
+    interfaz.resultadoCrafteo.disabled =
+      !receta ||
+      !inventario.puedeAgregar(receta.result.itemId, receta.result.amount);
+    interfaz.iconoResultadoCrafteo.className =
+      `inventory-tile ${definicion?.clase ?? ""}`;
+    interfaz.etiquetaResultadoCrafteo.textContent = receta
+      ? `${receta.result.amount} × ${definicion?.nombre ?? receta.result.itemId}`
+      : "SIN RECETA";
+  }
+
+  function pintarInventarioMesa() {
+    interfaz.inventarioMesaCrafteo.replaceChildren();
+    const porTipo = new Map();
+    for (const ranura of inventario.obtenerRanuras()) {
+      if (!ranura) continue;
+      porTipo.set(
+        ranura.tipo,
+        (porTipo.get(ranura.tipo) ?? 0) +
+          (ranura.infinite ? 1 : ranura.cantidad),
+      );
+    }
+    for (const [tipo, cantidad] of porTipo) {
+      const definicion = DEFINICIONES_INVENTARIO[tipo];
+      const boton = document.createElement("button");
+      boton.type = "button";
+      boton.className = "crafting-inventory-item";
+      boton.classList.toggle("is-selected", ingredienteSeleccionado === tipo);
+      boton.append(
+        crearIconoContenido(definicion),
+        crearTexto("span", definicion?.nombre ?? tipo),
+        crearTexto("b", inventario.esCreativo() ? "∞" : String(cantidad)),
+      );
+      boton.addEventListener("click", () => {
+        ingredienteSeleccionado =
+          ingredienteSeleccionado === tipo ? null : tipo;
+        pintarMesaManual();
+      });
+      interfaz.inventarioMesaCrafteo.append(boton);
+    }
+  }
+
+  function fabricarDesdeCuadricula() {
+    const receta = validarRecetaCuadricula(
+      cuadricula,
+      recetasParaEstacion("crafting_table"),
+    );
+    if (!receta) return;
+    if (!inventario.puedeAgregar(receta.result.itemId, receta.result.amount)) {
+      interfaz.mensajeEstacion.textContent =
+        "No hay espacio para guardar el resultado.";
+      return;
+    }
+    if (!consumirRecetaCuadricula(cuadricula, receta)) return;
+    if (!inventario.agregar(receta.result.itemId, receta.result.amount)) {
+      interfaz.mensajeEstacion.textContent =
+        "La fabricación se canceló sin consumir objetos.";
+      return;
+    }
+    interfaz.mensajeEstacion.textContent =
+      `Fabricaste ${receta.result.amount} ${NOMBRES_BLOQUE[receta.result.itemId]}.`;
+    pintarMesaManual();
+    pintarLibroRecetas();
+  }
+
+  function pintarLibroRecetas() {
+    interfaz.listaLibroRecetas.replaceChildren();
+    for (const receta of recetasParaEstacion("crafting_table")) {
+      const faltantes = receta.ingredients.filter(
+        (ingrediente) =>
+          inventario.cantidadTotal(ingrediente.itemId) < ingrediente.amount,
+      );
+      const tarjeta = document.createElement("article");
+      tarjeta.className = "recipe-book-card";
+      const definicion = DEFINICIONES_INVENTARIO[receta.result.itemId];
+      tarjeta.append(
+        crearIconoContenido(definicion),
+        crearTexto(
+          "strong",
+          `${receta.result.amount} × ${definicion?.nombre ?? receta.result.itemId}`,
+        ),
+        crearTexto(
+          "small",
+          faltantes.length
+            ? `FALTAN: ${faltantes.map((item) => NOMBRES_BLOQUE[item.itemId]).join(", ")}`
+            : "MATERIALES DISPONIBLES",
+        ),
+      );
+      const boton = crearTexto("button", "COLOCAR EN CUADRÍCULA");
+      boton.type = "button";
+      boton.disabled = faltantes.length > 0;
+      boton.addEventListener("click", () => colocarRecetaDesdeLibro(receta));
+      tarjeta.append(boton);
+      interfaz.listaLibroRecetas.append(tarjeta);
+    }
+  }
+
+  function colocarRecetaDesdeLibro(receta) {
+    if (!devolverCuadricula()) return;
+    const retirados = [];
+    for (const ingrediente of receta.ingredients) {
+      const cantidad = inventario.retirar(ingrediente.itemId, ingrediente.amount);
+      if (cantidad !== ingrediente.amount) {
+        for (const retirado of retirados) {
+          inventario.agregar(retirado.itemId, retirado.amount);
+        }
+        interfaz.mensajeEstacion.textContent = "Faltan materiales.";
+        return;
+      }
+      retirados.push(ingrediente);
+    }
+    if (receta.pattern) {
+      for (let y = 0; y < receta.pattern.length; y += 1) {
+        for (let x = 0; x < receta.pattern[y].length; x += 1) {
+          const simbolo = receta.pattern[y][x];
+          const tipo = receta.key?.[simbolo];
+          if (tipo) colocarIngrediente(cuadricula, y * 6 + x, tipo, 1);
+        }
+      }
+    } else {
+      let indice = 0;
+      for (const ingrediente of receta.ingredients) {
+        colocarIngrediente(
+          cuadricula,
+          indice,
+          ingrediente.itemId,
+          ingrediente.amount,
+        );
+        indice += 1;
+      }
+    }
+    ingredienteSeleccionado = null;
+    interfaz.libroRecetas.hidden = true;
+    interfaz.interfazMesaCrafteo.hidden = false;
+    interfaz.mensajeEstacion.textContent =
+      "Ingredientes colocados; toca el resultado para fabricar.";
+    pintarMesaManual();
+  }
+
+  function devolverCuadricula() {
+    for (let indice = 0; indice < cuadricula.length; indice += 1) {
+      const celda = cuadricula[indice];
+      if (!celda) continue;
+      const devueltos = inventario.agregarParcial(celda.itemId, celda.amount);
+      celda.amount -= devueltos;
+      if (celda.amount <= 0) cuadricula[indice] = null;
+    }
+    return cuadricula.every((celda) => celda === null);
   }
 
   function pintarRecetas(estacion) {
@@ -255,7 +507,7 @@ export function avanzarEstadoHorno(estado, delta, configuracionHorno) {
   const puedeCocer =
     estado.inputItemId === "arena" &&
     estado.inputAmount > 0 &&
-    estado.outputAmount < 32;
+    estado.outputAmount < SURVIVAL_MAX_STACK;
   if (!puedeCocer) {
     estado.progress = 0;
     return estado;
@@ -272,7 +524,7 @@ export function avanzarEstadoHorno(estado, delta, configuracionHorno) {
   while (
     estado.progress >= 1 &&
     estado.inputAmount > 0 &&
-    estado.outputAmount < 32
+    estado.outputAmount < SURVIVAL_MAX_STACK
   ) {
     estado.progress -= 1;
     estado.inputAmount -= 1;
@@ -299,7 +551,10 @@ function restaurarHornos(datos) {
       fuelItemId: guardado.fuelItemId === "carbon" ? "carbon" : null,
       fuelAmount: cantidadSegura(guardado.fuelAmount, 64),
       outputItemId: guardado.outputItemId === "cristal" ? "cristal" : null,
-      outputAmount: cantidadSegura(guardado.outputAmount, 32),
+      outputAmount: cantidadSegura(
+        guardado.outputAmount,
+        SURVIVAL_MAX_STACK,
+      ),
       progress: limitarNumero(guardado.progress, 0, 0.999, 0),
       remainingFuelTime: limitarNumero(
         guardado.remainingFuelTime,
@@ -332,4 +587,18 @@ function mensajeErrorCrafteo(motivo) {
 
 function redondear(valor) {
   return Math.round(Number(valor) * 10_000) / 10_000;
+}
+
+function crearIconoContenido(definicion) {
+  const icono = document.createElement("span");
+  icono.className = `inventory-tile ${definicion?.clase ?? ""}`;
+  icono.setAttribute("aria-hidden", "true");
+  return icono;
+}
+
+function crearTexto(etiqueta, texto, clase = "") {
+  const elemento = document.createElement(etiqueta);
+  elemento.textContent = texto;
+  if (clase) elemento.className = clase;
+  return elemento;
 }

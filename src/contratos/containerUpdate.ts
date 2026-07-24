@@ -46,6 +46,53 @@ export interface CraftingRecipe {
     readonly itemId: string;
     readonly amount: number;
   };
+  readonly shapeless?: boolean;
+  readonly pattern?: readonly string[];
+  readonly key?: Readonly<Record<string, string>>;
+}
+
+export interface InventoryStack {
+  readonly itemId: string;
+  amount: number;
+  readonly infinite: boolean;
+}
+
+export interface WaterInteractionComponent {
+  readonly blocksFlow: boolean;
+  readonly allowsWaterInside: boolean;
+  readonly displaceableByWater: boolean;
+  readonly receivesWaterUpdates: boolean;
+}
+
+export interface VisualAssetDefinition {
+  readonly id: string;
+  readonly traditionalAsset: string;
+  readonly pixelAsset?: string;
+  readonly fallbackAsset: string;
+}
+
+export interface LoadingTip {
+  readonly id: string;
+  readonly textKey: string;
+  readonly requiredFeatures?: readonly string[];
+}
+
+export interface FrameBudget {
+  readonly worldUpdatesMs: number;
+  readonly waterUpdatesMs: number;
+  readonly entityUpdatesMs: number;
+  readonly meshUpdatesMs: number;
+}
+
+export interface GlobalPerformanceSettings {
+  readonly profile: PerformanceProfileId;
+  readonly loadDistance: number;
+  readonly pixelRatio: number;
+  readonly fpsLimit: 0 | 30 | 45 | 60;
+  readonly dynamicResolution: boolean;
+  readonly shadows: boolean;
+  readonly particles: number;
+  readonly activeEntities: number;
 }
 
 export interface FurnaceState {

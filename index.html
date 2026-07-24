@@ -6,10 +6,10 @@
     <meta name="theme-color" content="#87b9d9">
     <meta
       name="description"
-      content="War 3D v1.7.5 Snapshot 1: Container Update, minería, crafteo y mundos regionales."
+      content="War 3D v1.7.5 Snapshot 2: Performance & Polish, crafteo manual y rendimiento móvil."
     >
     <title>War 3D — Container Update</title>
-    <link rel="stylesheet" href="./style.css?v=1.7.5-s1">
+    <link rel="stylesheet" href="./style.css?v=1.7.5-s2">
   </head>
   <body>
     <svg class="ui-icon-sprite" aria-hidden="true">
@@ -36,6 +36,16 @@
       <symbol id="icon-flight" viewBox="0 0 24 24"><path d="m12 1 2.2 7.2L21 12l-6.8 3.8L12 23l-2.2-7.2L3 12l6.8-3.8L12 1Z"></path></symbol>
       <symbol id="icon-interact" viewBox="0 0 24 24"><path d="M10 2h4v8h-4V2Zm-5.7 3 2.8-2.8 5.7 5.7L10 10.7 4.3 5Zm15.4 0L14 10.7l-2.8-2.8 5.7-5.7L19.7 5ZM4 12h6v4H4v-4Zm10 0h6v4h-6v-4Zm-4 5h4v5h-4v-5Z"></path></symbol>
       <symbol id="icon-look" viewBox="0 0 24 24"><path d="m7.2 5.2 2.1 2.1L6.6 10H11v4H6.6l2.7 2.7-2.1 2.1L1 12l6.2-6.8Zm9.6 0L23 12l-6.2 6.8-2.1-2.1 2.7-2.7H13v-4h4.4l-2.7-2.7 2.1-2.1Z"></path></symbol>
+      <symbol id="icon-play-pixel" viewBox="0 0 24 24"><path d="M6 3h4v3h4v3h4v6h-4v3h-4v3H6V3Z"></path></symbol>
+      <symbol id="icon-plus-pixel" viewBox="0 0 24 24"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6V3Z"></path></symbol>
+      <symbol id="icon-settings-pixel" viewBox="0 0 24 24"><path d="M9 2h6v3h4v4h3v6h-3v4h-4v3H9v-3H5v-4H2V9h3V5h4V2Zm1 7v6h4V9h-4Z"></path></symbol>
+      <symbol id="icon-bag-pixel" viewBox="0 0 24 24"><path d="M8 2h8v5h4l2 15H2L4 7h4V2Zm3 3v2h2V5h-2Z"></path></symbol>
+      <symbol id="icon-jump-pixel" viewBox="0 0 24 24"><path d="M9 3h6v4h4v4h-4v10H9V11H5V7h4V3Z"></path></symbol>
+      <symbol id="icon-sword-pixel" viewBox="0 0 24 24"><path d="M17 2h5v5h-3v3h-3v3h-3v3h-3v3H7v3H2v-5h3v-3h3v-3h3V8h3V5h3V2Z"></path></symbol>
+      <symbol id="icon-recipe-book" viewBox="0 0 24 24"><path d="M3 3.5C7 2.6 10 3.2 12 5v16c-2-1.8-5-2.4-9-1.5v-16Zm18 0v16c-4-.9-7-.3-9 1.5V5c2-1.8 5-2.4 9-1.5Z"></path></symbol>
+      <symbol id="icon-recipe-book-pixel" viewBox="0 0 24 24"><path d="M2 3h8v2h2v16h-2v-2H2V3Zm12 2h2V3h6v16h-8V5ZM5 7v2h4V7H5Zm0 5v2h4v-2H5Zm11-5v2h4V7h-4Zm0 5v2h4v-2h-4Z"></path></symbol>
+      <symbol id="icon-minus" viewBox="0 0 24 24"><path d="M4 10h16v4H4v-4Z"></path></symbol>
+      <symbol id="icon-monitor" viewBox="0 0 24 24"><path d="M2 3h20v14H14v2h4v3H6v-3h4v-2H2V3Zm3 3v8h14V6H5Z"></path></symbol>
     </svg>
     <main id="game" aria-label="War 3D">
       <section id="start-screen" class="start-screen launcher" aria-labelledby="start-title">
@@ -52,7 +62,10 @@
           <button id="play-button" class="launcher-primary launcher-primary--play" type="button">
             <svg class="ui-icon" aria-hidden="true"><use href="#icon-play"></use></svg><b>JUGAR</b>
           </button>
-          <p class="launcher-version">v1.7.5 · CONTAINER UPDATE · SNAPSHOT 1</p>
+          <button id="launcher-settings-button" class="launcher-secondary" type="button">
+            <svg class="ui-icon" aria-hidden="true"><use href="#icon-settings"></use></svg><b>AJUSTES</b>
+          </button>
+          <p class="launcher-version">v1.7.5 · CONTAINER UPDATE · SNAPSHOT 2</p>
         </div>
 
         <div id="launcher-worlds" class="launcher-view launcher-panel launcher-worlds" hidden>
@@ -194,6 +207,40 @@
             <button class="launcher-primary launcher-primary--create" type="submit"><svg class="ui-icon" aria-hidden="true"><use href="#icon-plus"></use></svg><b>CREAR MUNDO</b></button>
           </form>
         </div>
+
+        <div id="launcher-settings" class="launcher-view launcher-panel launcher-global-settings" hidden>
+          <header class="launcher-panel__header">
+            <button id="launcher-settings-back" class="launcher-back" type="button" aria-label="Volver a la portada"><svg class="ui-icon" aria-hidden="true"><use href="#icon-back"></use></svg></button>
+            <div><small>CONFIGURACIÓN GLOBAL</small><h2>AJUSTES</h2></div>
+            <span class="launcher-step">S2</span>
+          </header>
+          <div class="global-settings-layout">
+            <nav id="global-settings-tabs" class="settings-tabs settings-tabs--vertical" aria-label="Categorías globales">
+              <button type="button" data-global-settings-tab="juego" class="is-active">JUEGO</button>
+              <button type="button" data-global-settings-tab="pantalla">PANTALLA</button>
+              <button type="button" data-global-settings-tab="graficos">GRÁFICOS</button>
+              <button type="button" data-global-settings-tab="controles">CONTROLES</button>
+              <button type="button" data-global-settings-tab="interfaz">INTERFAZ</button>
+              <button type="button" data-global-settings-tab="sonido">SONIDO</button>
+              <button type="button" data-global-settings-tab="rendimiento">RENDIMIENTO</button>
+              <button type="button" data-global-settings-tab="accesibilidad">ACCESIBILIDAD</button>
+              <button type="button" data-global-settings-tab="experimentos">EXPERIMENTOS</button>
+              <button type="button" data-global-settings-tab="datos">DATOS</button>
+            </nav>
+            <div class="global-settings-pages">
+              <section data-global-settings-page="juego" class="is-active"><h3>JUEGO</h3><p>Las preferencias de este dispositivo se aplican a todos los mundos. Plantilla, modo y agua continúan guardándose dentro de cada mundo.</p></section>
+              <section data-global-settings-page="pantalla"><h3>PANTALLA</h3><div class="visual-preview-grid"><article class="visual-preview is-selected" data-visual-preview="traditional"><div class="visual-preview__scene visual-preview__scene--traditional"><i></i><b></b></div><strong>TRADICIONAL</strong><small>Estilo predeterminado del mundo</small></article><article class="visual-preview" data-visual-preview="pixelar"><div class="visual-preview__scene visual-preview__scene--pixel"><i></i><b></b></div><strong>PIXELAR</strong><small>Se elige por mundo · experimental</small></article></div></section>
+              <section data-global-settings-page="graficos"><h3>GRÁFICOS</h3><label>ESCALA DE RESOLUCIÓN <output id="global-resolution-value">1.25×</output><input id="global-resolution" type="range" min="0.65" max="1.8" step="0.05" value="1.25"></label><label class="settings-check"><input id="global-dynamic-resolution" type="checkbox" checked><span><b>Resolución dinámica</b><small>Reduce la escala gradualmente cuando el tiempo por cuadro permanece alto.</small></span></label></section>
+              <section data-global-settings-page="controles"><h3>CONTROLES</h3><div id="joystick-preview-grid" class="joystick-preview-grid"><button type="button" data-joystick-preview="traditional"><i class="joystick-preview joystick-preview--traditional"><b></b></i><strong>TRADICIONAL</strong></button><button type="button" data-joystick-preview="dark"><i class="joystick-preview joystick-preview--dark"><b></b></i><strong>OSCURO</strong></button><button type="button" data-joystick-preview="pixel"><i class="joystick-preview joystick-preview--pixel"><b></b></i><strong>PIXELADO</strong></button></div></section>
+              <section data-global-settings-page="interfaz"><h3>INTERFAZ</h3><label class="settings-check"><input id="global-large-controls" type="checkbox"><span><b>Controles grandes</b><small>Aumenta las zonas táctiles sin cambiar el movimiento.</small></span></label><p>La distribución personalizada se edita dentro de un mundo para poder ver todos los controles.</p></section>
+              <section data-global-settings-page="sonido"><h3>SONIDO</h3><label>VOLUMEN GENERAL <output id="global-volume-value">80 %</output><input id="global-volume" type="range" min="0" max="100" value="80"></label><p>La arquitectura de audio conserva esta preferencia; los sonidos llegarán en una snapshot posterior.</p></section>
+              <section data-global-settings-page="rendimiento"><h3>RENDIMIENTO</h3><div id="performance-preview-grid" class="performance-preview-grid"><button type="button" data-performance-profile="basico"><svg class="ui-icon" aria-hidden="true"><use href="#icon-monitor"></use></svg><strong>BAJO</strong><small>30 FPS · 1× · carga 5</small></button><button type="button" data-performance-profile="equilibrado" class="is-selected"><svg class="ui-icon" aria-hidden="true"><use href="#icon-monitor"></use></svg><strong>EQUILIBRADO</strong><small>45 FPS · 1.25× · carga 6</small></button><button type="button" data-performance-profile="alto"><svg class="ui-icon" aria-hidden="true"><use href="#icon-monitor"></use></svg><strong>ALTO</strong><small>60 FPS · 1.6× · carga 10</small></button></div><label>LÍMITE DE FPS<select id="global-fps-limit"><option value="30">30 FPS</option><option value="45" selected>45 FPS</option><option value="60">60 FPS</option><option value="0">Automático</option></select></label></section>
+              <section data-global-settings-page="accesibilidad"><h3>ACCESIBILIDAD</h3><label class="settings-check"><input id="global-reduced-motion" type="checkbox"><span><b>Reducir movimiento</b><small>Reduce sacudidas y transiciones.</small></span></label></section>
+              <section data-global-settings-page="experimentos"><h3>EXPERIMENTOS</h3><label class="settings-check"><input id="global-developer-mode" type="checkbox"><span><b>Modo desarrollador</b><small>Muestra Snapshot 2 y permite abrir el panel de métricas dentro del mundo.</small></span></label></section>
+              <section data-global-settings-page="datos"><h3>DATOS Y ALMACENAMIENTO</h3><p>Los mundos se guardan en IndexedDB. Las preferencias globales usan almacenamiento local y nunca mezclan la plantilla o el inventario de un mundo con otro.</p></section>
+            </div>
+          </div>
+        </div>
       </section>
 
       <canvas id="game-canvas" role="img" aria-label="Mundo 3D de War 3D"></canvas>
@@ -206,7 +253,7 @@
             <p>PROTOTIPO DE MOVIMIENTO</p>
           </div>
         </div>
-        <span id="version-badge" class="version-badge">v1.7.5 S1 • CONTAINER UPDATE</span>
+        <span id="version-badge" class="version-badge">v1.7.5 S2 • PERFORMANCE &amp; POLISH</span>
       </header>
 
       <div class="game-menu">
@@ -236,6 +283,7 @@
       <section id="loading" class="loading" aria-live="polite" hidden>
         <div class="loading__spinner"></div>
         <p id="loading-text">Construyendo mundo cúbico…</p>
+        <p id="loading-tip" class="loading__tip"></p>
       </section>
 
       <div id="look-zone" class="look-zone"></div>
@@ -316,6 +364,7 @@
               <span id="inventory-selected-icon" class="inventory-tile inventory-detail__icon" aria-hidden="true" hidden></span>
               <h3 id="inventory-selected-name">Espacio vacío</h3>
               <p id="inventory-selected-meta">Arrastra aquí un objeto para guardarlo.</p>
+              <button id="inventory-split" class="inventory-split-button" type="button" disabled><svg class="ui-icon" aria-hidden="true"><use href="#icon-sort"></use></svg> DIVIDIR STACK</button>
               <div id="inventory-summary" class="inventory-summary">0 / 24 ESPACIOS</div>
             </aside>
 
@@ -338,6 +387,21 @@
             <svg class="ui-icon" aria-hidden="true"><use href="#icon-interact"></use></svg>
             ARRASTRA PARA MOVER · SUELTA SOBRE LA MISMA CLASE PARA COMBINAR PILAS
           </footer>
+        </div>
+      </section>
+
+      <section id="stack-split-dialog" class="stack-split-dialog" role="dialog" aria-modal="true" aria-labelledby="stack-split-title" hidden>
+        <div class="stack-split-dialog__card">
+          <small>ADMINISTRAR STACK</small>
+          <h2 id="stack-split-title">DIVIDIR OBJETOS</h2>
+          <p><b id="stack-split-original">12</b> originales · <b id="stack-split-selected">3</b> seleccionados · <b id="stack-split-remaining">9</b> restantes</p>
+          <div class="stack-split-control">
+            <button id="stack-split-less" type="button" aria-label="Quitar una unidad"><svg class="ui-icon" aria-hidden="true"><use href="#icon-minus"></use></svg></button>
+            <input id="stack-split-range" type="range" min="1" max="11" value="3" aria-label="Cantidad a separar">
+            <button id="stack-split-more" type="button" aria-label="Añadir una unidad"><svg class="ui-icon" aria-hidden="true"><use href="#icon-plus"></use></svg></button>
+          </div>
+          <div class="stack-split-dialog__actions"><button id="stack-split-cancel" type="button">CANCELAR</button><button id="stack-split-confirm" type="button">CONFIRMAR</button></div>
+          <p id="stack-split-message" aria-live="polite"></p>
         </div>
       </section>
 
@@ -406,6 +470,19 @@
             <button id="station-close" type="button" aria-label="Cerrar estación"><svg class="ui-icon" aria-hidden="true"><use href="#icon-close"></use></svg></button>
           </header>
           <div id="recipe-list" class="recipe-list"></div>
+          <section id="crafting-workbench" class="crafting-workbench" hidden>
+            <div class="crafting-workbench__manual">
+              <div class="crafting-workbench__heading"><div><small>FABRICACIÓN MANUAL</small><h3>CUADRÍCULA 6 × 6</h3></div><button id="recipe-book-open" type="button"><svg class="ui-icon" aria-hidden="true"><use href="#icon-recipe-book"></use></svg><span>LIBRO DE RECETAS</span></button></div>
+              <div id="crafting-grid" class="crafting-grid" role="grid" aria-label="Cuadrícula de crafteo de 6 por 6"></div>
+              <button id="crafting-result" class="crafting-result" type="button" disabled><span id="crafting-result-icon" class="inventory-tile" aria-hidden="true"></span><span><small>RESULTADO</small><b id="crafting-result-label">SIN RECETA</b></span></button>
+            </div>
+            <div class="crafting-workbench__inventory"><div class="inventory-section-label"><b>INVENTARIO DEL JUGADOR</b><span>TOCA Y DESPUÉS ELIGE UNA CELDA</span></div><div id="crafting-player-inventory" class="crafting-player-inventory" role="grid" aria-label="Inventario dentro de la mesa"></div></div>
+          </section>
+          <section id="recipe-book" class="recipe-book" aria-label="Libro de recetas" hidden>
+            <header><div><small>RECETAS CONOCIDAS</small><h3>LIBRO DE RECETAS</h3></div><button id="recipe-book-close" type="button" aria-label="Cerrar libro"><svg class="ui-icon" aria-hidden="true"><use href="#icon-close"></use></svg></button></header>
+            <p>El libro puede colocar ingredientes en la cuadrícula, pero nunca fabrica ni consume por sí solo.</p>
+            <div id="recipe-book-list" class="recipe-book-list"></div>
+          </section>
           <section id="furnace-interface" class="furnace-interface" hidden>
             <div class="furnace-slot">
               <small>MATERIAL</small><b id="furnace-input">VACÍO</b>
@@ -439,19 +516,27 @@
             <button type="button" data-settings-tab="juego" class="is-active">JUEGO</button>
             <button type="button" data-settings-tab="mundo">MUNDO</button>
             <button type="button" data-settings-tab="pantalla">PANTALLA</button>
+            <button type="button" data-settings-tab="graficos">GRÁFICOS</button>
             <button type="button" data-settings-tab="controles">CONTROLES</button>
+            <button type="button" data-settings-tab="interfaz">INTERFAZ</button>
+            <button type="button" data-settings-tab="sonido">SONIDO</button>
             <button type="button" data-settings-tab="rendimiento">RENDIMIENTO</button>
             <button type="button" data-settings-tab="experimentos">EXPERIMENTOS</button>
             <button type="button" data-settings-tab="accesibilidad">ACCESIBILIDAD</button>
+            <button type="button" data-settings-tab="datos">DATOS</button>
           </nav>
           <div class="settings-pages">
             <section data-settings-page="juego" class="is-active"><h3>JUEGO</h3><p>Los cambios de jugabilidad se conservan dentro del mundo.</p><div class="setting-readonly"><span>Modo actual</span><b id="settings-game-mode">SUPERVIVENCIA</b></div><div class="setting-readonly"><span>Dificultad</span><b id="settings-difficulty">NORMAL</b></div></section>
             <section data-settings-page="mundo"><h3>MUNDO</h3><div class="setting-readonly"><span>Plantilla</span><b id="settings-template">CLÁSICA</b></div><div class="setting-readonly"><span>Tamaño</span><b id="settings-world-size">128×128</b></div></section>
             <section data-settings-page="pantalla"><h3>PANTALLA</h3><p>El diseño personalizado utiliza coordenadas normalizadas y áreas seguras.</p><button id="hud-editor-open" class="settings-action" type="button">REORGANIZAR INTERFAZ <small>EXPERIMENTAL</small></button></section>
-            <section data-settings-page="controles"><h3>CONTROLES</h3><label>DISEÑO DEL JOYSTICK<select id="settings-joystick"><option value="traditional">Tradicional</option><option value="dark">Oscuro</option><option value="pixel">Pixelado</option></select></label><p>La apariencia no altera sensibilidad, velocidad ni zona muerta.</p></section>
-            <section data-settings-page="rendimiento"><h3>RENDIMIENTO</h3><div class="setting-readonly"><span>Perfil del mundo</span><b id="settings-performance">EQUILIBRADO</b></div><div class="setting-readonly"><span>Carga de pantalla</span><b id="settings-load-distance">6 REGIONES</b></div><p>Los cambios de distancia se aplican al volver a abrir el mundo.</p></section>
+            <section data-settings-page="graficos"><h3>GRÁFICOS</h3><label>ESCALA DE RESOLUCIÓN <output id="settings-resolution-value">1.25×</output><input id="settings-resolution" type="range" min="0.65" max="1.8" step="0.05" value="1.25"></label><label class="settings-check"><input id="settings-dynamic-resolution" type="checkbox" checked><span><b>Resolución dinámica</b><small>Solo modifica el mundo 3D; la interfaz permanece nítida.</small></span></label></section>
+            <section data-settings-page="controles"><h3>CONTROLES</h3><label>DISEÑO DEL JOYSTICK<select id="settings-joystick"><option value="traditional">Tradicional</option><option value="dark">Oscuro</option><option value="pixel">Pixelado</option></select></label><div class="joystick-preview-inline"><i id="settings-joystick-preview" class="joystick-preview joystick-preview--traditional"><b></b></i><span>La apariencia no altera sensibilidad, velocidad ni zona muerta.</span></div></section>
+            <section data-settings-page="interfaz"><h3>INTERFAZ</h3><p>Los menús bloquean movimiento, minería, ataque y cámara mientras están abiertos.</p><button id="hud-editor-open-secondary" class="settings-action" type="button">REORGANIZAR INTERFAZ <small>EXPERIMENTAL</small></button></section>
+            <section data-settings-page="sonido"><h3>SONIDO</h3><label>VOLUMEN GENERAL <output id="settings-volume-value">80 %</output><input id="settings-volume" type="range" min="0" max="100" value="80"></label></section>
+            <section data-settings-page="rendimiento"><h3>RENDIMIENTO</h3><label>PERFIL<select id="settings-performance-profile"><option value="basico">Bajo</option><option value="equilibrado">Equilibrado</option><option value="alto">Alto</option><option value="personalizado">Personalizado</option></select></label><label>LÍMITE DE FPS<select id="settings-fps-limit"><option value="30">30 FPS</option><option value="45">45 FPS</option><option value="60">60 FPS</option><option value="0">Automático</option></select></label><label>CARGA DE PANTALLA <output id="settings-load-distance">6</output><input id="settings-load-distance-control" type="range" min="2" max="32" value="6"></label><div class="setting-readonly"><span>Perfil activo</span><b id="settings-performance">EQUILIBRADO</b></div><p id="settings-performance-warning">Equilibrado está recomendado para móviles.</p></section>
             <section data-settings-page="experimentos"><h3>EXPERIMENTOS</h3><div class="setting-readonly"><span>Agua nueva</span><b id="settings-water">DESACTIVADA</b></div><div class="setting-readonly"><span>Pixelar</span><b id="settings-pixelar">DESACTIVADO</b></div></section>
             <section data-settings-page="accesibilidad"><h3>ACCESIBILIDAD</h3><label class="settings-check"><input id="settings-large-controls" type="checkbox"><span><b>Controles grandes</b><small>Aumenta las zonas táctiles un 12 %.</small></span></label><label class="settings-check"><input id="settings-reduced-motion" type="checkbox"><span><b>Reducir movimiento</b><small>Reduce sacudidas y animaciones de interfaz.</small></span></label></section>
+            <section data-settings-page="datos"><h3>DATOS Y ALMACENAMIENTO</h3><p>Este mundo conserva su plantilla, bloques, inventario, estaciones y experimentos en IndexedDB. Las preferencias visuales del dispositivo permanecen separadas.</p></section>
           </div>
         </div>
       </section>
@@ -471,12 +556,17 @@
         <div class="hud-editor__safe-area" aria-hidden="true"></div>
       </section>
 
+      <aside id="developer-panel" class="developer-panel" aria-label="Métricas de desarrollo" hidden>
+        <header><b>SNAPSHOT 2 · MÉTRICAS</b><button id="developer-panel-close" type="button" aria-label="Ocultar métricas"><svg class="ui-icon" aria-hidden="true"><use href="#icon-close"></use></svg></button></header>
+        <pre id="developer-metrics">Esperando muestras…</pre>
+      </aside>
+
       <section id="error-panel" class="error-panel" role="alert" hidden>
         <strong>No se pudo iniciar War 3D</strong>
         <p id="error-message">Revisa tu conexión y vuelve a cargar la página.</p>
       </section>
     </main>
 
-    <script type="module" src="./main.js?v=1.7.5-s1"></script>
+    <script type="module" src="./main.js?v=1.7.5-s2"></script>
   </body>
 </html>

@@ -5,6 +5,10 @@ import {
   limitePilaContenido,
   obtenerDefinicionContenido,
 } from "../contenido/registroContenido.js";
+import {
+  SURVIVAL_MAX_STACK,
+  dividirCantidadesStack,
+} from "./constantes.js";
 
 export const DEFINICIONES_INVENTARIO = REGISTRO_CONTENIDO;
 
@@ -24,7 +28,7 @@ const TIPOS_INICIALES = Object.freeze([
   "arena",
   "tierra",
 ]);
-const LIMITE_RESPALDO = 32;
+const LIMITE_RESPALDO = SURVIVAL_MAX_STACK;
 
 export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
   const limites = configuracion.inventario.limites;
@@ -86,6 +90,7 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
   let inventarioAbierto = false;
   let arrastre = null;
   let ignorarClickHasta = 0;
+  let indiceDivision = null;
 
   for (const vista of vistasEspacios) registrarEspacio(vista);
   configurarPanel();
@@ -156,6 +161,22 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
       agregarCantidadEn(ranuras, tipo, solicitada, limites, metadatos);
       actualizarInterfaz();
       return true;
+    },
+
+    agregarParcial(tipo, cantidad = 1, metadatos = {}) {
+      if (!DEFINICIONES_INVENTARIO[tipo]) return 0;
+      const solicitada = cantidadSegura(cantidad);
+      if (solicitada <= 0) return 0;
+      if (creativo) return solicitada;
+      const agregada = agregarCantidadEn(
+        ranuras,
+        tipo,
+        solicitada,
+        limites,
+        metadatos,
+      );
+      if (agregada > 0) actualizarInterfaz();
+      return agregada;
     },
 
     retirar(tipo, cantidad = 1) {
@@ -248,6 +269,12 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
       return ranuras.slice(0, cantidadRapida).map((ranura) => ranura?.tipo ?? null);
     },
 
+    obtenerRanuras() {
+      return ranuras.map((ranura, indice) =>
+        ranura ? { ...ranura, indice } : null,
+      );
+    },
+
     exportarEstado() {
       return {
         version: 3,
@@ -288,6 +315,16 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
       establecerPanelAbierto(false);
     });
     interfaz.ordenarInventario.addEventListener("click", ordenarMochila);
+    interfaz.botonDividirInventario?.addEventListener("click", abrirDivision);
+    interfaz.reducirDivision?.addEventListener("click", () =>
+      cambiarCantidadDivision(-1),
+    );
+    interfaz.aumentarDivision?.addEventListener("click", () =>
+      cambiarCantidadDivision(1),
+    );
+    interfaz.rangoDivision?.addEventListener("input", actualizarResumenDivision);
+    interfaz.cancelarDivision?.addEventListener("click", cerrarDivision);
+    interfaz.confirmarDivision?.addEventListener("click", confirmarDivision);
     interfaz.panelInventario.addEventListener("pointerdown", (event) => {
       if (event.target === interfaz.panelInventario) establecerPanelAbierto(false);
     });
@@ -320,6 +357,7 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
         interfaz.cerrarInventario.focus({ preventScroll: true });
       });
     } else {
+      cerrarDivision();
       limpiarArrastre();
       interfaz.botonInventario.focus({ preventScroll: true });
     }
@@ -342,7 +380,7 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
         crearTexto("span", "∞"),
       );
       boton.addEventListener("click", () => {
-        ranuras[indiceEnFoco] = crearRanura(tipo, 1);
+        ranuras[indiceEnFoco] = crearRanura(tipo, 1, { infinite: true });
         if (indiceEnFoco < cantidadRapida) indiceSeleccionado = indiceEnFoco;
         actualizarInterfaz();
       });
@@ -645,6 +683,77 @@ export function crearInventario(interfaz, configuracion, opcionesMundo = {}) {
       `${ocupados} / ${cantidadTotal} ESPACIOS · ${objetos}`;
     interfaz.insigniaInventario.textContent = String(ocupados);
     interfaz.ordenarInventario.disabled = !ranuras.slice(cantidadRapida).some(Boolean);
+    if (interfaz.botonDividirInventario) {
+      interfaz.botonDividirInventario.disabled =
+        creativo || !ranura || ranura.cantidad < 2;
+    }
+  }
+
+  function abrirDivision() {
+    const ranura = ranuras[indiceEnFoco];
+    if (creativo || !ranura || ranura.cantidad < 2) return;
+    indiceDivision = indiceEnFoco;
+    const inicial = Math.max(1, Math.floor(ranura.cantidad / 2));
+    interfaz.rangoDivision.min = "1";
+    interfaz.rangoDivision.max = String(ranura.cantidad - 1);
+    interfaz.rangoDivision.value = String(inicial);
+    interfaz.mensajeDivision.textContent = "";
+    actualizarResumenDivision();
+    interfaz.dialogoDividirStack.hidden = false;
+    requestAnimationFrame(() =>
+      interfaz.rangoDivision.focus({ preventScroll: true }),
+    );
+  }
+
+  function cambiarCantidadDivision(cambio) {
+    const minimo = Number(interfaz.rangoDivision.min) || 1;
+    const maximo = Number(interfaz.rangoDivision.max) || minimo;
+    interfaz.rangoDivision.value = String(
+      Math.max(
+        minimo,
+        Math.min(maximo, Number(interfaz.rangoDivision.value) + cambio),
+      ),
+    );
+    actualizarResumenDivision();
+  }
+
+  function actualizarResumenDivision() {
+    const ranura = ranuras[indiceDivision];
+    if (!ranura) return;
+    const division = dividirCantidadesStack(
+      ranura.cantidad,
+      Number(interfaz.rangoDivision.value),
+    );
+    if (!division) return;
+    interfaz.cantidadOriginalDivision.textContent = String(ranura.cantidad);
+    interfaz.cantidadSeleccionadaDivision.textContent = String(division.separada);
+    interfaz.cantidadRestanteDivision.textContent = String(division.restante);
+  }
+
+  function confirmarDivision() {
+    const ranura = ranuras[indiceDivision];
+    if (!ranura) return cerrarDivision();
+    const division = dividirCantidadesStack(
+      ranura.cantidad,
+      Number(interfaz.rangoDivision.value),
+    );
+    if (!division) return;
+    const destino = ranuras.findIndex((actual) => actual === null);
+    if (destino < 0) {
+      interfaz.mensajeDivision.textContent =
+        "Libera una casilla vacía antes de dividir el stack.";
+      return;
+    }
+    ranura.cantidad = division.restante;
+    ranuras[destino] = crearRanura(ranura.tipo, division.separada, ranura);
+    indiceEnFoco = destino;
+    cerrarDivision();
+    actualizarInterfaz();
+  }
+
+  function cerrarDivision() {
+    indiceDivision = null;
+    if (interfaz.dialogoDividirStack) interfaz.dialogoDividirStack.hidden = true;
   }
 }
 
@@ -717,7 +826,9 @@ function restaurarRanuras(
     if (!progreso) return resultado;
     for (let indice = 0; indice < cantidadRapida; indice += 1) {
       const tipo = orden[indice];
-      if (DEFINICIONES_INVENTARIO[tipo]) resultado[indice] = crearRanura(tipo, 1);
+      if (DEFINICIONES_INVENTARIO[tipo]) {
+        resultado[indice] = crearRanura(tipo, 1, { infinite: true });
+      }
     }
     return resultado;
   }
@@ -752,7 +863,9 @@ function restaurarRanuras(
 
 function normalizarRanura(ranura, limites, creativo) {
   if (!ranura || !DEFINICIONES_INVENTARIO[ranura.tipo]) return null;
-  if (creativo) return crearRanura(ranura.tipo, 1, ranura);
+  if (creativo) {
+    return crearRanura(ranura.tipo, 1, { ...ranura, infinite: true });
+  }
   const cantidad = Math.min(
     limitePila(limites, ranura.tipo),
     cantidadSegura(ranura.cantidad),
@@ -811,6 +924,7 @@ function agregarCantidadEn(ranuras, tipo, cantidad, limites, metadatos = {}) {
 function crearRanura(tipo, cantidad, metadatos = {}) {
   const definicion = DEFINICIONES_INVENTARIO[tipo];
   const ranura = { tipo, cantidad };
+  if (metadatos?.infinite === true) ranura.infinite = true;
   if (definicion?.categoria === "herramienta") {
     const maxima = definicion.herramienta?.durabilidad ?? 1;
     ranura.durabilidad = Math.max(

@@ -42,10 +42,28 @@ export function crearInteraccionBloques(
   let temporizadorMensaje = null;
   let ultimaRevisionInteraccion = 0;
   let ultimaRevisionNaturales = 0;
+  // Toda la minería usa el reloj de simulación entregado por el juego. Antes
+  // `pointerdown` guardaba performance.now(), mientras actualizarRotura recibía
+  // el reloj pausado del mundo. Tras abrir un menú ambos quedaban desfasados y
+  // ninguna rotura posterior podía alcanzar el 100 %.
+  let relojInteraccion = performance.now();
+  const metricas = {
+    intentos: 0,
+    sinObjetivo: 0,
+    completadas: 0,
+    canceladas: 0,
+    referenciasRecuperadas: 0,
+  };
 
   scene.add(contorno);
 
   interfaz.zonaMirada.addEventListener("pointerdown", (event) => {
+    // Algunos navegadores móviles no entregan `pointerup` al mismo destino
+    // después de que una reconstrucción de malla ocurre bajo el dedo. Una
+    // rotura ya terminada no debe conservar la propiedad lógica del puntero:
+    // esa referencia obsoleta era la causa de que la minería dejara de
+    // responder después de abrir menús o continuar jugando.
+    if (punteroActivo !== null && !rotura) punteroActivo = null;
     if (
       punteroActivo !== null ||
       (event.pointerType === "mouse" && event.button !== 0)
@@ -56,7 +74,7 @@ export function crearInteraccionBloques(
     punteroActivo = event.pointerId;
     inicioPunteroX = event.clientX;
     inicioPunteroY = event.clientY;
-    comenzarRotura(event.clientX, event.clientY, performance.now());
+    comenzarRotura(event.clientX, event.clientY, relojInteraccion);
   });
 
   interfaz.zonaMirada.addEventListener("pointermove", (event) => {
@@ -118,6 +136,7 @@ export function crearInteraccionBloques(
 
   return {
     actualizar(now, jugadorActivo = true, simular = true) {
+      relojInteraccion = now;
       if (!simular) {
         punteroActivo = null;
         if (rotura) cancelarRotura();
@@ -153,11 +172,40 @@ export function crearInteraccionBloques(
         })),
       };
     },
+
+    obtenerMetricas() {
+      return Object.freeze({ ...metricas, recolectables: recolectables.length });
+    },
+
+    diagnosticarObjetivoPantalla(clientX, clientY) {
+      const impacto = buscarImpactoDesdePantalla(clientX, clientY);
+      return impacto
+        ? Object.freeze({
+            clave: impacto.bloque.clave,
+            tipo: impacto.bloque.tipo,
+          })
+        : null;
+    },
+
+    cancelarEntrada() {
+      punteroActivo = null;
+      cancelarRotura("control_bloqueado");
+    },
   };
 
   function comenzarRotura(clientX, clientY, now) {
-    const impacto = buscarImpactoDesdePantalla(clientX, clientY);
-    if (!impacto) return;
+    metricas.intentos += 1;
+    // La mira representa el objetivo real del jugador. El punto tocado se
+    // conserva como primera opción para poder tocar directamente un bloque,
+    // pero la mira central actúa como respaldo estable en móvil. Antes ambos
+    // controladores usaban referencias distintas y un toque podía no responder.
+    const impacto =
+      buscarImpactoDesdePantalla(clientX, clientY) ??
+      buscarImpacto(0, 0);
+    if (!impacto) {
+      metricas.sinObjetivo += 1;
+      return;
+    }
 
     const definicionHerramienta = inventario.definicionSeleccionada();
     const regla = calcularRotura(
@@ -165,9 +213,14 @@ export function crearInteraccionBloques(
       definicionHerramienta,
       opcionesMundo.modo === "creativo",
     );
-    rotura = { bloque: impacto.bloque, inicio: now, regla };
+    rotura = {
+      claveBloque: impacto.bloque.clave,
+      bloque: impacto.bloque,
+      inicio: now,
+      regla,
+    };
     interfaz.etiquetaRotura.textContent =
-      `ROMPIENDO ${NOMBRES_BLOQUE[impacto.bloque.tipo].toUpperCase()}`;
+      `ROMPIENDO ${(NOMBRES_BLOQUE[impacto.bloque.tipo] ?? impacto.bloque.tipo).toUpperCase()}`;
     contorno.position.copy(terreno.obtenerCentroBloque(impacto.bloque));
     contorno.visible = true;
     interfaz.rellenoRotura.style.transform = "scaleX(0)";
@@ -176,9 +229,15 @@ export function crearInteraccionBloques(
 
   function actualizarRotura(now) {
     if (!rotura) return;
-    if (!terreno.contieneBloque(rotura.bloque)) {
-      cancelarRotura();
+    const bloqueActual = terreno.obtenerBloquePorClave?.(rotura.claveBloque) ??
+      rotura.bloque;
+    if (!terreno.contieneBloque(bloqueActual)) {
+      cancelarRotura("objetivo_descargado");
       return;
+    }
+    if (bloqueActual !== rotura.bloque) {
+      rotura.bloque = bloqueActual;
+      metricas.referenciasRecuperadas += 1;
     }
 
     const progreso = Math.min(1, (now - rotura.inicio) / rotura.regla.duracionMs);
@@ -188,13 +247,17 @@ export function crearInteraccionBloques(
 
     const resultado = terreno.romperBloque(rotura.bloque);
     if (!resultado) {
-      cancelarRotura();
+      cancelarRotura("rechazada_terreno");
       return;
     }
 
     const regla = rotura.regla;
     limpiarVisualRotura();
     rotura = null;
+    // La operación terminó; no dependemos de que Safari entregue después un
+    // `pointerup` al elemento que inició el gesto.
+    punteroActivo = null;
+    metricas.completadas += 1;
     accionesEntidades.alAccion?.("romper", resultado.bloque.tipo);
     if (opcionesMundo.modo === "creativo") {
       mostrarMensaje(`${NOMBRES_BLOQUE[resultado.bloque.tipo]} eliminado`);
@@ -211,7 +274,11 @@ export function crearInteraccionBloques(
     }
   }
 
-  function cancelarRotura() {
+  function cancelarRotura(motivo = "puntero") {
+    if (rotura) {
+      metricas.canceladas += 1;
+      metricas.ultimaCancelacion = motivo;
+    }
     rotura = null;
     limpiarVisualRotura();
   }
@@ -388,6 +455,8 @@ export function crearInteraccionBloques(
 
   function buscarImpacto(ndcX, ndcY) {
     punteroNormalizado.set(ndcX, ndcY);
+    raycaster.near = 0;
+    raycaster.far = interaccion.alcance;
     raycaster.setFromCamera(punteroNormalizado, camera);
     const impactos = raycaster.intersectObjects(terreno.mallas, false);
     for (const impacto of impactos) {
@@ -397,7 +466,13 @@ export function crearInteraccionBloques(
         impacto.object,
         impacto.instanceId,
       );
-      if (!bloque || bloque.tipo === "agua") continue;
+      if (
+        !bloque ||
+        bloque.tipo === "agua" ||
+        !terreno.contieneBloque(bloque)
+      ) {
+        continue;
+      }
       return {
         bloque,
         normal: impacto.face.normal.clone(),

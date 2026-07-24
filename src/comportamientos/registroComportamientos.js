@@ -51,6 +51,16 @@ const definicionesIniciales = [
     const valor = Number(configuracion?.permeability);
     return Number.isFinite(valor) && valor >= 0 && valor <= 1;
   }),
+  comportamiento("war:water_interaction", "bloque", true, (configuracion) => {
+    if (!configuracion || typeof configuracion !== "object") return false;
+    return [
+      "blocksFlow",
+      "allowsWaterInside",
+      "displaceableByWater",
+      "receivesWaterUpdates",
+    ].every((propiedad) => typeof configuracion[propiedad] === "boolean") &&
+      !(configuracion.blocksFlow && configuracion.allowsWaterInside);
+  }),
   comportamiento("war:player_held_item", "objeto", false, (configuracion) => {
     if (configuracion?.visible === undefined) return true;
     return (

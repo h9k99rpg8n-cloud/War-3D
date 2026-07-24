@@ -21,7 +21,18 @@ export function crearBibliotecaBloques(THREE, estiloVisual = "traditional") {
     carbonMineral: textura("carbon-mineral", pixelCarbonMineral),
     hierroMineral: textura("hierro-mineral", pixelHierroMineral),
     tablones: textura("tablones", pixelTablones),
-    mesaCrafteo: textura("mesa-crafteo", pixelMesaCrafteo),
+    mesaCrafteoSuperior: textura(
+      "mesa-crafteo-superior",
+      pixelMesaCrafteoSuperior,
+    ),
+    mesaCrafteoLateral: textura(
+      "mesa-crafteo-lateral",
+      pixelMesaCrafteoLateral,
+    ),
+    mesaCrafteoInferior: textura(
+      "mesa-crafteo-inferior",
+      pixelMesaCrafteoInferior,
+    ),
     horno: textura("horno", pixelHorno),
     cristal: textura("cristal", pixelCristal),
     palo: textura("palo", pixelPalo),
@@ -54,7 +65,11 @@ export function crearBibliotecaBloques(THREE, estiloVisual = "traditional") {
     carbon_mineral: material(THREE, texturas.carbonMineral, 0x202126, 0.17),
     hierro_mineral: material(THREE, texturas.hierroMineral, 0x493a31, 0.2),
     tablones: material(THREE, texturas.tablones, 0x493018, 0.33),
-    mesa_crafteo: material(THREE, texturas.mesaCrafteo, 0x50321a, 0.34),
+    mesa_crafteo: carasCubo(
+      material(THREE, texturas.mesaCrafteoLateral, 0x50321a, 0.3),
+      material(THREE, texturas.mesaCrafteoSuperior, 0x58361b, 0.34),
+      material(THREE, texturas.mesaCrafteoInferior, 0x3b2618, 0.26),
+    ),
     horno: material(THREE, texturas.horno, 0x26282c, 0.2),
     cristal: materialCristal(THREE, texturas.cristal),
     agua: materialAgua(THREE, texturas.agua),
@@ -166,8 +181,10 @@ function crearTextura(THREE, nombre, obtenerPixel, pixelar = false) {
   const textura = new THREE.DataTexture(datos, tamano, tamano, THREE.RGBAFormat);
   textura.name = nombre;
   textura.colorSpace = THREE.SRGBColorSpace;
-  textura.magFilter = THREE.NearestFilter;
-  textura.minFilter = THREE.NearestMipmapNearestFilter;
+  textura.magFilter = pixelar ? THREE.NearestFilter : THREE.LinearFilter;
+  textura.minFilter = pixelar
+    ? THREE.NearestFilter
+    : THREE.LinearMipmapLinearFilter;
   textura.generateMipmaps = true;
   textura.needsUpdate = true;
   return textura;
@@ -247,27 +264,34 @@ function pixelArena(x, y) {
 
 function pixelTierraBloque(x, y) {
   const ruido = hashPixel(x, y, 103);
-  const piedra = (x * 5 + y * 7 + Math.floor(ruido * 8)) % 19;
-  if (piedra === 0) return [173, 123, 72];
-  if (piedra === 9 || ruido < 0.12) return [74, 48, 34];
-  if (ruido > 0.72) return [139, 91, 52];
-  return ruido > 0.38 ? [112, 70, 43] : [94, 59, 39];
+  const grumo = hashPixel(Math.floor(x / 3), Math.floor(y / 3), 107);
+  const piedra = (x * 5 + y * 7 + Math.floor(ruido * 8)) % 23;
+  if (piedra === 0) return [166, 126, 83];
+  if (piedra === 11 || ruido < 0.08) return [66, 47, 37];
+  if (grumo > 0.78) return [143, 92, 53];
+  if (grumo < 0.22) return [86, 57, 41];
+  return ruido > 0.48 ? [119, 76, 45] : [102, 65, 42];
 }
 
 function pixelPiedra(x, y) {
   const ruido = hashPixel(x, y, 127);
-  const grieta = (x * 7 + y * 11 + Math.floor(ruido * 7)) % 23;
-  if (grieta === 0 || grieta === 1) return [66, 70, 76];
-  if (ruido > 0.82) return [151, 156, 160];
-  if (ruido < 0.18) return [86, 91, 96];
-  return ruido > 0.5 ? [124, 129, 134] : [105, 110, 116];
+  const fragmento = hashPixel(Math.floor(x / 4), Math.floor(y / 3), 131);
+  const grieta =
+    (x * 5 + y * 9 + Math.floor(fragmento * 11)) % 29 <= 1 &&
+    hashPixel(x, y, 133) > 0.3;
+  if (grieta) return [57, 63, 69];
+  if (fragmento > 0.82) return ruido > 0.5 ? [157, 163, 166] : [139, 146, 151];
+  if (fragmento < 0.18) return ruido > 0.5 ? [83, 90, 96] : [95, 101, 107];
+  return ruido > 0.58 ? [128, 134, 139] : [111, 117, 123];
 }
 
 function pixelPiedraLisa(x, y) {
   const borde = x % 8 === 0 || y % 8 === 0;
   const ruido = hashPixel(x, y, 139);
-  if (borde) return [78, 84, 90];
-  return ruido > 0.55 ? [139, 145, 149] : [119, 125, 131];
+  const brillo = (x + y * 3) % 17 === 0;
+  if (borde) return [82, 89, 95];
+  if (brillo) return [151, 157, 161];
+  return ruido > 0.68 ? [139, 145, 150] : [123, 130, 136];
 }
 
 function pixelCarbonMineral(x, y) {
@@ -291,10 +315,35 @@ function pixelTablones(x, y) {
   return ruido > 0.62 ? [196, 130, 67] : [157, 94, 47];
 }
 
-function pixelMesaCrafteo(x, y) {
-  if (x % 8 === 0 || y % 8 === 0) return [69, 40, 24];
-  const cuadrante = (Math.floor(x / 4) + Math.floor(y / 4)) % 2;
-  return cuadrante ? [177, 111, 55] : [125, 75, 39];
+function pixelMesaCrafteoSuperior(x, y) {
+  const borde = x <= 1 || y <= 1 || x >= 14 || y >= 14;
+  if (borde) return [69, 40, 24];
+  const serrucho =
+    y >= 4 && y <= 5 && x >= 3 && x <= 11 ||
+    y === 6 && x >= 5 && x <= 12 && x % 2 === 0;
+  if (serrucho) return [187, 193, 183];
+  const mangoSerrucho = x >= 11 && x <= 13 && y >= 3 && y <= 6;
+  if (mangoSerrucho) return [87, 49, 26];
+  const martillo =
+    x >= 4 && x <= 5 && y >= 8 && y <= 13 ||
+    x >= 2 && x <= 8 && y >= 8 && y <= 9;
+  if (martillo) return x <= 7 && y <= 9 ? [72, 76, 78] : [110, 61, 31];
+  return hashPixel(x, y, 167) > 0.58 ? [180, 111, 55] : [151, 88, 43];
+}
+
+function pixelMesaCrafteoLateral(x, y) {
+  const herraje = x <= 1 || x >= 14 || (y >= 7 && y <= 8);
+  if (herraje) return [73, 62, 52];
+  const tabla = Math.floor(x / 4) % 2;
+  const marca = (x * 3 + y * 5) % 19 === 0;
+  if (marca) return [81, 46, 26];
+  return tabla ? [176, 105, 51] : [133, 77, 39];
+}
+
+function pixelMesaCrafteoInferior(x, y) {
+  const junta = x % 8 === 0 || y % 8 === 0;
+  if (junta) return [63, 39, 26];
+  return hashPixel(x, y, 169) > 0.55 ? [116, 72, 43] : [95, 58, 37];
 }
 
 function pixelHorno(x, y) {

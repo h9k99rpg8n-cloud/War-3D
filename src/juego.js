@@ -15,6 +15,15 @@ import { crearCicloDiaNoche } from "./mundo/cicloDiaNoche.js";
 import { crearInteraccionBloques } from "./mundo/interaccionBloques.js";
 import { crearTerrenoContainer } from "./mundo/terrenoContainer.js";
 import { ajustarRenderizado, crearSistemaRenderizado } from "./renderizado/escena.js";
+import { aplicarRecursosVisualesInterfaz } from "./renderizado/registroVisuales.js";
+import {
+  intervaloRenderMs,
+  resolverPerfilRendimiento,
+} from "./rendimiento/perfiles.js";
+import {
+  crearMonitorRendimiento,
+  estimarMemoriaRender,
+} from "./rendimiento/monitorRendimiento.js";
 
 export function iniciarJuego(
   THREE,
@@ -29,6 +38,7 @@ export function iniciarJuego(
   prepararInterfaz(interfaz);
   interfaz.juego.classList.toggle("mode-creative", creativo);
   interfaz.juego.dataset.visualStyle = opciones.estiloVisual;
+  aplicarRecursosVisualesInterfaz(document, opciones.estiloVisual);
   interfaz.juego.dataset.joystickSkin = opciones.joystickSkin;
   interfaz.nombreMundoActual.textContent = opciones.nombreMundo;
 
@@ -36,8 +46,31 @@ export function iniciarJuego(
     THREE,
     interfaz.canvas,
     configuracion,
+    { estiloVisual: opciones.estiloVisual },
   );
   const { renderer, scene, camera } = sistemaRenderizado;
+  const direccionCamaraTemporal = new THREE.Vector3();
+  const perfilInicial = resolverPerfilRendimiento(
+    opciones.preferenciasGlobales.perfilRendimiento ||
+      opciones.perfilRendimiento,
+    opciones.preferenciasGlobales,
+  );
+  let ajustesRendimiento = {
+    perfil: perfilInicial.id,
+    limiteFps:
+      opciones.preferenciasGlobales.limiteFps ?? perfilInicial.fps,
+    pixelRatio:
+      opciones.preferenciasGlobales.escalaResolucion ?? perfilInicial.pixelRatio,
+    resolucionDinamica:
+      opciones.preferenciasGlobales.resolucionDinamica ??
+      perfilInicial.resolucionDinamica,
+    distanciaCarga: opciones.distanciaCarga,
+  };
+  sistemaRenderizado.aplicarAjustesRendimiento({
+    pixelRatio: ajustesRendimiento.pixelRatio,
+    sombras: perfilInicial.sombras,
+  });
+  const monitor = crearMonitorRendimiento();
   const terreno = crearTerrenoContainer(
     THREE,
     scene,
@@ -70,6 +103,26 @@ export function iniciarJuego(
     opciones,
     inventario,
     controles,
+    {
+      alCambiarRendimiento(nuevos) {
+        ajustesRendimiento = { ...ajustesRendimiento, ...nuevos };
+        const perfil = resolverPerfilRendimiento(
+          ajustesRendimiento.perfil,
+          {
+            distanciaCarga: ajustesRendimiento.distanciaCarga,
+            pixelRatio: ajustesRendimiento.pixelRatio,
+            fps: ajustesRendimiento.limiteFps,
+            resolucionDinamica: ajustesRendimiento.resolucionDinamica,
+          },
+        );
+        sistemaRenderizado.aplicarAjustesRendimiento({
+          pixelRatio: ajustesRendimiento.pixelRatio,
+          sombras: perfil.sombras,
+        });
+        sistemaRenderizado.establecerEscalaResolucion(1);
+        terreno.establecerDistanciaCarga(ajustesRendimiento.distanciaCarga);
+      },
+    },
   );
   const brazo = crearBrazoPrimeraPersona(
     THREE,
@@ -180,20 +233,26 @@ export function iniciarJuego(
   let promesaGuardado = null;
   let guardadoSolicitado = false;
   let interfazBloqueadaAnterior = false;
+  let aplicacionVisible = document.visibilityState !== "hidden";
+  let ultimoRenderEfectivo = 0;
+  let ultimaAdaptacionResolucion = 0;
 
   const redimensionar = () => ajustarRenderizado(renderer, camera, configuracion);
   window.addEventListener("resize", redimensionar);
   window.addEventListener("orientationchange", redimensionar);
   document.addEventListener("contextmenu", (event) => event.preventDefault());
   configurarMenuJuego();
+  interfaz.panelDesarrollador.hidden =
+    !opciones.preferenciasGlobales.modoDesarrollador;
+  interfaz.cerrarPanelDesarrollador?.addEventListener("click", () => {
+    interfaz.panelDesarrollador.hidden = true;
+  });
 
   const intervaloGuardado = window.setInterval(
     () => void guardarAhora(),
     configuracion.guardado.intervaloMs,
   );
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") void guardarAhora();
-  });
+  document.addEventListener("visibilitychange", manejarVisibilidad);
   window.addEventListener("pagehide", () => void guardarAhora());
 
   renderer.setAnimationLoop(renderFrame);
@@ -202,9 +261,20 @@ export function iniciarJuego(
   ocultarCarga(interfaz);
 
   function renderFrame(now) {
+    if (!aplicacionVisible) return;
+    const intervaloObjetivo = intervaloRenderMs(ajustesRendimiento.limiteFps);
+    if (
+      intervaloObjetivo > 0 &&
+      ultimoRenderEfectivo > 0 &&
+      now - ultimoRenderEfectivo < intervaloObjetivo - 0.7
+    ) {
+      return;
+    }
+    ultimoRenderEfectivo = now;
     const deltaReal = Math.min((now - ultimoFrame) / 1000, 0.25);
     const delta = Math.min(deltaReal, 0.05);
     ultimoFrame = now;
+    monitor.registrarFrame(deltaReal * 1000);
 
     const muerto = salud.estaMuerto();
     const interfazBloqueada =
@@ -331,7 +401,8 @@ export function iniciarJuego(
       zombies.actualizar(nowJuego, deltaJuego, estadoCiclo);
       esqueletos.actualizar(nowJuego, deltaJuego, estadoCiclo);
       fisicaArena.actualizar(deltaJuego);
-      terreno.actualizar(nowJuego, camera.position);
+      const direccionCamara = camera.getWorldDirection(direccionCamaraTemporal);
+      terreno.actualizar(nowJuego, camera.position, direccionCamara);
     }
     estaciones.actualizar(now, !salud.estaMuerto());
     interaccionBloques.actualizar(
@@ -352,6 +423,83 @@ export function iniciarJuego(
       renderer.render(scene, camera);
       ultimoRenderInterfaz = now;
     }
+    actualizarRendimientoDinamico(now);
+    actualizarPanelDesarrollador(now);
+  }
+
+  function manejarVisibilidad() {
+    aplicacionVisible = document.visibilityState !== "hidden";
+    if (!aplicacionVisible) {
+      controles.reiniciar();
+      interaccionBloques.cancelarEntrada?.("pestaña_oculta");
+      renderer.setAnimationLoop(null);
+      void guardarAhora();
+      return;
+    }
+    ultimoFrame = performance.now();
+    ultimoRenderEfectivo = 0;
+    renderer.setAnimationLoop(renderFrame);
+  }
+
+  function actualizarRendimientoDinamico(now) {
+    if (
+      !ajustesRendimiento.resolucionDinamica ||
+      now - ultimaAdaptacionResolucion < 5_000
+    ) {
+      return;
+    }
+    const resumen = monitor.obtenerResumen();
+    const estado = sistemaRenderizado.obtenerEstadoResolucion();
+    const objetivo =
+      ajustesRendimiento.limiteFps > 0
+        ? 1_000 / ajustesRendimiento.limiteFps
+        : 16.67;
+    if (monitor.hayCargaSostenida() && estado.escala > 0.7) {
+      sistemaRenderizado.establecerEscalaResolucion(estado.escala - 0.08);
+      ultimaAdaptacionResolucion = now;
+    } else if (
+      resumen.framePromedioMs > 0 &&
+      resumen.framePromedioMs < objetivo * 0.72 &&
+      estado.escala < 1
+    ) {
+      sistemaRenderizado.establecerEscalaResolucion(estado.escala + 0.04);
+      ultimaAdaptacionResolucion = now;
+    }
+  }
+
+  function actualizarPanelDesarrollador(now) {
+    if (
+      !interfaz.metricasDesarrollador ||
+      interfaz.panelDesarrollador.hidden ||
+      !monitor.debeActualizarPanel(now)
+    ) {
+      return;
+    }
+    const terrenoMetricas = terreno.obtenerMetricas?.() ?? {};
+    const interaccionMetricas = interaccionBloques.obtenerMetricas?.() ?? {};
+    const memoria = estimarMemoriaRender(renderer);
+    const resumen = monitor.obtenerResumen({
+      drawCalls: renderer.info.render.calls,
+      triangles: renderer.info.render.triangles,
+      regiones: terreno.obtenerEstadoCarga().activas,
+      aguaPendiente: terrenoMetricas.agua?.pendientes ?? 0,
+      meshBuilds: terrenoMetricas.reconstruccionesMalla ?? 0,
+      intentosMineria: interaccionMetricas.intentos ?? 0,
+    });
+    interfaz.metricasDesarrollador.textContent = [
+      `FPS PROM.      ${resumen.fpsPromedio.toFixed(1)}`,
+      `FRAME P95      ${resumen.frameP95Ms.toFixed(2)} ms`,
+      `DRAW CALLS     ${resumen.drawCalls}`,
+      `TRIÁNGULOS     ${resumen.triangles}`,
+      `REGIONES       ${resumen.regiones}`,
+      `GEOMETRÍAS     ${memoria.geometries}`,
+      `TEXTURAS       ${memoria.textures}`,
+      `AGUA PEND.     ${resumen.aguaPendiente}`,
+      `MALLAS         ${resumen.meshBuilds}`,
+      `MINERÍA        ${resumen.intentosMineria}`,
+      `RESOLUCIÓN     ${sistemaRenderizado.obtenerEstadoResolucion().pixelRatio.toFixed(2)}×`,
+      `PERFIL         ${String(ajustesRendimiento.perfil).toUpperCase()}`,
+    ].join("\n");
   }
 
   function restaurarPosicionJugador() {
@@ -688,6 +836,12 @@ export function iniciarJuego(
           }
           return { ancho, alto, muestras };
         },
+        interactionTarget(clientX, clientY) {
+          return interaccionBloques.diagnosticarObjetivoPantalla(
+            Number(clientX),
+            Number(clientY),
+          );
+        },
         snapshot() {
           return {
             version: CONFIGURACION.guardado.versionMundo,
@@ -702,6 +856,14 @@ export function iniciarJuego(
               near: scene.fog?.near ?? null,
               far: scene.fog?.far ?? null,
             },
+            sun: {
+              style: sistemaRenderizado.sol.userData.estilo,
+              texture:
+                sistemaRenderizado.sol.userData.texturaSolar?.name ?? null,
+              unlit:
+                sistemaRenderizado.sol.userData.materialSolar?.isMeshBasicMaterial ===
+                true,
+            },
             load: terreno.obtenerEstadoCarga(),
             visible: Object.fromEntries(
               ["pasto", "tierra", "piedra", "agua"].map((tipo) => [
@@ -712,15 +874,36 @@ export function iniciarJuego(
             render: {
               calls: renderer.info.render.calls,
               triangles: renderer.info.render.triangles,
+              ...estimARenderDebug(),
             },
+            performance: monitor.obtenerResumen({
+              terrain: terreno.obtenerMetricas(),
+              interaction: interaccionBloques.obtenerMetricas(),
+            }),
           };
         },
       }),
     });
   }
+
+  function estimARenderDebug() {
+    const memoria = estimarMemoriaRender(renderer);
+    return {
+      geometries: memoria.geometries,
+      textures: memoria.textures,
+      pixelRatio: sistemaRenderizado.obtenerEstadoResolucion().pixelRatio,
+      profile: ajustesRendimiento.perfil,
+      fpsLimit: ajustesRendimiento.limiteFps,
+    };
+  }
 }
 
 function normalizarOpcionesMundo(opciones) {
+  const preferenciasGlobales =
+    opciones.preferenciasGlobales &&
+    typeof opciones.preferenciasGlobales === "object"
+      ? opciones.preferenciasGlobales
+      : {};
   const modo = opciones.modo === "creativo" ? "creativo" : "supervivencia";
   const tipoMundo =
     modo === "creativo" && opciones.tipoMundo === "plano" ? "plano" : "normal";
@@ -751,17 +934,38 @@ function normalizarOpcionesMundo(opciones) {
       opciones.estiloVisual === "pixelar" ? "pixelar" : "traditional",
     aguaExperimental: opciones.aguaExperimental === true,
     perfilRendimiento: ["basico", "equilibrado", "alto", "personalizado"].includes(
-      opciones.perfilRendimiento,
+      preferenciasGlobales.perfilRendimiento || opciones.perfilRendimiento,
     )
-      ? opciones.perfilRendimiento
+      ? preferenciasGlobales.perfilRendimiento || opciones.perfilRendimiento
       : "equilibrado",
     distanciaCarga: Math.max(
       2,
       Math.min(32, Math.floor(Number(opciones.distanciaCarga) || 6)),
     ),
-    joystickSkin: ["traditional", "dark", "pixel"].includes(opciones.joystickSkin)
-      ? opciones.joystickSkin
+    joystickSkin: ["traditional", "dark", "pixel"].includes(
+      preferenciasGlobales.joystickSkin || opciones.joystickSkin,
+    )
+      ? preferenciasGlobales.joystickSkin || opciones.joystickSkin
       : "traditional",
+    preferenciasGlobales: {
+      perfilRendimiento: ["basico", "equilibrado", "alto", "personalizado"].includes(
+        preferenciasGlobales.perfilRendimiento,
+      )
+        ? preferenciasGlobales.perfilRendimiento
+        : "equilibrado",
+      escalaResolucion: limitar(
+        numeroFinito(preferenciasGlobales.escalaResolucion, 1.25),
+        0.65,
+        1.8,
+      ),
+      resolucionDinamica: preferenciasGlobales.resolucionDinamica !== false,
+      limiteFps: [0, 30, 45, 60].includes(
+        Number(preferenciasGlobales.limiteFps),
+      )
+        ? Number(preferenciasGlobales.limiteFps)
+        : 45,
+      modoDesarrollador: preferenciasGlobales.modoDesarrollador === true,
+    },
     colisionJugador:
       opciones.colisionJugador && typeof opciones.colisionJugador === "object"
         ? opciones.colisionJugador
@@ -830,9 +1034,9 @@ export function crearConfiguracionJuego(opciones) {
     }),
     renderizado: Object.freeze({
       ...CONFIGURACION.renderizado,
-      proporcionPixelesMaxima: perfil.proporcionPixeles,
+      proporcionPixelesMaxima: perfil.pixelRatio,
       proporcionPixelesMovil: Math.min(
-        perfil.proporcionPixeles,
+        perfil.pixelRatio,
         CONFIGURACION.renderizado.proporcionPixelesMovil,
       ),
       nieblaCercana,

@@ -1,76 +1,86 @@
-const LIMITE_PILA_PREDETERMINADO = 32;
+import { SURVIVAL_MAX_STACK } from "../inventario/constantes.js";
+
+const LIMITE_PILA_PREDETERMINADO = SURVIVAL_MAX_STACK;
 
 const contenido = {
-  pasto: bloque("Bloque de pasto", "inventory-tile--grass", 35, {
+  pasto: bloque("Bloque de pasto", "inventory-tile--grass", SURVIVAL_MAX_STACK, {
     dureza: 0.75,
     familia: "tierra",
   }),
-  hojas: bloque("Bloque de hojas", "inventory-tile--leaves", 36, {
+  hojas: bloque("Bloque de hojas", "inventory-tile--leaves", SURVIVAL_MAX_STACK, {
     dureza: 0.35,
     familia: "vegetacion",
     transparente: true,
   }),
-  madera: bloque("Bloque de madera", "inventory-tile--wood", 37, {
+  madera: bloque("Bloque de madera", "inventory-tile--wood", SURVIVAL_MAX_STACK, {
     dureza: 1.65,
     familia: "madera",
   }),
-  arena: bloque("Bloque de arena", "inventory-tile--sand", 47, {
+  arena: bloque("Bloque de arena", "inventory-tile--sand", SURVIVAL_MAX_STACK, {
     dureza: 0.7,
     familia: "arena",
     gravedad: true,
+    componentes: {
+      "war:water_interaction": {
+        blocksFlow: true,
+        allowsWaterInside: false,
+        displaceableByWater: false,
+        receivesWaterUpdates: true,
+      },
+    },
   }),
-  tierra: bloque("Bloque de tierra", "inventory-tile--dirt", 40, {
+  tierra: bloque("Bloque de tierra", "inventory-tile--dirt", SURVIVAL_MAX_STACK, {
     dureza: 0.8,
     familia: "tierra",
   }),
-  piedra: bloque("Piedra", "inventory-tile--stone", 48, {
+  piedra: bloque("Piedra", "inventory-tile--stone", SURVIVAL_MAX_STACK, {
     dureza: 3.2,
     familia: "piedra",
     herramientaRecomendada: "pico",
   }),
-  piedra_lisa: bloque("Piedra lisa", "inventory-tile--smooth-stone", 48, {
+  piedra_lisa: bloque("Piedra lisa", "inventory-tile--smooth-stone", SURVIVAL_MAX_STACK, {
     dureza: 3.35,
     familia: "piedra",
     herramientaRecomendada: "pico",
   }),
-  carbon_mineral: bloque("Mineral de carbón", "inventory-tile--coal-ore", 48, {
+  carbon_mineral: bloque("Mineral de carbón", "inventory-tile--coal-ore", SURVIVAL_MAX_STACK, {
     dureza: 5.2,
     familia: "mineral",
     herramientaRecomendada: "pico",
     nivelMinimo: 0,
     suelta: "carbon",
   }),
-  hierro_mineral: bloque("Mineral de hierro", "inventory-tile--iron-ore", 48, {
+  hierro_mineral: bloque("Mineral de hierro", "inventory-tile--iron-ore", SURVIVAL_MAX_STACK, {
     dureza: 6.4,
     familia: "mineral",
     herramientaRecomendada: "pico",
     nivelMinimo: 2,
     suelta: "hierro_bruto",
   }),
-  tablones: bloque("Tablones de madera", "inventory-tile--planks", 48, {
+  tablones: bloque("Tablones de madera", "inventory-tile--planks", SURVIVAL_MAX_STACK, {
     dureza: 1.3,
     familia: "madera",
   }),
-  mesa_crafteo: bloque("Mesa de crafteo", "inventory-tile--crafting-table", 16, {
+  mesa_crafteo: bloque("Mesa de crafteo", "inventory-tile--crafting-table", SURVIVAL_MAX_STACK, {
     dureza: 1.8,
     familia: "estacion",
     comportamientos: ["war:crafting_station"],
   }),
-  horno: bloque("Horno", "inventory-tile--furnace", 16, {
+  horno: bloque("Horno", "inventory-tile--furnace", SURVIVAL_MAX_STACK, {
     dureza: 4.5,
     familia: "estacion",
     herramientaRecomendada: "pico",
     comportamientos: ["war:furnace_station"],
   }),
-  cristal: bloque("Cristal", "inventory-tile--glass", 32, {
+  cristal: bloque("Cristal", "inventory-tile--glass", SURVIVAL_MAX_STACK, {
     dureza: 0.45,
     familia: "cristal",
     transparente: true,
     comportamientos: ["war:transparent_block"],
   }),
-  palo: objeto("Palo", "inventory-tile--stick", 64),
-  carbon: objeto("Carbón", "inventory-tile--coal", 64),
-  hierro_bruto: objeto("Hierro bruto", "inventory-tile--raw-iron", 48),
+  palo: objeto("Palo", "inventory-tile--stick", SURVIVAL_MAX_STACK),
+  carbon: objeto("Carbón", "inventory-tile--coal", SURVIVAL_MAX_STACK),
+  hierro_bruto: objeto("Hierro bruto", "inventory-tile--raw-iron", SURVIVAL_MAX_STACK),
   pico_madera: herramienta("Pico de madera", "inventory-tile--wood-pickaxe", {
     durabilidad: 59,
     velocidadMineria: 3.6,
@@ -142,7 +152,7 @@ export function esHuevoGenerador(id) {
 export function limitePilaContenido(id) {
   const limite = Number(REGISTRO_CONTENIDO[id]?.limitePila);
   return Number.isFinite(limite) && limite > 0
-    ? Math.floor(limite)
+    ? Math.min(SURVIVAL_MAX_STACK, Math.floor(limite))
     : LIMITE_PILA_PREDETERMINADO;
 }
 
@@ -191,6 +201,7 @@ function bloque(nombre, clase, limitePila, opciones = {}) {
     suelta: opciones.suelta ?? null,
     gravedad: Boolean(opciones.gravedad),
     transparente: Boolean(opciones.transparente),
+    componentes: Object.freeze({ ...(opciones.componentes ?? {}) }),
     comportamientos: Object.freeze([
       "war:solid_collision",
       "war:player_held_item",
@@ -240,7 +251,7 @@ function huevo(nombre, clase, entidadId) {
     nombre,
     clase,
     categoria: "entidad",
-    limitePila: 16,
+    limitePila: SURVIVAL_MAX_STACK,
     entidadId,
     comportamientos: Object.freeze(["war:spawn_egg", "war:player_held_item"]),
     sostenido: Object.freeze({

@@ -1,11 +1,35 @@
 # War 3D
 
-**War 3D v1.7.5-snapshot.1** es un juego 3D de bloques para navegador pensado
-primero para móvil. Esta versión inicia oficialmente la **Container Update**.
+**War 3D v1.7.5-snapshot.2** es un juego 3D de bloques para navegador pensado
+primero para móvil. Esta versión corresponde a **Container Update: Performance
+& Polish**.
 
 ## Jugar
 
 **GitHub Pages:** <https://h9k99rpg8n-cloud.github.io/War-3D/>
+
+## Container Update — Snapshot 2
+
+- Minería corregida desde la causa raíz, incluso después de abrir menús,
+  guardar y recargar.
+- Interacción agua/arena mediante `war:water_interaction`.
+- Sol tradicional y Pixelar con textura propia y material sin iluminación.
+- Ajustes globales desde la portada, pantalla completa, vistas previas y diez
+  categorías.
+- Pixelar coordinado mediante un registro central de recursos, sin emojis
+  finales.
+- Texturas diferenciadas para piedra, piedra lisa, tierra, arena y mesa de
+  crafteo.
+- Mesa manual 6×6, libro de recetas independiente y división táctil de stacks.
+- Límite único de 92 objetos en Supervivencia y stacks lógicamente infinitos en
+  Creativo.
+- Perfiles Bajo, Equilibrado y Alto conectados al renderizador; límite de FPS,
+  resolución dinámica, histéresis regional y pausa al ocultar la aplicación.
+- TypeScript estricto, 24 pruebas automatizadas y prueba móvil E2E de minería,
+  guardado y recarga.
+
+El diagnóstico, las métricas y las limitaciones reales están en
+[Container Update — Snapshot 2](docs/CONTAINER_UPDATE_SNAPSHOT_2.md).
 
 ## Container Update — Snapshot 1
 

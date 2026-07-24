@@ -1,4 +1,7 @@
-export const VERSION_JUEGO = "1.7.5-snapshot.1";
+import { SURVIVAL_MAX_STACK } from "./inventario/constantes.js";
+import { PERFILES_RENDIMIENTO } from "./rendimiento/perfiles.js";
+
+export const VERSION_JUEGO = "1.7.5-snapshot.2";
 export const VERSION_THREE = "0.185.1";
 export const VERSION_RAPIER = "0.19.3";
 export const VERSION_IDB = "8.0.3";
@@ -59,29 +62,8 @@ export const CONFIGURACION = Object.freeze({
   }),
   inventario: Object.freeze({
     espaciosMochila: 18,
-    limites: Object.freeze({
-      pasto: 35,
-      hojas: 36,
-      madera: 37,
-      arena: 47,
-      tierra: 40,
-      piedra: 48,
-      piedra_lisa: 48,
-      carbon_mineral: 48,
-      hierro_mineral: 48,
-      tablones: 48,
-      mesa_crafteo: 16,
-      horno: 16,
-      cristal: 32,
-      palo: 64,
-      carbon: 64,
-      hierro_bruto: 48,
-      pico_madera: 1,
-      arco: 1,
-      huevo_arana: 16,
-      huevo_zombie: 16,
-      huevo_esqueleto_umbral: 16,
-    }),
+    limiteSupervivencia: SURVIVAL_MAX_STACK,
+    limites: Object.freeze({}),
   }),
   lagos: Object.freeze({
     nivelAgua: 0,
@@ -128,28 +110,12 @@ export const CONFIGURACION = Object.freeze({
   }),
   rendimiento: Object.freeze({
     perfilPredeterminado: "equilibrado",
-    perfiles: Object.freeze({
-      basico: Object.freeze({
-        distanciaCarga: 6,
-        proporcionPixeles: 1,
-        entidadesActivas: 8,
-        calidadAgua: "baja",
-        densidadParticulas: 0.45,
-      }),
-      equilibrado: Object.freeze({
-        distanciaCarga: 8,
-        proporcionPixeles: 1.35,
-        entidadesActivas: 14,
-        calidadAgua: "media",
-        densidadParticulas: 0.75,
-      }),
-      alto: Object.freeze({
-        distanciaCarga: 12,
-        proporcionPixeles: 1.75,
-        entidadesActivas: 24,
-        calidadAgua: "alta",
-        densidadParticulas: 1,
-      }),
+    perfiles: PERFILES_RENDIMIENTO,
+    presupuestoFrame: Object.freeze({
+      mundoMs: 2.4,
+      aguaMs: 0.7,
+      entidadesMs: 2,
+      mallasMs: 1.8,
     }),
   }),
   horno: Object.freeze({
