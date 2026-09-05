@@ -4,6 +4,10 @@ import {
   RegistroComponentes,
   componentesWar,
 } from "../src/componentes/registroComponentes.js";
+import {
+  obtenerComponentesGUI,
+  prepararPreviewMenu,
+} from "../src/interfaz/componentesMenu.js";
 
 test("Component Core registra la familia GUI inicial", () => {
   const ids = new Set(componentesWar.listar({ familia: "gui" }).map(({ id }) => id));
@@ -70,6 +74,27 @@ test("los validadores rechazan configuraciones GUI imposibles", () => {
     }),
     true,
   );
+});
+
+test("Preview Menu adjunta la rama correcta sin depender de un DOM real", () => {
+  const host = {};
+  prepararPreviewMenu(host, {
+    mode: "3d",
+    width: 128,
+    height: 72,
+    cameraDistance: 12,
+    cameraMovement: "orbit",
+  });
+  const ids = new Set(obtenerComponentesGUI(host).keys());
+  for (const id of [
+    "war:gui_menu_scrotch_creation_preview",
+    "war:gui_menu_scrotch_creation_preview_3d",
+    "war:gui_menu_scrotch_creation_preview_pixel",
+    "war:gui_menu_scrotch_creation_preview_camera",
+  ]) {
+    assert.ok(ids.has(id), `falta ${id}`);
+  }
+  assert.equal(ids.has("war:gui_menu_scrotch_creation_preview_2d"), false);
 });
 
 test("el registro rechaza ids invalidos, padres ausentes y duplicados", () => {
