@@ -1,12 +1,25 @@
 # War 3D
 
-**War 3D v1.7.5-snapshot.2** es un juego 3D de bloques para navegador pensado
-primero para móvil. Esta versión corresponde a **Container Update: Performance
-& Polish**.
+**War 3D v2.0.0-buildy.1** es un juego 3D de bloques para navegador pensado
+primero para móvil. Esta primera War Buildy 2.0 inicia una arquitectura gradual
+basada en componentes sin cambiar de forma importante el gameplay ni la imagen
+de Container Update.
 
 ## Jugar
 
 **GitHub Pages:** <https://h9k99rpg8n-cloud.github.io/War-3D/>
+
+## War Buildy 2.0.0-01 — Component Core
+
+- Registro formal de componentes y subcomponentes con namespace `war:*`.
+- Jerarquías padre/hijo consultables y filtros por familia.
+- Familia GUI/Menu/Scrotch integrada con la portada existente.
+- Contratos de Preview 2D, Preview 3D futuro, resolución Pixel y cámara.
+- Previews de mundos dinámicas preparadas directamente, sin observers continuos.
+- Compatibilidad conservada con `src/comportamientos` y mundos 1.7.x.
+
+El alcance y las exclusiones están documentados en
+[War Buildy 2.0.0-01](docs/WAR_BUILDY_2_0_0_01.md).
 
 ## Container Update — Snapshot 2
 

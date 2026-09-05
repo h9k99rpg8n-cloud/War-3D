@@ -10,7 +10,12 @@ export class RegistroComponentes {
       throw new Error(`El componente ${normalizada.id} ya está registrado.`);
     }
     this.#registros.set(normalizada.id, normalizada);
-    normalizada.onRegister?.();
+    try {
+      normalizada.onRegister?.();
+    } catch (error) {
+      this.#registros.delete(normalizada.id);
+      throw error;
+    }
     return normalizada;
   }
 
@@ -31,11 +36,15 @@ export class RegistroComponentes {
   adjuntar(id, host, configuracion = {}) {
     const definicion = this.obtener(id);
     if (!definicion) throw new Error(`Componente desconocido: ${id}`);
+    if ((typeof host !== "object" && typeof host !== "function") || host === null) {
+      throw new TypeError(`Host inválido para ${id}`);
+    }
     if (!this.validar(id, configuracion)) {
       throw new TypeError(`Configuración inválida para ${id}`);
     }
-    definicion.onAttach?.(host, configuracion);
-    return Object.freeze({ definicion, host, configuracion: Object.freeze({ ...configuracion }) });
+    const configuracionInmutable = copiarConfiguracionInmutable(configuracion);
+    definicion.onAttach?.(host, configuracionInmutable);
+    return Object.freeze({ definicion, host, configuracion: configuracionInmutable });
   }
 
   listar(filtros = {}) {
@@ -59,6 +68,16 @@ export class RegistroComponentes {
       actual = this.obtener(actual.parent);
     }
     return false;
+  }
+
+  listarDescendientes(id, { directos = false } = {}) {
+    const padreId = String(id);
+    if (!this.#registros.has(padreId)) return [];
+    return [...this.#registros.values()].filter((definicion) =>
+      directos
+        ? definicion.parent === padreId
+        : this.esDescendiente(definicion.id, padreId),
+    );
   }
 }
 
@@ -161,17 +180,28 @@ function validarDefinicion(definicion, registros) {
   if (type === "subcomponent" && !parent) {
     throw new TypeError(`El subcomponente ${id} necesita un componente padre.`);
   }
-  if (parent && !registros.has(parent)) {
+  if (type !== "subcomponent" && parent) {
+    throw new TypeError(`Solo un subcomponente puede declarar padre: ${id}`);
+  }
+  const definicionPadre = parent ? registros.get(parent) : null;
+  if (parent && !definicionPadre) {
     throw new TypeError(`El padre ${parent} de ${id} todavía no está registrado.`);
+  }
+  if (definicionPadre && !["component", "subcomponent"].includes(definicionPadre.type)) {
+    throw new TypeError(`El padre ${parent} de ${id} no es un componente.`);
   }
   if (typeof definicion.validate !== "function") {
     throw new TypeError(`El componente ${id} necesita validate().`);
+  }
+  const family = String(definicion.family || "general");
+  if (definicionPadre && definicionPadre.family !== family) {
+    throw new TypeError(`La familia de ${id} no coincide con la de ${parent}.`);
   }
   return Object.freeze({
     ...definicion,
     id,
     version,
-    family: String(definicion.family || "general"),
+    family,
     type,
     parent,
     experimental: Boolean(definicion.experimental),
@@ -219,9 +249,17 @@ function validarOpacidad(configuracion) {
 
 function validarResolucionPixel(configuracion) {
   if (!configuracion || typeof configuracion !== "object") return false;
-  const ancho = Math.floor(Number(configuracion.width));
-  const alto = Math.floor(Number(configuracion.height));
-  return ancho >= 1 && ancho <= 2048 && alto >= 1 && alto <= 2048;
+  const ancho = Number(configuracion.width);
+  const alto = Number(configuracion.height);
+  return (
+    Number.isInteger(ancho) &&
+    Number.isInteger(alto) &&
+    ancho >= 1 &&
+    ancho <= 2048 &&
+    alto >= 1 &&
+    alto <= 2048 &&
+    (configuracion.imageSmoothing === undefined || configuracion.imageSmoothing === false)
+  );
 }
 
 function validarCamaraPreview(configuracion) {
@@ -234,4 +272,19 @@ function validarCamaraPreview(configuracion) {
     distancia <= 256 &&
     ["static", "horizontal", "orbit"].includes(movimiento)
   );
+}
+
+function copiarConfiguracionInmutable(valor, copias = new WeakMap()) {
+  if (valor === null || typeof valor !== "object") return valor;
+  if (copias.has(valor)) return copias.get(valor);
+  const prototipo = Object.getPrototypeOf(valor);
+  if (!Array.isArray(valor) && prototipo !== Object.prototype && prototipo !== null) {
+    return valor;
+  }
+  const copia = Array.isArray(valor) ? [] : Object.create(prototipo);
+  copias.set(valor, copia);
+  for (const [clave, contenido] of Object.entries(valor)) {
+    copia[clave] = copiarConfiguracionInmutable(contenido, copias);
+  }
+  return Object.freeze(copia);
 }

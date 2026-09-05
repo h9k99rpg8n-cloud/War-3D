@@ -1,4 +1,5 @@
 import { obtenerPlantillaMundo } from "../generacion/plantillasMundo.js";
+import { prepararBotonMenu, prepararPreviewMundo } from "./componentesMenu.js";
 
 const LIMITE_NOMBRE = 24;
 
@@ -205,6 +206,7 @@ function pintarMundos(interfaz, mundos, alSeleccionar) {
     vista.width = 160;
     vista.height = 90;
     vista.setAttribute("aria-hidden", "true");
+    prepararPreviewMundo(vista);
     pintarVistaPrevia(vista, mundo);
 
     const informacion = document.createElement("div");
@@ -237,6 +239,7 @@ function pintarMundos(interfaz, mundos, alSeleccionar) {
     jugar.className = "world-card__play";
     jugar.setAttribute("aria-label", `Jugar en ${mundo.nombreMundo}`);
     jugar.innerHTML = '<svg class="ui-icon" aria-hidden="true"><use href="#icon-play"></use></svg><b>ENTRAR</b>';
+    prepararBotonMenu(jugar, "play-world");
     jugar.addEventListener("click", () => alSeleccionar(mundo));
 
     tarjeta.append(vista, informacion, jugar);
