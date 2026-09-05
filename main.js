@@ -7,9 +7,11 @@ import {
   obtenerInterfaz,
 } from "./src/interfaz/interfaz.js";
 import { crearAjustesGlobales } from "./src/interfaz/ajustesGlobales.js";
+import { prepararComponentesMenu } from "./src/interfaz/componentesMenu.js";
 import { esperarSeleccionMundo } from "./src/interfaz/lanzador.js";
 
 const interfaz = obtenerInterfaz();
+prepararComponentesMenu(interfaz);
 const ajustesGlobales = crearAjustesGlobales(interfaz);
 let errorMostrado = false;
 
