@@ -1,7 +1,7 @@
 import { SURVIVAL_MAX_STACK } from "./inventario/constantes.js";
 import { PERFILES_RENDIMIENTO } from "./rendimiento/perfiles.js";
 
-export const VERSION_JUEGO = "1.7.5-snapshot.2";
+export const VERSION_JUEGO = "2.0.0-buildy.1";
 export const VERSION_THREE = "0.185.1";
 export const VERSION_RAPIER = "0.19.3";
 export const VERSION_IDB = "8.0.3";
@@ -43,8 +43,6 @@ export const CONFIGURACION = Object.freeze({
     inclinacionMinima: -1.12,
     inclinacionMaxima: 1.12,
     giroInicial: Math.PI * 0.18,
-    // Una ligera inclinación hacia el suelo muestra el terreno desde el primer
-    // fotograma incluso en pantallas móviles muy anchas.
     inclinacionInicial: -0.22,
   }),
   renderizado: Object.freeze({
