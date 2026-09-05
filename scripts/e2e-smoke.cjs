@@ -90,6 +90,18 @@ let navegador = null;
     timeout: 10_000,
   });
   process.stdout.write("E2E: portada cargada…\n");
+  assert.match(
+    await page.locator("#start-screen").getAttribute("data-war-components"),
+    /war:gui_menu/,
+  );
+  assert.match(
+    await page.locator("#animated-title").getAttribute("data-war-components"),
+    /war:gui_menu_label_animation/,
+  );
+  assert.match(
+    await page.locator("#play-button").getAttribute("data-war-components"),
+    /war:gui_menu_button/,
+  );
   await page.click("#launcher-settings-button");
   await page.waitForSelector("#launcher-settings:not([hidden])");
   assert.equal(
@@ -219,6 +231,16 @@ let navegador = null;
   ]);
   await page.click("#play-button");
   await page.waitForSelector(".world-card__play");
+  const componentesPreview =
+    await page.locator(".world-card__preview").getAttribute("data-war-components");
+  for (const id of [
+    "war:gui_menu_scrotch_creation_preview",
+    "war:gui_menu_scrotch_creation_preview_2d",
+    "war:gui_menu_scrotch_creation_preview_pixel",
+    "war:gui_menu_scrotch_creation_preview_camera",
+  ]) {
+    assert.match(componentesPreview, new RegExp(id));
+  }
   await page.click(".world-card__play");
   await page.waitForFunction(
     () =>

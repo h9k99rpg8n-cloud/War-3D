@@ -1,6 +1,6 @@
 {
   "name": "war-3d",
-  "version": "1.7.5-snapshot.2",
+  "version": "2.0.0-buildy.1",
   "private": true,
   "type": "module",
   "scripts": {

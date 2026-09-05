@@ -16,6 +16,7 @@ Se añade `src/componentes/registroComponentes.js` con un registro genérico cap
 - validar configuraciones antes de adjuntarlas;
 - declarar jerarquías padre/hijo;
 - consultar descendencia;
+- listar descendientes directos o recursivos;
 - filtrar por familia, tipo y estado experimental;
 - rechazar IDs inválidos, padres ausentes y duplicados.
 
@@ -52,9 +53,11 @@ Componentes incluidos:
 
 `src/interfaz/componentesMenu.js` conecta la portada actual con los nuevos componentes sin rediseñarla todavía.
 
-La portada se marca como menú/Scrotch, el título como label animado y los botones principales como botones GUI con opacidad y animación de presión.
+La portada se marca como menú/Scrotch, el título como label animado y los botones principales como botones GUI con opacidad y animación de presión. Esto incluye la vista y los botones de Ajustes globales ya existentes, sin cambiar su aspecto.
 
-También queda preparada la función `prepararPreviewMenu()` para previews 2D o 3D, resolución interna tipo pixel y cámara de preview. La renderización 3D real se implementará en una Buildy posterior; esta primera Buildy define el contrato y validación.
+También queda preparada la función `prepararPreviewMenu()` para previews 2D o 3D, resolución interna tipo pixel y cámara de preview. `src/contratos/componentCore.ts` declara los modos, el contenido 3D futuro y el contrato de cámara. La renderización 3D real se implementará en una Buildy posterior.
+
+Las tarjetas de mundo adjuntan sus componentes al crear cada canvas, sin observación continua del DOM. Esto evita observers persistentes y garantiza que una preview dinámica reciba Preview, 2D, Pixel y cámara `static` una sola vez.
 
 ## Correcciones y protecciones
 
@@ -62,12 +65,17 @@ También queda preparada la función `prepararPreviewMenu()` para previews 2D o 
 - Los subcomponentes no pueden registrarse antes que su padre.
 - La opacidad se limita a `0..1`.
 - Las previews pixeladas requieren dimensiones válidas entre 1 y 2048 px.
+- El contrato Pixel fija `imageSmoothing: false` y rechaza dimensiones decimales.
 - La cámara de preview valida distancia y tipos de movimiento (`static`, `horizontal`, `orbit`).
-- Las configuraciones adjuntas se congelan superficialmente para evitar cambios accidentales después del registro.
+- Las configuraciones adjuntas se copian y congelan recursivamente para evitar mutaciones accidentales después del registro.
+- Un host no vuelve a adjuntar el mismo componente si la preparación de GUI se ejecuta otra vez.
+- Reutilizar un componente con otra configuración se rechaza en vez de conservar silenciosamente datos obsoletos.
+- Las jerarquías rechazan padres no compatibles y familias padre/hijo distintas.
+- La preparación de Preview valida el contrato completo antes de adjuntar nada y no permite mezclar 2D con 3D.
 
 ## Pruebas
 
-Se añade `test/componentes.test.js` para validar el catálogo GUI inicial, jerarquías, configuraciones inválidas y duplicados.
+`test/componentes.test.js` valida el catálogo GUI inicial, jerarquías, configuraciones inválidas, adjuntos inmutables, duplicados y previews dinámicas.
 
 ## Fuera de alcance
 

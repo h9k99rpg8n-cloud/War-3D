@@ -1,7 +1,6 @@
 import { componentesWar } from "../componentes/registroComponentes.js";
 
-const CLAVE_COMPONENTES = Symbol("warGuiComponents");
-const CLAVE_OBSERVADOR = Symbol("warGuiPreviewObserver");
+const COMPONENTES_POR_HOST = new WeakMap();
 
 export function prepararComponentesMenu(interfaz) {
   marcarComponenteGUI(interfaz.pantallaInicio, "war:gui_menu", { role: "launcher" });
@@ -9,7 +8,12 @@ export function prepararComponentesMenu(interfaz) {
     view: "launcher",
   });
 
-  for (const vista of [interfaz.vistaPortada, interfaz.vistaMundos, interfaz.vistaCrearMundo]) {
+  for (const vista of [
+    interfaz.vistaPortada,
+    interfaz.vistaMundos,
+    interfaz.vistaCrearMundo,
+    interfaz.vistaAjustesGlobales,
+  ]) {
     marcarComponenteGUI(vista, "war:gui_menu_scrotch", { view: vista?.id || "screen" });
   }
 
@@ -20,15 +24,16 @@ export function prepararComponentesMenu(interfaz) {
     durationMs: 115,
   });
 
-  marcarBoton(interfaz.botonJugar, "play");
-  marcarBoton(interfaz.botonVolverPortada, "back-home");
-  marcarBoton(interfaz.botonVolverMundos, "back-worlds");
-  marcarBoton(interfaz.botonCrearMundoLista, "create-world");
-  marcarBoton(interfaz.botonAjustesCreacion, "creation-settings");
-  for (const boton of interfaz.botonesCrearMundo ?? []) marcarBoton(boton, "create-world");
+  prepararBotonMenu(interfaz.botonJugar, "play");
+  prepararBotonMenu(interfaz.botonAjustesGlobales, "settings");
+  prepararBotonMenu(interfaz.botonVolverAjustesGlobales, "back-home");
+  prepararBotonMenu(interfaz.botonVolverPortada, "back-home");
+  prepararBotonMenu(interfaz.botonVolverMundos, "back-worlds");
+  prepararBotonMenu(interfaz.botonCrearMundoLista, "create-world");
+  prepararBotonMenu(interfaz.botonAjustesCreacion, "creation-settings");
+  for (const boton of interfaz.botonesCrearMundo ?? []) prepararBotonMenu(boton, "create-world");
 
   prepararPreviewsExistentes(interfaz.pantallaInicio);
-  observarPreviewsDinamicas(interfaz.pantallaInicio);
 }
 
 export function prepararPreviewMenu(elemento, {
@@ -39,30 +44,52 @@ export function prepararPreviewMenu(elemento, {
   cameraMovement = "horizontal",
 } = {}) {
   if (!elemento) return;
-  marcarComponenteGUI(elemento, "war:gui_menu_scrotch_creation_preview", {});
-  marcarComponenteGUI(
-    elemento,
-    mode === "3d"
-      ? "war:gui_menu_scrotch_creation_preview_3d"
-      : "war:gui_menu_scrotch_creation_preview_2d",
-    {},
-  );
-  marcarComponenteGUI(elemento, "war:gui_menu_scrotch_creation_preview_pixel", {
-    width,
-    height,
-  });
-  marcarComponenteGUI(elemento, "war:gui_menu_scrotch_creation_preview_camera", {
-    distance: cameraDistance,
-    movement: cameraMovement,
-  });
+  if (!["2d", "3d"].includes(mode)) {
+    throw new TypeError(`Modo de preview inválido: ${mode}`);
+  }
+  const actuales = obtenerComponentesGUI(elemento);
+  const modoOpuesto = mode === "3d"
+    ? "war:gui_menu_scrotch_creation_preview_2d"
+    : "war:gui_menu_scrotch_creation_preview_3d";
+  if (actuales.has(modoOpuesto)) {
+    throw new TypeError("Un Preview no puede ser 2D y 3D al mismo tiempo.");
+  }
+  const solicitudes = [
+    ["war:gui_menu_scrotch_creation_preview", {}],
+    [`war:gui_menu_scrotch_creation_preview_${mode}`, {}],
+    ["war:gui_menu_scrotch_creation_preview_pixel", {
+      width,
+      height,
+      imageSmoothing: false,
+    }],
+    ["war:gui_menu_scrotch_creation_preview_camera", {
+      distance: cameraDistance,
+      movement: cameraMovement,
+    }],
+  ];
+  for (const [id, configuracion] of solicitudes) {
+    if (!componentesWar.validar(id, configuracion)) {
+      throw new TypeError(`Configuración inválida para ${id}`);
+    }
+  }
+  for (const [id, configuracion] of solicitudes) {
+    marcarComponenteGUI(elemento, id, configuracion);
+  }
 }
 
 export function marcarComponenteGUI(elemento, id, configuracion = {}) {
   if (!elemento) return null;
+  const actuales = COMPONENTES_POR_HOST.get(elemento) ?? new Map();
+  const existente = actuales.get(id);
+  if (existente) {
+    if (!configuracionesIguales(existente.configuracion, configuracion)) {
+      throw new TypeError(`El host ya tiene ${id} con otra configuración.`);
+    }
+    return existente;
+  }
   const adjunto = componentesWar.adjuntar(id, elemento, configuracion);
-  const actuales = elemento[CLAVE_COMPONENTES] ?? new Map();
   actuales.set(id, adjunto);
-  elemento[CLAVE_COMPONENTES] = actuales;
+  COMPONENTES_POR_HOST.set(elemento, actuales);
   if (elemento.dataset) {
     elemento.dataset.warComponents = [...actuales.keys()].join(" ");
   }
@@ -70,18 +97,28 @@ export function marcarComponenteGUI(elemento, id, configuracion = {}) {
 }
 
 export function obtenerComponentesGUI(elemento) {
-  return elemento?.[CLAVE_COMPONENTES]
-    ? new Map(elemento[CLAVE_COMPONENTES])
+  return COMPONENTES_POR_HOST.has(elemento)
+    ? new Map(COMPONENTES_POR_HOST.get(elemento))
     : new Map();
 }
 
-function marcarBoton(boton, action) {
+export function prepararBotonMenu(boton, action) {
   if (!boton) return;
   marcarComponenteGUI(boton, "war:gui_menu_button", { action });
   marcarComponenteGUI(boton, "war:gui_menu_button_opacity", { value: 1 });
   marcarComponenteGUI(boton, "war:gui_menu_button_animation", {
     name: "press",
     durationMs: 140,
+  });
+}
+
+export function prepararPreviewMundo(preview) {
+  if (!preview) return;
+  prepararPreviewMenu(preview, {
+    mode: "2d",
+    width: Number(preview.width) || 160,
+    height: Number(preview.height) || 90,
+    cameraMovement: "static",
   });
 }
 
@@ -92,33 +129,17 @@ function prepararPreviewsExistentes(raiz) {
   }
 }
 
-function observarPreviewsDinamicas(raiz) {
-  if (!raiz || raiz[CLAVE_OBSERVADOR] || typeof globalThis.MutationObserver !== "function") {
-    return;
+function configuracionesIguales(izquierda, derecha) {
+  if (Object.is(izquierda, derecha)) return true;
+  if (!izquierda || !derecha || typeof izquierda !== "object" || typeof derecha !== "object") {
+    return false;
   }
-  const observador = new globalThis.MutationObserver((cambios) => {
-    for (const cambio of cambios) {
-      for (const nodo of cambio.addedNodes ?? []) {
-        if (nodo?.matches?.(".world-card__preview")) prepararPreviewMundo(nodo);
-        if (nodo?.querySelectorAll) {
-          for (const preview of nodo.querySelectorAll(".world-card__preview")) {
-            prepararPreviewMundo(preview);
-          }
-        }
-      }
-    }
-  });
-  observador.observe(raiz, { childList: true, subtree: true });
-  raiz[CLAVE_OBSERVADOR] = observador;
-}
-
-function prepararPreviewMundo(preview) {
-  const actuales = obtenerComponentesGUI(preview);
-  if (actuales.has("war:gui_menu_scrotch_creation_preview")) return;
-  prepararPreviewMenu(preview, {
-    mode: "2d",
-    width: Number(preview.width) || 160,
-    height: Number(preview.height) || 90,
-    cameraMovement: "static",
-  });
+  if (Array.isArray(izquierda) !== Array.isArray(derecha)) return false;
+  const clavesIzquierda = Object.keys(izquierda);
+  const clavesDerecha = Object.keys(derecha);
+  if (clavesIzquierda.length !== clavesDerecha.length) return false;
+  return clavesIzquierda.every((clave) =>
+    Object.hasOwn(derecha, clave) &&
+    configuracionesIguales(izquierda[clave], derecha[clave]),
+  );
 }
