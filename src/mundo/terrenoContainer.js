@@ -84,6 +84,8 @@ export function crearTerrenoContainer(
   const bloquesPorInstancia = Object.fromEntries(
     TIPOS_BLOQUE.map((tipo) => [tipo, []]),
   );
+  const indicesPorTipo = Object.fromEntries(TIPOS_BLOQUE.map((tipo) => [tipo, new Map()]));
+  const celdasSuciasPorTipo = Object.fromEntries(TIPOS_BLOQUE.map((tipo) => [tipo, new Set()]));
   const bloquesVisiblesPorTipo = Object.fromEntries(
     TIPOS_BLOQUE.map((tipo) => [tipo, new Map()]),
   );
@@ -91,6 +93,7 @@ export function crearTerrenoContainer(
   const mallasPorTipo = {};
   const mallas = [];
   const tiposSucios = new Set();
+  const subidasCompletasPendientes = new WeakSet();
   const actualizacionesAgua = new Set();
   const geometriaCubo = new THREE.BoxGeometry(
     tamanoBloque,
@@ -103,6 +106,7 @@ export function crearTerrenoContainer(
   );
   const matriz = new THREE.Matrix4();
   const posicionTemporal = new THREE.Vector3();
+  const limiteTemporal = new THREE.Vector3();
   let ultimoMovimientoAgua = 0;
   let cargaSucia = false;
   let reconstruccionesMalla = 0;
@@ -742,6 +746,7 @@ export function crearTerrenoContainer(
       (cantidadesPorTipo[bloque.tipo] ?? 0) - 1,
     );
     bloquesVisiblesPorTipo[bloque.tipo]?.delete(bloque.clave);
+    celdasSuciasPorTipo[bloque.tipo].add(bloque.clave);
     tiposSucios.add(bloque.tipo);
     const region = obtenerRegionCelda(bloque.x, bloque.z, TAMANO_REGION);
     clavesPorRegion.get(claveRegion(region.x, region.z))?.delete(bloque.clave);
@@ -800,7 +805,7 @@ export function crearTerrenoContainer(
       actualizarVisibilidadCelda(x + dx, y + dy, z + dz);
     }
     encolarAguaAlrededor(x, z);
-    for (const tipo of tiposSucios) reconstruirMalla(tipo);
+    for (const tipo of tiposSucios) sincronizarInstanciasLocales(tipo);
     tiposSucios.clear();
     ultimoTiempoMallasMs = relojActual() - inicio;
   }
@@ -828,6 +833,7 @@ export function crearTerrenoContainer(
     if (!visibles) return;
     if (esBloqueVisible(bloque)) visibles.set(bloque.clave, bloque);
     else visibles.delete(bloque.clave);
+    celdasSuciasPorTipo[bloque.tipo].add(bloque.clave);
     tiposSucios.add(bloque.tipo);
   }
 
@@ -859,6 +865,7 @@ export function crearTerrenoContainer(
       capacidad,
     );
     malla.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    malla.instanceMatrix.onUpload(() => subidasCompletasPendientes.delete(malla.instanceMatrix));
     // Cada malla agrupa todas las instancias visibles de varias regiones. Su
     // esfera cambia al cargar sectores y algunos WebKit antiguos conservan un
     // volumen anterior; evitar ese descarte impide un mundo invisible.
@@ -881,6 +888,11 @@ export function crearTerrenoContainer(
     asegurarCapacidad(tipo, visibles.size);
     const malla = mallasPorTipo[tipo];
     const orden = bloquesPorInstancia[tipo];
+    const indices = indicesPorTipo[tipo];
+    indices.clear();
+    celdasSuciasPorTipo[tipo].clear();
+    malla.instanceMatrix.clearUpdateRanges();
+    subidasCompletasPendientes.add(malla.instanceMatrix);
     orden.length = 0;
     let indice = 0;
     for (const bloque of visibles.values()) {
@@ -895,6 +907,7 @@ export function crearTerrenoContainer(
         posicionTemporal.z,
       );
       malla.setMatrixAt(indice, matriz);
+      indices.set(bloque.clave, indice);
       orden.push(bloque);
       indice += 1;
     }
@@ -903,6 +916,70 @@ export function crearTerrenoContainer(
     if (indice > 0) {
       malla.computeBoundingBox();
       malla.computeBoundingSphere();
+    }
+  }
+
+  // Las ediciones locales no reescriben todas las instancias del material.
+  // El hueco eliminado se rellena con la última instancia; la identidad lógica
+  // del bloque no cambia y el raycast consulta el orden actualizado.
+  function sincronizarInstanciasLocales(tipo) {
+    const visibles = bloquesVisiblesPorTipo[tipo];
+    if (visibles.size > capacidades[tipo]) {
+      reconstruirMalla(tipo);
+      return;
+    }
+    const malla = mallasPorTipo[tipo];
+    const orden = bloquesPorInstancia[tipo];
+    const indices = indicesPorTipo[tipo];
+    const celdas = celdasSuciasPorTipo[tipo];
+    let modificada = false;
+    for (const clave of celdas) {
+      const indice = indices.get(clave);
+      if (indice === undefined || visibles.has(clave)) continue;
+      const ultimo = orden.pop();
+      indices.delete(clave);
+      if (indice < orden.length) {
+        orden[indice] = ultimo;
+        indices.set(ultimo.clave, indice);
+        escribirInstancia(ultimo, indice);
+      }
+      modificada = true;
+    }
+    for (const clave of celdas) {
+      const bloque = visibles.get(clave);
+      if (!bloque || indices.has(clave)) continue;
+      const indice = orden.length;
+      orden.push(bloque);
+      indices.set(clave, indice);
+      escribirInstancia(bloque, indice);
+      modificada = true;
+    }
+    celdas.clear();
+    if (!modificada) return;
+    reconstruccionesMalla += 1;
+    malla.count = orden.length;
+    malla.instanceMatrix.needsUpdate = true;
+    if (malla.boundingBox && !malla.boundingBox.isEmpty()) {
+      malla.boundingSphere ??= new THREE.Sphere();
+      malla.boundingBox.getBoundingSphere(malla.boundingSphere);
+    }
+
+    function escribirInstancia(bloque, indice) {
+      posicionTemporal.set(
+        indiceAMundo(bloque.x, tamanoCuadricula, tamanoBloque),
+        bloque.y * tamanoBloque,
+        indiceAMundo(bloque.z, tamanoCuadricula, tamanoBloque),
+      );
+      matriz.makeTranslation(posicionTemporal.x, posicionTemporal.y, posicionTemporal.z);
+      malla.setMatrixAt(indice, matriz);
+      if (!subidasCompletasPendientes.has(malla.instanceMatrix)) {
+        malla.instanceMatrix.addUpdateRange(indice * 16, 16);
+      }
+      // Bounds conservadores para raycast. Se compactan en la próxima carga
+      // regional; no recorremos el material entero después de cada rotura.
+      malla.boundingBox ??= new THREE.Box3();
+      malla.boundingBox.expandByPoint(limiteTemporal.copy(posicionTemporal).addScalar(tamanoBloque / 2));
+      malla.boundingBox.expandByPoint(limiteTemporal.copy(posicionTemporal).addScalar(-tamanoBloque / 2));
     }
   }
 

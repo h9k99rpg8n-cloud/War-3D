@@ -77,6 +77,52 @@ Las tarjetas de mundo adjuntan sus componentes al crear cada canvas, sin observa
 
 `test/componentes.test.js` valida el catálogo GUI inicial, jerarquías, configuraciones inválidas, adjuntos inmutables, duplicados y previews dinámicas.
 
+## Revisión de estabilidad — septiembre de 2026
+
+Se mantiene `2.0.0-buildy.1`: esta revisión corrige Buildy 01, no añade una Buildy nueva ni modifica formatos de mundos, recetas, inventario, entidades o generación.
+
+### Fallos reproducidos y corregidos
+
+- La copia inmutable conservaba `Map` y `Date` mutables por referencia. Ahora solo admite datos primitivos finitos, objetos planos y arrays. Rechaza recursos vivos, funciones, símbolos y accessors sin ejecutar getters. Conserva ciclos y referencias compartidas; la comparación deja de desbordar la pila al readjuntar configuraciones cíclicas.
+- Deduplicación por host también en el registro, no solo en GUI. `obtenerAdjunto()` consulta la capacidad sin depender de `dataset`. Rechazo de reentrada del mismo `onAttach`; los adjuntos distintos creados por un hook no se pierden.
+- Previews con Pixel o Camera ya adjuntos y diferentes fallaban después de añadir otros componentes. Se verifican los conflictos antes de cualquier adjunto, incluso si se crearon directamente en el core.
+- Un `onRegister` que registraba hijos y luego fallaba dejaba huérfanos. Se revierte el conjunto de registros de esa operación. Los hooks deben ser síncronos; sus efectos externos no se pueden deshacer automáticamente.
+- IDs, versiones, dimensiones y distancias dejan de aceptar coerciones silenciosas de objetos, booleanos o cadenas numéricas.
+- El monitor confundía 30 FPS limitados con sobrecarga. Ahora conoce el intervalo objetivo y el tiempo de trabajo medido en CPU, permite recuperación con margen sostenido y reinicia la medición tras pausas o cambios de objetivo. No mide tiempo GPU ni temperatura.
+- La prueba de arquitectura encontraba cero imports por un escape erróneo en la expresión regular. Ahora usa el parser de TypeScript, incluye `main.js`, reexports, imports por efectos e imports dinámicos literales; verifica rutas y tiene pruebas negativas con ciclos deliberados.
+
+### Optimización acotada de minería
+
+Las ediciones locales actualizan solo las instancias afectadas. Al retirar una instancia se utiliza la última para cubrir el hueco y se actualiza el índice de selección. La geometría, materiales, identidad lógica y archivos de guardado no cambian. Los bounds se amplían de forma conservadora para raycast, sin recorrer todo el material en cada edición. Se conserva la protección de culling para WebKit.
+
+Escenario reproducible: `war:stone_ridges`, semilla `431991`, tamaño 256, distancia 2, 21 regiones cargadas; romper la primera instancia de pasto. Conteo de llamadas a `InstancedMesh.setMatrixAt`:
+
+| Trabajo de una rotura | Base `205a792` | Revisión |
+| --- | ---: | ---: |
+| Escrituras de matrices | 1781 | 2 |
+| Reconstrucciones globales adicionales | 0 | 0 |
+
+Es una reducción de trabajo localizado, no una medición de FPS ni calentamiento en iPhone. La ampliación de capacidad y la carga regional todavía requieren sincronización completa. El agua sigue reconstruyendo su superficie y no incorpora propagación nueva ni Liquid Engine. El meshing por caras y regiones queda pendiente.
+
+### Verificación y límites
+
+- `npm run check`: 52 pruebas aprobadas, build Vite y TypeScript estricto.
+- La cobertura de TypeScript ahora incluye los JS de Component Core, su utilidad de configuración, el adaptador GUI y el monitor. No cubre todavía todo el JavaScript del juego.
+- Pruebas nuevas de índices, matrices y bounds tras rotura, reposición, crecimiento de buffers y carga regional, además de exportación y recarga de cambios.
+- E2E usa `tap` para botones, comprueba previews dinámicas sin duplicados y datos realmente persistidos. Conserva el escenario sin CDN de idb/Rapier para verificar IndexedDB nativo y física de respaldo; no demuestra el camino Rapier.
+- En el entorno local de esta revisión, Chromium estaba incompleto (ejecutable de cero bytes) y la descarga oficial terminó en timeout/502. E2E local bloqueado antes del navegador, no aprobado.
+- El workflow de PR ejecuta check y E2E. Pages depende de esa verificación antes de desplegar. No se omiten pruebas fallidas para publicar.
+- Los parámetros internos `particulas` y `calidadAgua` de los perfiles siguen reservados, sin aplicación al motor. No se presentan aquí como optimizaciones realizadas. Tampoco se ha hecho una sesión prolongada en hardware móvil.
+
+Para ejecutar E2E en un entorno con navegador disponible:
+
+```sh
+npx playwright install chromium
+npm run test:e2e
+```
+
+También se admite `WAR_CHROMIUM_PATH` con un ejecutable Chromium válido.
+
 ## Fuera de alcance
 
 Esta Buildy NO implementa todavía:

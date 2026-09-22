@@ -1,5 +1,5 @@
 const assert = require("node:assert/strict");
-const { existsSync, readFileSync } = require("node:fs");
+const { existsSync, readFileSync, statSync } = require("node:fs");
 const { dirname, join } = require("node:path");
 const { chromium } = require("playwright");
 
@@ -25,6 +25,9 @@ let navegador = null;
   if (!existsSync(executablePath)) {
     executablePath =
       await require("@sparticuz/chromium").default.executablePath();
+  }
+  if (!existsSync(executablePath) || statSync(executablePath).size === 0) {
+    throw new Error("Chromium no está instalado correctamente. Ejecuta npx playwright install chromium o configura WAR_CHROMIUM_PATH con un ejecutable válido.");
   }
   navegador = await chromium.launch({
     headless: true,
@@ -102,25 +105,25 @@ let navegador = null;
     await page.locator("#play-button").getAttribute("data-war-components"),
     /war:gui_menu_button/,
   );
-  await page.click("#launcher-settings-button");
+  await page.tap("#launcher-settings-button");
   await page.waitForSelector("#launcher-settings:not([hidden])");
   assert.equal(
     await page.locator("[data-global-settings-tab]").count(),
     10,
   );
-  await page.click('[data-global-settings-tab="rendimiento"]');
+  await page.tap('[data-global-settings-tab="rendimiento"]');
   await page.waitForTimeout(420);
   await page.screenshot({
     path: "/tmp/war-3d-snapshot2-settings.png",
     fullPage: true,
   });
-  await page.click('[data-performance-profile="basico"]');
-  await page.click('[data-global-settings-tab="controles"]');
-  await page.click('[data-joystick-preview="dark"]');
-  await page.click("#launcher-settings-back");
-  await page.click("#play-button");
+  await page.tap('[data-performance-profile="basico"]');
+  await page.tap('[data-global-settings-tab="controles"]');
+  await page.tap('[data-joystick-preview="dark"]');
+  await page.tap("#launcher-settings-back");
+  await page.tap("#play-button");
   await page.waitForSelector("#empty-worlds:not([hidden])");
-  await page.click("#create-first-world");
+  await page.tap("#create-first-world");
   process.stdout.write("E2E: creando mundo móvil…\n");
   await page.fill("#world-name", "Container móvil");
   await page.locator('input[name="gameMode"][value="creativo"]').evaluate(
@@ -143,7 +146,7 @@ let navegador = null;
     entrada.value = "pixelar";
     entrada.dispatchEvent(new Event("change", { bubbles: true }));
   });
-  await page.click('#world-form button[type="submit"]');
+  await page.tap('#world-form button[type="submit"]');
   process.stdout.write("E2E: solicitud de mundo enviada…\n");
   await page.waitForFunction(
     () =>
@@ -176,14 +179,18 @@ let navegador = null;
   const mineriaAntes = diagnostico.performance.interaction.completadas;
   await romperBloqueTactil(page, cdp, mineriaAntes);
 
-  await page.click("#inventory-button");
+  await page.tap("#inventory-button");
   await page.waitForSelector("#inventory-panel:not([hidden])");
   assert.equal(
     await page.locator("#inventory-panel .inventory-slot--panel").count(),
     24,
   );
   assert.ok(await page.locator("#inventory-catalog-list button").count() >= 20);
-  await page.click("#inventory-close");
+  const mineriaConInventario = await page.evaluate(() => globalThis.__WAR3D_DEBUG__.snapshot().performance.interaction.completadas);
+  await page.locator("#inventory-panel").tap({ position: { x: 10, y: 10 } });
+  await page.waitForTimeout(550);
+  assert.equal(await page.evaluate(() => globalThis.__WAR3D_DEBUG__.snapshot().performance.interaction.completadas), mineriaConInventario);
+  await page.tap("#inventory-close");
   await romperBloqueTactil(
     page,
     cdp,
@@ -194,13 +201,13 @@ let navegador = null;
     ),
   );
 
-  await page.click("#game-menu-button");
-  await page.click("#world-settings-button");
+  await page.tap("#game-menu-button");
+  await page.tap("#world-settings-button");
   await page.waitForSelector("#settings-panel:not([hidden])");
-  await page.click('[data-settings-tab="controles"]');
+  await page.tap('[data-settings-tab="controles"]');
   await page.selectOption("#settings-joystick", "dark");
   assert.equal(await page.locator("#game").getAttribute("data-joystick-skin"), "dark");
-  await page.click("#settings-close");
+  await page.tap("#settings-close");
 
   await page.waitForTimeout(1_200);
   const diagnosticoEstable = await page.evaluate(() =>
@@ -224,13 +231,26 @@ let navegador = null;
     fullPage: true,
   });
 
-  await page.click("#game-menu-button");
+  await page.tap("#game-menu-button");
   await Promise.all([
     page.waitForNavigation({ waitUntil: "domcontentloaded" }),
-    page.click("#exit-world-button"),
+    page.tap("#exit-world-button"),
   ]);
-  await page.click("#play-button");
+  await page.tap("#play-button");
   await page.waitForSelector(".world-card__play");
+  const guardado = await page.evaluate(() => new Promise((resolve, reject) => {
+    const apertura = indexedDB.open("war-3d");
+    apertura.onerror = () => reject(apertura.error);
+    apertura.onsuccess = () => {
+      const db = apertura.result;
+      const lectura = db.transaction("mundos", "readonly").objectStore("mundos").getAll();
+      lectura.onerror = () => { db.close(); reject(lectura.error); };
+      lectura.onsuccess = () => { db.close(); resolve(lectura.result); };
+    };
+  }));
+  assert.equal(guardado.length, 1, "Un toque de creación no debe duplicar mundos.");
+  assert.ok(guardado[0].progreso.terreno.eliminados.length >= 2, "La minería debe persistir al salir.");
+  assert.ok(guardado[0].progreso.inventario, "El inventario debe guardarse junto al terreno.");
   const componentesPreview =
     await page.locator(".world-card__preview").getAttribute("data-war-components");
   for (const id of [
@@ -241,7 +261,22 @@ let navegador = null;
   ]) {
     assert.match(componentesPreview, new RegExp(id));
   }
-  await page.click(".world-card__play");
+  assert.equal(new Set(componentesPreview.split(" ")).size, 4);
+  const preview = await page.evaluate(async () => {
+    const { obtenerComponentesGUI, prepararPreviewMundo } = await import("/src/interfaz/componentesMenu.js");
+    const canvas = document.querySelector(".world-card__preview");
+    prepararPreviewMundo(canvas);
+    const componentes = obtenerComponentesGUI(canvas);
+    return {
+      cantidad: componentes.size,
+      pixel: componentes.get("war:gui_menu_scrotch_creation_preview_pixel").configuracion,
+      camera: componentes.get("war:gui_menu_scrotch_creation_preview_camera").configuracion,
+    };
+  });
+  assert.equal(preview.cantidad, 4);
+  assert.deepEqual(preview.pixel, { width: 160, height: 90, imageSmoothing: false });
+  assert.deepEqual(preview.camera, { distance: 12, movement: "static" });
+  await page.tap(".world-card__play");
   await page.waitForFunction(
     () =>
       document.querySelector("#loading")?.hidden === true &&
