@@ -271,10 +271,11 @@ export function iniciarJuego(
       return;
     }
     ultimoRenderEfectivo = now;
+    const inicioTrabajo = performance.now();
+    const intervaloRealMs = now - ultimoFrame;
     const deltaReal = Math.min((now - ultimoFrame) / 1000, 0.25);
     const delta = Math.min(deltaReal, 0.05);
     ultimoFrame = now;
-    monitor.registrarFrame(deltaReal * 1000);
 
     const muerto = salud.estaMuerto();
     const interfazBloqueada =
@@ -423,7 +424,15 @@ export function iniciarJuego(
       renderer.render(scene, camera);
       ultimoRenderInterfaz = now;
     }
-    actualizarRendimientoDinamico(now);
+    if (!interfazBloqueada) {
+      monitor.registrarFrame(intervaloRealMs, {
+        objetivoMs: intervaloObjetivo || 1000 / 60,
+        trabajoMs: performance.now() - inicioTrabajo,
+      });
+      actualizarRendimientoDinamico(now);
+    } else {
+      monitor.reiniciarMedicion();
+    }
     actualizarPanelDesarrollador(now);
   }
 
@@ -438,6 +447,7 @@ export function iniciarJuego(
     }
     ultimoFrame = performance.now();
     ultimoRenderEfectivo = 0;
+    monitor.reiniciarMedicion();
     renderer.setAnimationLoop(renderFrame);
   }
 
@@ -448,22 +458,18 @@ export function iniciarJuego(
     ) {
       return;
     }
-    const resumen = monitor.obtenerResumen();
     const estado = sistemaRenderizado.obtenerEstadoResolucion();
-    const objetivo =
-      ajustesRendimiento.limiteFps > 0
-        ? 1_000 / ajustesRendimiento.limiteFps
-        : 16.67;
     if (monitor.hayCargaSostenida() && estado.escala > 0.7) {
       sistemaRenderizado.establecerEscalaResolucion(estado.escala - 0.08);
       ultimaAdaptacionResolucion = now;
+      monitor.reiniciarMedicion();
     } else if (
-      resumen.framePromedioMs > 0 &&
-      resumen.framePromedioMs < objetivo * 0.72 &&
+      monitor.hayMargenSostenido() &&
       estado.escala < 1
     ) {
       sistemaRenderizado.establecerEscalaResolucion(estado.escala + 0.04);
       ultimaAdaptacionResolucion = now;
+      monitor.reiniciarMedicion();
     }
   }
 

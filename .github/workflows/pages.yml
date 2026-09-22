@@ -15,7 +15,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  verify:
+    uses: ./.github/workflows/check.yml
+    permissions:
+      contents: read
   deploy:
+    needs: verify
     name: Publicar sitio
     environment:
       name: github-pages

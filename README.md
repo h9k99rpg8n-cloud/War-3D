@@ -17,6 +17,12 @@ de Container Update.
 - Contratos de Preview 2D, Preview 3D futuro, resolución Pixel y cámara.
 - Previews de mundos dinámicas preparadas directamente, sin observers continuos.
 - Compatibilidad conservada con `src/comportamientos` y mundos 1.7.x.
+- Revisión de estabilidad: adjuntos inmutables y sin duplicados, previews sin
+  configuración parcial y detección de ciclos comprobada con casos negativos.
+- Menos escrituras de instancias al romper bloques y corrección del falso
+  diagnóstico de sobrecarga a 30 FPS.
+- Verificación TypeScript del core, GUI de componentes y monitor; pruebas de
+  regresión y comprobaciones obligatorias antes del despliegue.
 
 El alcance y las exclusiones están documentados en
 [War Buildy 2.0.0-01](docs/WAR_BUILDY_2_0_0_01.md).

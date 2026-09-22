@@ -1,7 +1,15 @@
+// @ts-check
 import { componentesWar } from "../componentes/registroComponentes.js";
+import { configuracionesIguales } from "../componentes/configuracionComponentes.js";
 
+/** @typedef {import('../contratos/componentCore').WarComponentId} Id */
+/** @typedef {import('../contratos/componentCore').WarComponentAttachment<unknown>} Adjunto */
+/** @typedef {{id?: string, dataset?: {warComponents?: string}, width?: number, height?: number, querySelectorAll?: (selector: string) => Iterable<Host>}} Host */
+/** @typedef {Partial<Record<'pantallaInicio'|'vistaPortada'|'vistaMundos'|'vistaCrearMundo'|'vistaAjustesGlobales'|'tituloAnimado'|'botonJugar'|'botonAjustesGlobales'|'botonVolverAjustesGlobales'|'botonVolverPortada'|'botonVolverMundos'|'botonCrearMundoLista'|'botonAjustesCreacion', Host>> & {botonesCrearMundo?: Iterable<Host>}} Interfaz */
+/** @type {WeakMap<Host, Map<Id, Adjunto>>} */
 const COMPONENTES_POR_HOST = new WeakMap();
 
+/** @param {Interfaz} interfaz */
 export function prepararComponentesMenu(interfaz) {
   marcarComponenteGUI(interfaz.pantallaInicio, "war:gui_menu", { role: "launcher" });
   marcarComponenteGUI(interfaz.pantallaInicio, "war:gui_menu_scrotch", {
@@ -36,6 +44,7 @@ export function prepararComponentesMenu(interfaz) {
   prepararPreviewsExistentes(interfaz.pantallaInicio);
 }
 
+/** @param {Host | null | undefined} elemento */
 export function prepararPreviewMenu(elemento, {
   mode = "2d",
   width = 160,
@@ -51,9 +60,10 @@ export function prepararPreviewMenu(elemento, {
   const modoOpuesto = mode === "3d"
     ? "war:gui_menu_scrotch_creation_preview_2d"
     : "war:gui_menu_scrotch_creation_preview_3d";
-  if (actuales.has(modoOpuesto)) {
+  if (actuales.has(modoOpuesto) || componentesWar.obtenerAdjunto(modoOpuesto, elemento)) {
     throw new TypeError("Un Preview no puede ser 2D y 3D al mismo tiempo.");
   }
+  /** @type {[Id, Record<string, unknown>][]} */
   const solicitudes = [
     ["war:gui_menu_scrotch_creation_preview", {}],
     [`war:gui_menu_scrotch_creation_preview_${mode}`, {}],
@@ -71,14 +81,22 @@ export function prepararPreviewMenu(elemento, {
     if (!componentesWar.validar(id, configuracion)) {
       throw new TypeError(`Configuración inválida para ${id}`);
     }
+    const existente = actuales.get(id) ?? componentesWar.obtenerAdjunto(id, elemento);
+    if (existente && !configuracionesIguales(existente.configuracion, configuracion)) {
+      throw new TypeError(`El host ya tiene ${id} con otra configuración.`);
+    }
   }
   for (const [id, configuracion] of solicitudes) {
     marcarComponenteGUI(elemento, id, configuracion);
   }
 }
 
+/** @param {Host | null | undefined} elemento @param {Id} id @param {unknown} configuracion */
 export function marcarComponenteGUI(elemento, id, configuracion = {}) {
   if (!elemento) return null;
+  if (!componentesWar.validar(id, configuracion)) {
+    throw new TypeError(`Configuración inválida para ${id}`);
+  }
   const actuales = COMPONENTES_POR_HOST.get(elemento) ?? new Map();
   const existente = actuales.get(id);
   if (existente) {
@@ -96,12 +114,14 @@ export function marcarComponenteGUI(elemento, id, configuracion = {}) {
   return adjunto;
 }
 
+/** @param {Host} elemento @returns {Map<Id, Adjunto>} */
 export function obtenerComponentesGUI(elemento) {
   return COMPONENTES_POR_HOST.has(elemento)
     ? new Map(COMPONENTES_POR_HOST.get(elemento))
     : new Map();
 }
 
+/** @param {Host | null | undefined} boton @param {string} action */
 export function prepararBotonMenu(boton, action) {
   if (!boton) return;
   marcarComponenteGUI(boton, "war:gui_menu_button", { action });
@@ -112,6 +132,7 @@ export function prepararBotonMenu(boton, action) {
   });
 }
 
+/** @param {Host | null | undefined} preview */
 export function prepararPreviewMundo(preview) {
   if (!preview) return;
   prepararPreviewMenu(preview, {
@@ -122,24 +143,10 @@ export function prepararPreviewMundo(preview) {
   });
 }
 
+/** @param {Host | null | undefined} raiz */
 function prepararPreviewsExistentes(raiz) {
   if (!raiz?.querySelectorAll) return;
   for (const preview of raiz.querySelectorAll(".world-card__preview")) {
     prepararPreviewMundo(preview);
   }
-}
-
-function configuracionesIguales(izquierda, derecha) {
-  if (Object.is(izquierda, derecha)) return true;
-  if (!izquierda || !derecha || typeof izquierda !== "object" || typeof derecha !== "object") {
-    return false;
-  }
-  if (Array.isArray(izquierda) !== Array.isArray(derecha)) return false;
-  const clavesIzquierda = Object.keys(izquierda);
-  const clavesDerecha = Object.keys(derecha);
-  if (clavesIzquierda.length !== clavesDerecha.length) return false;
-  return clavesIzquierda.every((clave) =>
-    Object.hasOwn(derecha, clave) &&
-    configuracionesIguales(izquierda[clave], derecha[clave]),
-  );
 }
