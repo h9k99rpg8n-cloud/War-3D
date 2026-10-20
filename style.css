@@ -4907,3 +4907,10 @@ section {
     justify-content: center;
   }
 }
+
+/* War 3D 2.0 panoramic voxel launcher */
+.launcher{isolation:isolate;min-height:100%;overflow:hidden;background:radial-gradient(ellipse at 76% 17%,#ffeba5 0 3%,transparent 18%),linear-gradient(180deg,#65b4e5 0%,#a5d9f0 36%,#d4e9d3 56%,#70b354 57%,#356d40 100%);background-size:cover;background-position:center}
+.launcher::before{z-index:0;bottom:-7%;height:54%;background:linear-gradient(180deg,#73b95d,#245b3b);clip-path:polygon(0 24%,12% 10%,24% 30%,39% 0,54% 27%,68% 7%,84% 28%,100% 5%,100% 100%,0 100%)}
+.launcher::after{z-index:0;right:-8%;bottom:9%;left:35%;height:29%;background:linear-gradient(180deg,#5e9f4c,#2f663b);clip-path:polygon(0 52%,12% 28%,26% 47%,40% 9%,54% 38%,68% 0,82% 40%,100% 14%,100% 100%,0 100%)}
+.launcher-cover{width:min(980px,100%);min-height:min(76vh,680px);align-content:center;justify-self:center;padding:clamp(18px,4vw,42px);border:1px solid rgb(255 255 255/.3);border-radius:24px 8px 24px 8px;background:linear-gradient(135deg,rgb(8 31 38/.18),rgb(9 30 24/.05));box-shadow:0 24px 80px rgb(10 34 24/.18)}
+.launcher-logo h1{letter-spacing:-.075em;text-shadow:0 4px 0 #284d3b,0 8px 0 rgb(16 49 37/.45),0 16px 30px rgb(8 31 25/.35)}

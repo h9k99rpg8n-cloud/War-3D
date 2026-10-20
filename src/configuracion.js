@@ -1,7 +1,7 @@
 import { SURVIVAL_MAX_STACK } from "./inventario/constantes.js";
 import { PERFILES_RENDIMIENTO } from "./rendimiento/perfiles.js";
 
-export const VERSION_JUEGO = "2.0.0-buildy.1";
+export const VERSION_JUEGO = "2.0.0-buildy.2";
 export const VERSION_THREE = "0.185.1";
 export const VERSION_RAPIER = "0.19.3";
 export const VERSION_IDB = "8.0.3";

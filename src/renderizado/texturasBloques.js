@@ -160,14 +160,15 @@ function materialCristal(THREE, textura) {
 }
 
 function crearTextura(THREE, nombre, obtenerPixel, pixelar = false) {
-  const tamano = pixelar ? 8 : 16;
+  // 16x16 pixels sampled sharply: no blurry scaling or smoothing.
+  const tamano = 16;
   const datos = new Uint8Array(tamano * tamano * 4);
 
   for (let y = 0; y < tamano; y += 1) {
     for (let x = 0; x < tamano; x += 1) {
       const colorBase = obtenerPixel(
-        pixelar ? x * 2 : x,
-        pixelar ? y * 2 : y,
+        x,
+        y,
       );
       const color = pixelar ? cuantizarPixel(colorBase) : colorBase;
       const indice = (y * tamano + x) * 4;
@@ -181,11 +182,9 @@ function crearTextura(THREE, nombre, obtenerPixel, pixelar = false) {
   const textura = new THREE.DataTexture(datos, tamano, tamano, THREE.RGBAFormat);
   textura.name = nombre;
   textura.colorSpace = THREE.SRGBColorSpace;
-  textura.magFilter = pixelar ? THREE.NearestFilter : THREE.LinearFilter;
-  textura.minFilter = pixelar
-    ? THREE.NearestFilter
-    : THREE.LinearMipmapLinearFilter;
-  textura.generateMipmaps = true;
+  textura.magFilter = THREE.NearestFilter;
+  textura.minFilter = THREE.NearestFilter;
+  textura.generateMipmaps = false;
   textura.needsUpdate = true;
   return textura;
 }
