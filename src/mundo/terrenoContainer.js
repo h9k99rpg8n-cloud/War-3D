@@ -66,6 +66,9 @@ export function crearTerrenoContainer(
   const tiposSuperficie = new Uint8Array(totalColumnas);
   const nivelesAgua = new Int16Array(totalColumnas);
   nivelesAgua.fill(AGUA_NULA);
+  // Distancia desde el agua natural más cercana; 255 representa una celda seca.
+  const distanciasAgua = new Uint8Array(totalColumnas);
+  distanciasAgua.fill(255);
 
   const anchoClave = tamanoCuadricula + 2;
   const areaClave = anchoClave * anchoClave;
@@ -540,7 +543,10 @@ export function crearTerrenoContainer(
         nivelesBase[indice] = superficie;
         nivelesActuales[indice] = superficie;
         tiposSuperficie[indice] = profundidadLago || playa ? 1 : 0;
-        if (profundidadLago) nivelesAgua[indice] = nivelAgua;
+        if (profundidadLago) {
+          nivelesAgua[indice] = nivelAgua;
+          distanciasAgua[indice] = 0;
+        }
       }
     }
   }
@@ -1034,7 +1040,8 @@ export function crearTerrenoContainer(
     let maximo = null;
     for (let y = nivelEn(x, z) + 1; y <= nivel; y += 1) {
       const bloque = bloques.get(claveBloque(x, y, z));
-      if (bloque && !puedeAguaOcuparCelda(bloque.tipo)) continue;
+      // No unir celdas separadas por un bloque sólido: el agua no lo atraviesa.
+      if (bloque && !puedeAguaOcuparCelda(bloque.tipo)) break;
       if (minimo === null) minimo = y;
       maximo = y;
     }
