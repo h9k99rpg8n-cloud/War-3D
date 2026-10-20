@@ -7,21 +7,15 @@ export function crearFisicaAgua(terreno, { experimental = false } = {}) {
     modo: experimental ? "experimental" : "classic",
 
     estaEnAgua(worldX, worldZ, pies, cabeza) {
-      return terreno.estaEnAgua(worldX, worldZ, pies, cabeza);
-    },
-
-    obtenerParametrosMovimiento(base) {
-      if (!base || typeof base !== "object") {
-        throw new TypeError("El agua necesita parámetros de movimiento.");
-      }
-      if (!experimental) return base;
-      return {
-        ...base,
-        multiplicadorMovimiento: Math.min(base.multiplicadorMovimiento, 0.44),
-        gravedad: Math.max(base.gravedad, 5.2),
-        velocidadAscenso: Math.max(base.velocidadAscenso, 4.5),
-        velocidadHundimiento: Math.min(base.velocidadHundimiento, 0.72),
-      };
+      // El modo experimental añade un margen de contacto pequeño para que la
+      // flotación no parpadee cuando el jugador cruza la superficie del agua.
+      const margen = experimental ? 0.08 : 0;
+      return terreno.estaEnAgua(
+        worldX,
+        worldZ,
+        pies - margen,
+        cabeza + margen,
+      );
     },
 
     obtenerCantidadSensores() {
