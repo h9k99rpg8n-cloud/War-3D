@@ -1139,6 +1139,7 @@ export function crearTerrenoContainer(
       const indice = indiceColumna(x, z);
       let superficie = nivelesAgua[indice];
       let distancia = distanciasAgua[indice];
+      let seExpandio = false;
 
       if (superficie === AGUA_NULA) {
         // Flujo lateral simplificado: el agua solo entra si alcanza la primera
@@ -1165,6 +1166,7 @@ export function crearTerrenoContainer(
           nivelesAgua[indice] = superficie;
           distanciasAgua[indice] = distancia;
           necesitaMalla = true;
+          seExpandio = true;
           break;
         }
       }
@@ -1191,7 +1193,7 @@ export function crearTerrenoContainer(
         necesitaMalla = true;
       }
 
-      if (distancia < configuracion.agua.expansionMaxima) {
+      if (seExpandio && distancia < configuracion.agua.expansionMaxima) {
         for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
           const nx = x + dx;
           const nz = z + dz;
