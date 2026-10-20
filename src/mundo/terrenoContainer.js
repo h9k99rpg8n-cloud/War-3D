@@ -1112,11 +1112,12 @@ export function crearTerrenoContainer(
   }
 
   function encolarAguaAlrededor(x, z) {
+    // Se encolan también las columnas secas vecinas: una rotura puede abrir
+    // una salida para que el agua alcance una depresión contigua.
     for (const [dx, dz] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) {
       const actualX = x + dx;
       const actualZ = z + dz;
       if (!posicionHorizontalValida(actualX, actualZ)) continue;
-      if (nivelesAgua[indiceColumna(actualX, actualZ)] === AGUA_NULA) continue;
       actualizacionesAgua.add(`${actualX}:${actualZ}`);
     }
   }
@@ -1134,13 +1135,69 @@ export function crearTerrenoContainer(
         celdasAguaDescartadas += 1;
         continue;
       }
-      const superficie = nivelesAgua[indiceColumna(x, z)];
+
+      const indice = indiceColumna(x, z);
+      let superficie = nivelesAgua[indice];
+      let distancia = distanciasAgua[indice];
+
+      if (superficie === AGUA_NULA) {
+        // Flujo lateral simplificado: el agua solo entra si alcanza la primera
+        // celda sobre el terreno y esta no está ocupada por un bloque sólido.
+        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = x + dx;
+          const nz = z + dz;
+          if (!posicionHorizontalValida(nx, nz) || !regionCeldaActiva(nx, nz)) continue;
+          const indiceVecino = indiceColumna(nx, nz);
+          const nivelVecino = nivelesAgua[indiceVecino];
+          const distanciaVecino = distanciasAgua[indiceVecino];
+          if (
+            nivelVecino === AGUA_NULA ||
+            distanciaVecino >= configuracion.agua.expansionMaxima ||
+            nivelVecino <= nivelEn(x, z)
+          ) continue;
+
+          const primeraCelda = nivelEn(x, z) + 1;
+          const bloqueEntrada = bloques.get(claveBloque(x, primeraCelda, z));
+          if (bloqueEntrada && !puedeAguaOcuparCelda(bloqueEntrada.tipo)) continue;
+
+          superficie = nivelVecino;
+          distancia = distanciaVecino + 1;
+          nivelesAgua[indice] = superficie;
+          distanciasAgua[indice] = distancia;
+          necesitaMalla = true;
+          break;
+        }
+      }
+
       if (superficie === AGUA_NULA) {
         celdasAguaDescartadas += 1;
         continue;
       }
+
+      // Si se colocó un sólido justo en la superficie líquida, no se conserva
+      // una columna que represente agua atravesando ese bloque.
       const bloqueSuperficie = bloques.get(claveBloque(x, superficie, z));
-      if (bloqueSuperficie) resolverVecindadAgua(bloqueSuperficie.tipo);
+      if (bloqueSuperficie && !puedeAguaOcuparCelda(bloqueSuperficie.tipo)) {
+        const nuevoNivel = superficie - 1;
+        if (nuevoNivel <= nivelEn(x, z)) {
+          nivelesAgua[indice] = AGUA_NULA;
+          distanciasAgua[indice] = 255;
+          necesitaMalla = true;
+          celdasAguaDescartadas += 1;
+          continue;
+        }
+        nivelesAgua[indice] = nuevoNivel;
+        superficie = nuevoNivel;
+        necesitaMalla = true;
+      }
+
+      if (distancia < configuracion.agua.expansionMaxima) {
+        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = x + dx;
+          const nz = z + dz;
+          if (posicionHorizontalValida(nx, nz)) actualizacionesAgua.add(`${nx}:${nz}`);
+        }
+      }
       celdasAguaProcesadas += 1;
       necesitaMalla = true;
     }
