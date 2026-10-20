@@ -18,7 +18,6 @@ import {
 import { crearMapaLagos } from "./generadorLagos.js";
 import {
   puedeAguaOcuparCelda,
-  resolverVecindadAgua,
 } from "../fisica/interaccionAgua.js";
 
 const AGUA_NULA = -32_768;
@@ -1201,7 +1200,6 @@ export function crearTerrenoContainer(
         }
       }
       celdasAguaProcesadas += 1;
-      necesitaMalla = true;
     }
     if (necesitaMalla) reconstruirMalla("agua");
   }
