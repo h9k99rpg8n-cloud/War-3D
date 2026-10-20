@@ -1038,7 +1038,7 @@ export function crearTerrenoContainer(
     if (nivel === AGUA_NULA) return null;
     let minimo = null;
     let maximo = null;
-    for (let y = nivelEn(x, z) + 1; y <= nivel; y += 1) {
+    for (let y = nivelesActuales[indiceColumna(x, z)] + 1; y <= nivel; y += 1) {
       const bloque = bloques.get(claveBloque(x, y, z));
       // No unir celdas separadas por un bloque sólido: el agua no lo atraviesa.
       if (bloque && !puedeAguaOcuparCelda(bloque.tipo)) break;
@@ -1154,10 +1154,10 @@ export function crearTerrenoContainer(
           if (
             nivelVecino === AGUA_NULA ||
             distanciaVecino >= configuracion.agua.expansionMaxima ||
-            nivelVecino <= nivelEn(x, z)
+            nivelVecino <= nivelesActuales[indiceColumna(x, z)]
           ) continue;
 
-          const primeraCelda = nivelEn(x, z) + 1;
+          const primeraCelda = nivelesActuales[indiceColumna(x, z)] + 1;
           const bloqueEntrada = bloques.get(claveBloque(x, primeraCelda, z));
           if (bloqueEntrada && !puedeAguaOcuparCelda(bloqueEntrada.tipo)) continue;
 
@@ -1181,7 +1181,7 @@ export function crearTerrenoContainer(
       const bloqueSuperficie = bloques.get(claveBloque(x, superficie, z));
       if (bloqueSuperficie && !puedeAguaOcuparCelda(bloqueSuperficie.tipo)) {
         const nuevoNivel = superficie - 1;
-        if (nuevoNivel <= nivelEn(x, z)) {
+        if (nuevoNivel <= nivelesActuales[indiceColumna(x, z)]) {
           nivelesAgua[indice] = AGUA_NULA;
           distanciasAgua[indice] = 255;
           necesitaMalla = true;
