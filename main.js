@@ -9,11 +9,19 @@ import {
 import { crearAjustesGlobales } from "./src/interfaz/ajustesGlobales.js";
 import { prepararComponentesMenu } from "./src/interfaz/componentesMenu.js";
 import { esperarSeleccionMundo } from "./src/interfaz/lanzador.js";
+import { crearVistaMenu3D } from "./src/menu/vistaMenu3D.js";
 
 const interfaz = obtenerInterfaz();
 prepararComponentesMenu(interfaz);
 const ajustesGlobales = crearAjustesGlobales(interfaz);
 let errorMostrado = false;
+
+// Vista previa 3D de la portada: se pinta cuanto antes, sin bloquear el resto
+// del arranque. Si WebGL falta, la portada mantiene su fondo CSS.
+const vistaMenu = await crearVistaMenu3D(interfaz.previewMenu, {
+  semilla: "WAR",
+  reducido: window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches === true,
+}).catch(() => null);
 
 window.addEventListener("error", (event) => {
   if (event.error) manejarError(event.error);
@@ -31,7 +39,12 @@ try {
     console.warn("La librería idb no cargó; se usará IndexedDB nativo.", errorIdb);
   }
   const almacenMundos = await crearAlmacenMundos(openDB);
-  const mundoSeleccionado = await esperarSeleccionMundo(interfaz, almacenMundos);
+  interfaz.pantallaInicio.dataset.vista3d = vistaMenu ? "activa" : "ausente";
+  const mundoSeleccionado = await esperarSeleccionMundo(interfaz, almacenMundos, {
+    vistaMenu,
+    audio: ajustesGlobales,
+  });
+  vistaMenu?.destruir?.();
   const opcionesMundo = {
     ...mundoSeleccionado,
     preferenciasGlobales: ajustesGlobales.obtenerPreferencias(),

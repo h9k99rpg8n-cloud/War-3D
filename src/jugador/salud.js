@@ -1,4 +1,9 @@
-export function crearSistemaSalud(interfaz, configuracion, opcionesMundo = {}) {
+export function crearSistemaSalud(
+  interfaz,
+  configuracion,
+  opcionesMundo = {},
+  audio = null,
+) {
   const activo = opcionesMundo.modo === "supervivencia";
   const maximo = configuracion.jugador.corazones;
   const corazonesGuardados = Number(opcionesMundo.progreso?.salud?.corazones);
@@ -37,6 +42,7 @@ export function crearSistemaSalud(interfaz, configuracion, opcionesMundo = {}) {
     recibirDano(cantidad = 1, now = performance.now()) {
       if (!activo || muerto || now < invulnerableHasta) return false;
       corazones = Math.max(0, corazones - cantidad);
+      audio?.reproducir?.("war:jugador_dano", { minimoEntreMs: 260 });
       invulnerableHasta = now + configuracion.jugador.invulnerabilidadMs;
       destelloHasta = now + 280;
       sacudidaHasta = now + 340;
@@ -48,6 +54,7 @@ export function crearSistemaSalud(interfaz, configuracion, opcionesMundo = {}) {
       actualizarInterfaz();
 
       if (corazones === 0) {
+        audio?.reproducir?.("war:jugador_muerte", { minimoEntreMs: 0 });
         muerto = true;
         interfaz.panelMuerte.hidden = false;
         interfaz.juego.classList.add("player-dead");

@@ -1,5 +1,7 @@
 import { CONFIGURACION } from "./configuracion.js";
 import { crearControles } from "./controles/entrada.js";
+import { crearMotorAudio } from "./audio/motorAudio.js";
+import { sonidoDePaso } from "./audio/catalogoSonidos.js";
 import { crearSistemaAranas } from "./entidades/aranas.js";
 import { crearSistemaEsqueletosUmbral } from "./entidades/esqueletosUmbral.js";
 import { crearSistemaZombies } from "./entidades/zombies.js";
@@ -91,7 +93,17 @@ export function iniciarJuego(
   const estadoJugador = opciones.progreso?.jugador ?? {};
   const controles = crearControles(interfaz, configuracion, estadoJugador);
   const inventario = crearInventario(interfaz, configuracion, opciones);
-  const salud = crearSistemaSalud(interfaz, configuracion, opciones);
+  const preferenciasAudio = opciones.preferenciasGlobales ?? {};
+  const audio = crearMotorAudio({
+    volumen: preferenciasAudio.volumen,
+    silenciado: preferenciasAudio.silenciado === true,
+  });
+  // El navegador solo permite audio tras un gesto; el primer toque lo activa.
+  const activarAudio = () => audio.activar();
+  interfaz.juego.addEventListener("pointerdown", activarAudio, { once: true });
+  window.addEventListener("keydown", activarAudio, { once: true });
+
+  const salud = crearSistemaSalud(interfaz, configuracion, opciones, audio);
   const estaciones = crearSistemaEstaciones(
     interfaz,
     inventario,
@@ -161,6 +173,7 @@ export function iniciarJuego(
     salud,
     configuracion,
     opciones,
+    audio,
   );
   const zombies = crearSistemaZombies(
     THREE,
@@ -170,6 +183,7 @@ export function iniciarJuego(
     salud,
     configuracion,
     opciones,
+    audio,
   );
   const esqueletos = crearSistemaEsqueletosUmbral(
     THREE,
@@ -179,6 +193,7 @@ export function iniciarJuego(
     salud,
     configuracion,
     opciones,
+    audio,
   );
 
   const interaccionBloques = crearInteraccionBloques(
@@ -198,6 +213,7 @@ export function iniciarJuego(
       interactuar: (bloque) => estaciones.interactuar(bloque),
       esInteractuable: (tipo) => estaciones.esInteractuable(tipo),
       alAccion: (accion) => brazo.accion(accion),
+      sonido: (id, opcionesSonido) => audio.reproducir(id, opcionesSonido),
       atacar(origen, direccion, alcance, dano) {
         return (
           aranas.atacar(origen, direccion, alcance, dano) ||
@@ -227,6 +243,7 @@ export function iniciarJuego(
     );
   });
 
+  let distanciaPasos = 0;
   let ultimoFrame = performance.now();
   let tiempoSimulado = ultimoFrame;
   let ultimoRenderInterfaz = 0;
@@ -300,6 +317,7 @@ export function iniciarJuego(
       ? { lateral: 0, adelante: 0 }
       : controles.obtenerMovimiento();
     const { giro, inclinacion } = controles.obtenerVista();
+    audio.actualizarOyente(camera.position, giro);
     const forwardX = -Math.sin(giro);
     const forwardZ = -Math.cos(giro);
     const rightX = Math.cos(giro);
@@ -340,6 +358,32 @@ export function iniciarJuego(
       piesJugador,
       cabezaJugador,
     );
+
+    // Pasos: se disparan al avanzar una fracción de bloque, con el sonido del
+    // material que hay bajo los pies.
+    const avanceReal = Math.hypot(
+      desplazamientoX,
+      desplazamientoZ,
+    );
+    if (!muerto && avanceReal > 0.0005 && esTierraFirme()) {
+      distanciaPasos += avanceReal;
+      const zancada = mundo.tamanoBloque * 0.92;
+      if (distanciaPasos >= zancada) {
+        distanciaPasos = 0;
+        const tipoPiso =
+          terreno.tipoBajoJugador?.(
+            camera.position.x,
+            camera.position.z,
+            camera.position.y - jugador.alturaOjos,
+          ) ?? "tierra";
+        audio.reproducir(sonidoDePaso(tipoPiso), {
+          volumen: 0.75,
+          minimoEntreMs: 180,
+        });
+      }
+    } else if (muerto) {
+      distanciaPasos = 0;
+    }
 
     if (!muerto) {
       camera.position.x = THREE.MathUtils.clamp(
@@ -627,6 +671,19 @@ export function iniciarJuego(
     if (clase) interfaz.estadoGuardado.classList.add(clase);
   }
 
+  function esTierraFirme() {
+    return (
+      !volando &&
+      Math.abs(velocidadVertical) < 0.35 &&
+      !fisicaAgua.estaEnAgua(
+        camera.position.x,
+        camera.position.z,
+        camera.position.y - jugador.alturaOjos,
+        camera.position.y + (jugador.altura - jugador.alturaOjos),
+      )
+    );
+  }
+
   function actualizarMovimientoVertical(delta, saltoSolicitado) {
     if (volando) {
       const movimientoVertical = THREE.MathUtils.clamp(
@@ -741,6 +798,7 @@ export function iniciarJuego(
     if (saltoSolicitado && tocandoSuelo) {
       camera.position.y = soporteCercano + jugador.alturaOjos;
       velocidadVertical = jugador.velocidadSalto;
+      audio.reproducir("war:salto", { volumen: 0.7 });
     } else if (tocandoSuelo) {
       camera.position.y = soporteCercano + jugador.alturaOjos;
       velocidadVertical = 0;
@@ -965,6 +1023,8 @@ function normalizarOpcionesMundo(opciones) {
         ? Number(preferenciasGlobales.limiteFps)
         : 45,
       modoDesarrollador: preferenciasGlobales.modoDesarrollador === true,
+      volumen: limitar(numeroFinito(preferenciasGlobales.volumen, 80), 0, 100),
+      silenciado: preferenciasGlobales.silenciado === true,
     },
     colisionJugador:
       opciones.colisionJugador && typeof opciones.colisionJugador === "object"

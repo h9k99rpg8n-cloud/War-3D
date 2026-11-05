@@ -3,6 +3,8 @@ import {
   calcularRotura,
   obtenerDefinicionContenido,
 } from "../contenido/registroContenido.js";
+import { sonidoDeMaterial } from "../audio/catalogoSonidos.js";
+import { crearEmisorParticulas } from "../renderizado/particulasBloques.js";
 
 export function crearInteraccionBloques(
   THREE,
@@ -47,6 +49,7 @@ export function crearInteraccionBloques(
   // el reloj pausado del mundo. Tras abrir un menú ambos quedaban desfasados y
   // ninguna rotura posterior podía alcanzar el 100 %.
   let relojInteraccion = performance.now();
+  const particulas = crearEmisorParticulas(THREE, scene, terreno);
   const metricas = {
     intentos: 0,
     sinObjetivo: 0,
@@ -145,6 +148,7 @@ export function crearInteraccionBloques(
       if (jugadorActivo) actualizarRotura(now);
       else if (rotura) cancelarRotura();
       actualizarRecolectables(now);
+      particulas.actualizar(now);
       if (now - ultimaRevisionInteraccion >= 120) {
         ultimaRevisionInteraccion = now;
         const objetivo = buscarImpacto(0, 0);
@@ -156,6 +160,15 @@ export function crearInteraccionBloques(
         ultimaRevisionNaturales = now;
         cargarPalosNaturales(now);
       }
+    },
+
+    /** Resumen de las partículas vivas, útil para el panel de rendimiento. */
+    obtenerMetricasParticulas() {
+      return particulas.metricas();
+    },
+
+    liberarParticulas() {
+      particulas.dispose();
     },
 
     exportarEstado() {
@@ -259,6 +272,14 @@ export function crearInteraccionBloques(
     punteroActivo = null;
     metricas.completadas += 1;
     accionesEntidades.alAccion?.("romper", resultado.bloque.tipo);
+    particulas.estallar(
+      resultado.posicion,
+      resultado.bloque.tipo,
+      mundo.tamanoBloque,
+    );
+    accionesEntidades.sonido?.(sonidoDeMaterial(resultado.bloque.tipo), {
+      volumen: 0.9,
+    });
     if (opcionesMundo.modo === "creativo") {
       mostrarMensaje(`${NOMBRES_BLOQUE[resultado.bloque.tipo]} eliminado`);
     } else if (!regla.obtieneRecurso) {
@@ -375,6 +396,7 @@ export function crearInteraccionBloques(
       scene.remove(item.malla);
       recolectables.splice(i, 1);
       if (item.naturalId) naturalesRecogidos.add(item.naturalId);
+      accionesEntidades.sonido?.("war:recoger", { volumen: 0.7 });
       mostrarMensaje(`+1 ${NOMBRES_BLOQUE[item.tipo]}`);
     }
   }
@@ -436,6 +458,7 @@ export function crearInteraccionBloques(
 
     inventario.usarBloque(tipo);
     accionesEntidades.alAccion?.("colocar", tipo);
+    accionesEntidades.sonido?.("war:colocar_bloque", { volumen: 0.8 });
     const cayendo = fisicaArena?.procesarBloqueColocado(
       resultado.bloque,
       resultado.posicion,

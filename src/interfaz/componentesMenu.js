@@ -33,6 +33,18 @@ export function prepararComponentesMenu(interfaz) {
   prepararBotonMenu(interfaz.botonAjustesCreacion, "creation-settings");
   for (const boton of interfaz.botonesCrearMundo ?? []) prepararBotonMenu(boton, "create-world");
 
+  // La portada es la primera Preview 3D real de la familia Scrotch: cámara
+  // propia a 60 fps, resolución interna tipo Pixel y movimiento de órbita.
+  if (interfaz.previewMenu) {
+    prepararPreviewMenu(interfaz.previewMenu, {
+      mode: "3d",
+      width: 1280,
+      height: 720,
+      cameraDistance: 34,
+      cameraMovement: "orbit",
+    });
+  }
+
   prepararPreviewsExistentes(interfaz.pantallaInicio);
 }
 

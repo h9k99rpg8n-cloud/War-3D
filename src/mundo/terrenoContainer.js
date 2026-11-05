@@ -171,6 +171,9 @@ export function crearTerrenoContainer(
       return biblioteca.materialesRecolectables[tipo] ?? null;
     },
 
+    /** Texturas del mundo, usadas por las partículas de bloques. */
+    bibliotecaTexturas: biblioteca,
+
     exportarCambios() {
       return {
         version: 2,
@@ -257,6 +260,28 @@ export function crearTerrenoContainer(
 
     obtenerAlturaSoporte(worldX, worldZ, alturaMaxima, radio) {
       return calcularAlturaSoporte(worldX, worldZ, alturaMaxima, radio);
+    },
+
+    /**
+     * Tipo de bloque que hay justo debajo de un punto del mundo. El sonido de
+     * pasos lo usa para sonar a pasto, piedra, arena o madera.
+     */
+    tipoBajoJugador(worldX, worldZ, alturaReferencia = null, margen = 0.35) {
+      const gridX = worldX / tamanoBloque + (tamanoCuadricula - 1) / 2;
+      const gridZ = worldZ / tamanoBloque + (tamanoCuadricula - 1) / 2;
+      const x = Math.round(gridX);
+      const z = Math.round(gridZ);
+      if (x < 0 || z < 0 || x >= tamanoCuadricula || z >= tamanoCuadricula) {
+        return "tierra";
+      }
+      const techo = alturaReferencia === null
+        ? nivelMaximoColocacion
+        : Math.floor(alturaReferencia / tamanoBloque) + 1;
+      for (let y = Math.min(nivelMaximoColocacion, techo); y >= nivelFondo; y -= 1) {
+        const bloque = bloques.get(claveBloque(x, y, z));
+        if (bloque) return bloque.tipo;
+      }
+      return "tierra";
     },
 
     obtenerCantidadTipo(tipo) {
