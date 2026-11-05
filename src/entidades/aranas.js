@@ -6,6 +6,7 @@ export function crearSistemaAranas(
   salud,
   configuracion,
   opcionesMundo = {},
+  audio = null,
 ) {
   const ajustes = configuracion.aranas;
   const hostiles =
@@ -144,6 +145,11 @@ export function crearSistemaAranas(
       objetivo.vida -= Math.max(1, Number(dano) || 1);
       objetivo.golpeJugadorHasta = performance.now() + 160;
       if (objetivo.vida <= 0) {
+        audio?.reproducirEn?.("war:arana_muerte", {
+          x: objetivo.x,
+          y: objetivo.y + 0.5,
+          z: objetivo.z,
+        }, { oyente: camera.position, minimoEntreMs: 0 });
         const indice = aranas.indexOf(objetivo);
         if (indice >= 0) aranas.splice(indice, 1);
       }
@@ -335,6 +341,16 @@ export function crearSistemaAranas(
       (inclinacionObjetivo - arana.inclinacion) * mezclaInclinacion;
     arana.fasePaso += delta * velocidad * (arana.subiendo ? 7.4 : 5.2);
 
+    // Pasos de quitina: se oyen sobre todo cuando la araña se acerca o sube.
+    if (hostiles && now >= (arana.siguientePaso ?? 0)) {
+      arana.siguientePaso = now + (arana.subiendo ? 260 : 420) + Math.random() * 180;
+      audio?.reproducirEn?.("war:arana_paso", {
+        x: arana.x,
+        y: arana.y + 0.2,
+        z: arana.z,
+      }, { oyente: camera.position, minimoEntreMs: 120, volumen: persiguiendo ? 1 : 0.6 });
+    }
+
     if (
       hostiles &&
       arana.danoPendiente &&
@@ -345,6 +361,10 @@ export function crearSistemaAranas(
         camera.position.x - arana.x,
         camera.position.z - arana.z,
       );
+      audio?.reproducirEn?.("war:arana_ataque", { x: arana.x, y: arana.y + 0.6, z: arana.z }, {
+        oyente: camera.position,
+        minimoEntreMs: 220,
+      });
       if (
         !salud.estaMuerto() &&
         now <= arana.vistoHasta &&

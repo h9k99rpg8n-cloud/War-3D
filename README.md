@@ -1,13 +1,36 @@
 # War 3D
 
-**War 3D v2.0.0-buildy.1** es un juego 3D de bloques para navegador pensado
-primero para móvil. Esta primera War Buildy 2.0 inicia una arquitectura gradual
-basada en componentes sin cambiar de forma importante el gameplay ni la imagen
-de Container Update.
+**War 3D v2.0.0-buildy.2** es un juego 3D de bloques para navegador pensado
+primero para móvil. La rama War Buildy 2.0 avanza en pasos pequeños y
+verificables: la primera Buildy montó el núcleo de componentes y esta segunda
+añade **sonido procedural real**, **partículas del mismo bloque** y un **menú
+con vista previa 3D del mundo**, sin cambiar el gameplay de Container Update.
 
 ## Jugar
 
 **GitHub Pages:** <https://h9k99rpg8n-cloud.github.io/War-3D/>
+
+## War Buildy 2.0.0-02 — Sound & Living Menu
+
+- Sonido sintetizado con DSP propio: 30 efectos y 93 variantes, sin un solo
+  archivo de audio. Romper bloques suena distinto en piedra, madera, cristal,
+  arena u hojas.
+- Criaturas con voz real: la araña chirría y frota quitina, el zombi gruñe con
+  formantes vocálicos y el esqueleto tensa el arco.
+- Audio posicional con paneo y distancia: si la araña está a tu izquierda, la
+  oyes a la izquierda.
+- Pasos según el material bajo los pies, salto, daño, muerte, recoger, colocar
+  y sonidos de interfaz.
+- El volumen global de Ajustes ya controla el motor de audio.
+- Al romper un bloque salen esquirlas con su textura real, con gravedad, rebote
+  y desvanecido.
+- La portada es una vista previa 3D viva: mundo voxel con semilla `WAR`, con
+  las letras grabadas en el relieve, cámara orbitando, nubes y agua.
+- Botones de la portada a la izquierda y en columna: JUGAR, AJUSTES, versión.
+- Las tarjetas de mundo se pintan con su propia semilla real.
+
+Alcance completo en
+[War Buildy 2.0.0-02](docs/WAR_BUILDY_2_0_0_02.md).
 
 ## War Buildy 2.0.0-01 — Component Core
 

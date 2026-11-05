@@ -6,6 +6,7 @@ export function crearSistemaEsqueletosUmbral(
   salud,
   configuracion,
   opcionesMundo = {},
+  audio = null,
 ) {
   const ajustes = configuracion.esqueletoUmbral;
   const hostiles =
@@ -94,6 +95,11 @@ export function crearSistemaEsqueletosUmbral(
       if (!objetivo) return false;
       objetivo.vida -= Math.max(1, Number(dano) || 1);
       objetivo.flashHasta = performance.now() + 150;
+      audio?.reproducirEn?.("war:esqueleto_huesos", {
+        x: objetivo.x,
+        y: objetivo.y + 1.4,
+        z: objetivo.z,
+      }, { oyente: camera.position, minimoEntreMs: 90 });
       if (objetivo.vida <= 0) eliminarEsqueleto(objetivo);
       return true;
     },
@@ -248,6 +254,11 @@ export function crearSistemaEsqueletosUmbral(
   }
 
   function disparar(esqueleto, now) {
+    audio?.reproducirEn?.("war:esqueleto_arco", {
+      x: esqueleto.x,
+      y: esqueleto.y + 2,
+      z: esqueleto.z,
+    }, { oyente: camera.position, minimoEntreMs: 400 });
     const origen = new THREE.Vector3(
       esqueleto.x,
       esqueleto.y + 2.05,

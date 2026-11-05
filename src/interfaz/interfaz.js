@@ -14,6 +14,7 @@ export function obtenerInterfaz() {
     vistaCrearMundo: document.querySelector("#launcher-create"),
     vistaAjustesGlobales: document.querySelector("#launcher-settings"),
     tituloAnimado: document.querySelector("#animated-title"),
+    previewMenu: document.querySelector("#menu-preview-3d"),
     botonJugar: document.querySelector("#play-button"),
     botonAjustesGlobales: document.querySelector("#launcher-settings-button"),
     botonVolverAjustesGlobales: document.querySelector("#launcher-settings-back"),

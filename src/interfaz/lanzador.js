@@ -1,14 +1,41 @@
 import { obtenerPlantillaMundo } from "../generacion/plantillasMundo.js";
+import { crearMotorAudio } from "../audio/motorAudio.js";
+import { pintarMiniaturaMundo } from "../menu/menuMundos.js";
 import { prepararBotonMenu, prepararPreviewMundo } from "./componentesMenu.js";
 
 const LIMITE_NOMBRE = 24;
 
-export function esperarSeleccionMundo(interfaz, almacenMundos) {
+export function esperarSeleccionMundo(interfaz, almacenMundos, opcionesMenu = {}) {
   const detenerTitulo = animarTitulo(interfaz.tituloAnimado);
   configurarFormulario(interfaz);
 
+  // Sonidos de interfaz del lanzador (clic y abrir panel). El navegador los
+  // habilita en el primer gesto del usuario.
+  const { vistaMenu = null, audio: ajustesGlobales = null } = opcionesMenu;
+  const preferencias = ajustesGlobales?.obtenerPreferencias?.() ?? {};
+  const audioMenu = crearMotorAudio({
+    volumen: preferencias.volumen,
+    silenciado: preferencias.silenciado === true,
+  });
+  const sonar = (id, volumen = 1) => {
+    audioMenu.activar();
+    audioMenu.reproducir(id, { volumen, minimoEntreMs: 40 });
+  };
+  interfaz.pantallaInicio.addEventListener("pointerdown", () => audioMenu.activar(), {
+    once: true,
+  });
+  for (const boton of interfaz.pantallaInicio.querySelectorAll(
+    "button, [data-joystick-preview], [data-performance-profile], [data-visual-preview]",
+  )) {
+    boton.addEventListener("pointerdown", () => sonar("war:ui_clic", 0.6));
+  }
+  for (const pestana of interfaz.pestanasAjustesGlobales ?? []) {
+    pestana.addEventListener("pointerdown", () => sonar("war:ui_abrir", 0.7));
+  }
+
   return new Promise((resolve, reject) => {
     interfaz.botonJugar.addEventListener("click", mostrarMundos);
+    interfaz.estadoLanzador.addEventListener("pointerdown", () => sonar("war:ui_clic", 0.6));
     interfaz.botonVolverPortada.addEventListener("click", () => mostrarVista(interfaz, "portada"));
     interfaz.botonesCrearMundo.forEach((boton) => {
       boton.addEventListener("click", () => mostrarVista(interfaz, "crear"));
@@ -22,6 +49,9 @@ export function esperarSeleccionMundo(interfaz, almacenMundos) {
         mostrarVista(interfaz, "mundos");
         const mundos = await almacenMundos.listarMundos();
         pintarMundos(interfaz, mundos, seleccionarMundo);
+        // Mientras el jugador explora los mundos, los sonidos se terminan de
+        // sintetizar en segundo plano.
+        audioMenu.activar();
         interfaz.estadoLanzador.textContent = mundos.length
           ? `${mundos.length} ${mundos.length === 1 ? "MUNDO GUARDADO" : "MUNDOS GUARDADOS"}`
           : "TU PRIMERA AVENTURA ESTÁ POR COMENZAR";
@@ -82,6 +112,7 @@ export function esperarSeleccionMundo(interfaz, almacenMundos) {
 
     function seleccionarMundo(mundo) {
       detenerTitulo();
+      vistaMenu?.mostrar?.(false);
       document.title = `War 3D — ${mundo.nombreMundo}`;
       resolve(mundo);
     }
@@ -207,7 +238,7 @@ function pintarMundos(interfaz, mundos, alSeleccionar) {
     vista.height = 90;
     vista.setAttribute("aria-hidden", "true");
     prepararPreviewMundo(vista);
-    pintarVistaPrevia(vista, mundo);
+    pintarMiniaturaMundo(vista, mundo);
 
     const informacion = document.createElement("div");
     informacion.className = "world-card__body";
@@ -245,35 +276,6 @@ function pintarMundos(interfaz, mundos, alSeleccionar) {
     tarjeta.append(vista, informacion, jugar);
     interfaz.listaMundos.append(tarjeta);
   }
-}
-
-function pintarVistaPrevia(canvas, mundo) {
-  const contexto = canvas.getContext("2d");
-  if (!contexto) return;
-  contexto.imageSmoothingEnabled = false;
-  const semilla = Number(mundo.semilla) || 1;
-  const noche = mundo.tiempo === "siempre_noche";
-  contexto.fillStyle = noche ? "#17223f" : "#82c4e8";
-  contexto.fillRect(0, 0, 160, 54);
-  contexto.fillStyle = noche ? "#f4f3d8" : "#ffd762";
-  contexto.fillRect(126, 12, 12, 12);
-  contexto.fillStyle = noche ? "#17391f" : "#69bd49";
-  contexto.fillRect(0, 50, 160, 40);
-  contexto.fillStyle = noche ? "#102c18" : "#45963b";
-  for (let x = 0; x < 160; x += 8) {
-    const altura = 3 + Math.floor(ruido(semilla, x) * 8);
-    contexto.fillRect(x, 50 - altura, 8, altura + 2);
-  }
-  contexto.fillStyle = "#77502e";
-  for (let indice = 0; indice < 4; indice += 1) {
-    const x = 15 + Math.floor(ruido(semilla + indice, 9) * 120);
-    contexto.fillRect(x, 34, 6, 23);
-    contexto.fillStyle = noche ? "#174628" : "#368c3c";
-    contexto.fillRect(x - 9, 24, 24, 18);
-    contexto.fillStyle = "#77502e";
-  }
-  contexto.fillStyle = "rgba(255,255,255,.18)";
-  contexto.fillRect(0, 50, 160, 2);
 }
 
 function agregarFecha(lista, etiqueta, fecha) {
@@ -336,9 +338,4 @@ function animarTitulo(elemento) {
     detenido = true;
     window.clearTimeout(temporizador);
   };
-}
-
-function ruido(a, b) {
-  const valor = Math.sin(a * 0.00013 + b * 17.31) * 43758.5453;
-  return valor - Math.floor(valor);
 }

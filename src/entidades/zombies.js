@@ -6,6 +6,7 @@ export function crearSistemaZombies(
   salud,
   configuracion,
   opcionesMundo = {},
+  audio = null,
 ) {
   const ajustes = configuracion.zombies;
   const hostiles =
@@ -356,12 +357,28 @@ export function crearSistemaZombies(
     }
     zombie.fasePaso += delta * velocidad * (zombie.corriendo ? 7.6 : 4.1);
 
+    // Gemido ambiental: aparece de vez en cuando mientras ronda, más seguido
+    // cuando persigue al jugador.
+    if (hostiles && now >= (zombie.siguienteGemido ?? 0)) {
+      zombie.siguienteGemido = now + (persiguiendo ? 3_400 : 7_200) + Math.random() * 2_600;
+      audio?.reproducirEn?.("war:zombie_gemido", {
+        x: zombie.x,
+        y: zombie.y + 1.6,
+        z: zombie.z,
+      }, { oyente: camera.position, minimoEntreMs: 900 });
+    }
+
     if (
       hostiles &&
       zombie.danoPendiente &&
       now - zombie.inicioAtaque >= ajustes.retrasoGolpeMs
     ) {
       zombie.danoPendiente = false;
+      audio?.reproducirEn?.("war:zombie_ataque", {
+        x: zombie.x,
+        y: zombie.y + 1.5,
+        z: zombie.z,
+      }, { oyente: camera.position, minimoEntreMs: 260 });
       const distanciaGolpe = Math.hypot(
         camera.position.x - zombie.x,
         camera.position.z - zombie.z,

@@ -6,10 +6,10 @@
     <meta name="theme-color" content="#87b9d9">
     <meta
       name="description"
-      content="War 3D v1.7.5 Snapshot 2: Performance & Polish, crafteo manual y rendimiento móvil."
+      content="War 3D v2.0.0 War Buildy 2: sonido procedural, partículas de bloques y menú 3D con vista previa dinámica."
     >
     <title>War 3D — Container Update</title>
-    <link rel="stylesheet" href="./style.css?v=1.7.5-s2">
+    <link rel="stylesheet" href="./style.css?v=2.0.0-b2">
   </head>
   <body>
     <svg class="ui-icon-sprite" aria-hidden="true">
@@ -52,20 +52,35 @@
         <div class="launcher__clouds" aria-hidden="true"></div>
 
         <div id="launcher-cover" class="launcher-view launcher-cover">
-          <div class="launcher-logo launcher-logo--hero">
-            <span class="launcher-logo__mark" aria-hidden="true">W</span>
-            <div>
-              <h1 id="start-title"><span id="animated-title">WAR 3D</span><i aria-hidden="true"></i></h1>
-              <p>UN MUNDO. INFINITAS HISTORIAS.</p>
+          <!-- Vista previa 3D dinámica del mundo base (semilla WAR). -->
+          <canvas
+            id="menu-preview-3d"
+            class="launcher-preview"
+            width="1280"
+            height="720"
+            role="img"
+            aria-label="Vista previa 3D del mundo War"
+          ></canvas>
+          <div class="launcher-vignette" aria-hidden="true"></div>
+
+          <div class="launcher-cover__content">
+            <div class="launcher-logo launcher-logo--hero">
+              <span class="launcher-logo__mark" aria-hidden="true">W</span>
+              <div>
+                <h1 id="start-title"><span id="animated-title">WAR 3D</span><i aria-hidden="true"></i></h1>
+                <p>UN MUNDO. INFINITAS HISTORIAS.</p>
+              </div>
+            </div>
+            <div class="launcher-actions">
+              <button id="play-button" class="launcher-primary launcher-primary--play" type="button">
+                <svg class="ui-icon" aria-hidden="true"><use href="#icon-play"></use></svg><b>JUGAR</b>
+              </button>
+              <button id="launcher-settings-button" class="launcher-secondary" type="button">
+                <svg class="ui-icon" aria-hidden="true"><use href="#icon-settings"></use></svg><b>AJUSTES</b>
+              </button>
+              <p class="launcher-version">v2.0.0-buildy.2 · SONIDO Y MENÚ VIVO</p>
             </div>
           </div>
-          <button id="play-button" class="launcher-primary launcher-primary--play" type="button">
-            <svg class="ui-icon" aria-hidden="true"><use href="#icon-play"></use></svg><b>JUGAR</b>
-          </button>
-          <button id="launcher-settings-button" class="launcher-secondary" type="button">
-            <svg class="ui-icon" aria-hidden="true"><use href="#icon-settings"></use></svg><b>AJUSTES</b>
-          </button>
-          <p class="launcher-version">v1.7.5 · CONTAINER UPDATE · SNAPSHOT 2</p>
         </div>
 
         <div id="launcher-worlds" class="launcher-view launcher-panel launcher-worlds" hidden>
